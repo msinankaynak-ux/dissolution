@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
 import io
 
-# --- KİNETİK MOTORU ---
+# --- KİNETİK MODELLER ---
 def zero_order(t, k0): return k0 * t
 def first_order(t, k1): return 100 * (1 - np.exp(-k1 * t))
 def higuchi(t, kh): return kh * np.sqrt(t)
@@ -24,84 +24,59 @@ def calculate_mdt(time, means):
     mid_t = time - (delta_t / 2)
     return np.sum(mid_t * mid_q) / np.sum(mid_q) if np.sum(mid_q) > 0 else 0
 
-st.set_page_config(page_title="PharmTech Lab Pro v2.7", layout="wide")
+st.set_page_config(page_title="PharmTech Lab Pro v3.0", layout="wide")
 
-# --- SIDEBAR (YAN MENÜ) TASARIMI ---
-st.sidebar.title("🔬 Kontrol Paneli")
-st.sidebar.markdown("---")
-
+# --- SIDEBAR TASARIMI ---
+st.sidebar.title("🔬 Analiz Paneli")
 menu = st.sidebar.radio(
-    "İşlem Seçiniz:",
-    ["📈 Dissolüsyon Profilleri", 
-     "🧮 Model-Bağımlı Analiz", 
-     "📊 Model-Bağımsız Analiz"]
+    "Görünüm Seçin:",
+    ["📈 Dissolüsyon Profilleri", "🧮 Model-Bağımlı (Tüm Eğriler)", "📊 Model-Bağımsız Analiz"]
 )
 
+# --- VERİ YÜKLEME ---
 st.sidebar.markdown("---")
-st.sidebar.info("Hocam, verilerinizi yükledikten sonra yukarıdaki sekmelerden analizi derinleştirebilirsiniz.")
+test_file = st.sidebar.file_uploader("Test Verisi (Numune)", type=['xlsx', 'csv'])
+ref_file = st.sidebar.file_uploader("Referans Verisi", type=['xlsx', 'csv'])
 
-# --- VERİ YÜKLEME FONKSİYONU ---
-def load_and_process(file):
+def load_data(file):
     if file is None: return None
     df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
-    time = pd.to_numeric(df.iloc[:, 0], errors='coerce').fillna(0).values
-    values = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
-    return {"time": time, "mean": values.mean(axis=1).values, "std": values.std(axis=1).values, "raw": values}
+    t = pd.to_numeric(df.iloc[:, 0], errors='coerce').fillna(0).values
+    v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
+    return {"t": t, "mean": v.mean(axis=1).values, "std": v.std(axis=1).values, "raw": v}
 
-# --- ANA EKRAN VE VERİ GİRİŞİ ---
-st.title("PharmTech Lab: Gelişmiş Analitik Sistem")
+test = load_data(test_file)
+ref = load_data(ref_file)
 
-col_u1, col_u2 = st.columns(2)
-with col_u1:
-    test_file = st.file_uploader("Test (Numune) Verisi", type=['xlsx', 'csv'], key="t_up")
-with col_u2:
-    ref_file = st.file_uploader("Referans Verisi (Kıyaslama İçin)", type=['xlsx', 'csv'], key="r_up")
-
-test_data = load_and_process(test_file)
-ref_data = load_and_process(ref_file)
-
-if test_data is not None:
-    time = test_data["time"]
-    mean_q = test_data["mean"]
-    std_q = test_data["std"]
-
-    # --- 1. SEKMELİ YAPI: DİSSOLÜSYON PROFİLLERİ ---
+if test:
+    time, mean_q, std_q = test["t"], test["mean"], test["std"]
+    
+    # --- 1. DİSSOLÜSYON PROFİLLERİ ---
     if menu == "📈 Dissolüsyon Profilleri":
-        st.subheader("📍 Kümülatif Çözünme Profili")
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.errorbar(time, mean_q, yerr=std_q, fmt='-ok', label="Test (Numune)", capsize=4, linewidth=2)
+        st.subheader("📍 Kümülatif Salım Grafiği")
+        fig1, ax1 = plt.subplots(figsize=(10, 5))
+        ax1.errorbar(time, mean_q, yerr=std_q, fmt='-ok', label="Test", capsize=4)
+        if ref:
+            ax1.errorbar(ref["t"], ref["mean"], yerr=ref["std"], fmt='--sr', label="Referans", alpha=0.6)
         
-        if ref_data is not None:
-            ax.errorbar(ref_data["time"], ref_data["mean"], yerr=ref_data["std"], fmt='--sr', label="Referans", capsize=4, alpha=0.7)
+        ax1.set_xlabel("Zaman (dk)"); ax1.set_ylabel("Salım (%)"); ax1.legend(); ax1.grid(True, alpha=0.3)
+        st.pyplot(fig1)
         
-        ax.set_xlabel("Zaman (dakika)")
-        ax.set_ylabel("Kümülatif Salım (%)")
-        ax.set_ylim(0, 110)
-        ax.grid(True, linestyle='--', alpha=0.6)
-        ax.legend()
-        st.pyplot(fig)
-        
-        # Grafik İndirme
         buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=300)
-        st.download_button("🖼️ Profili PNG Olarak İndir", buf.getvalue(), "profil_analizi.png", "image/png")
+        fig1.savefig(buf, format="png", dpi=300)
+        st.download_button("🖼️ Grafiği İndir", buf.getvalue(), "profil.png")
 
-    # --- 2. SEKMELİ YAPI: MODEL-BAĞIMLI ANALİZ ---
-    elif menu == "🧮 Model-Bağımlı Analiz":
-        st.subheader("🔍 Kinetik Modelleme (AIC & R² Temelli)")
+    # --- 2. MODEL-BAĞIMLI (TÜM EĞRİLER) ---
+    elif menu == "🧮 Model-Bağımlı (Tüm Eğriler)":
+        st.subheader("🔍 Tüm Kinetik Modellerin Karşılaştırmalı Çizimi")
+        
         t_fit, q_fit = time[time > 0], mean_q[time > 0]
-        kin_results = []
+        t_plot = np.linspace(0.1, time.max(), 100)
+        
+        fig2, ax2 = plt.subplots(figsize=(12, 7))
+        ax2.scatter(time, mean_q, color='black', label="Deneysel Veri", zorder=5)
         
         models = [
-            ("Zero-Order", zero_order, [1]),
-            ("First-Order", first_order, [0.1]),
-            ("Higuchi", higuchi, [1]),
-            ("Korsmeyer-Peppas", korsmeyer_peppas, [1, 0.5]),
-            ("Hixson-Crowell", hixson_crowell, [0.01]),
-            ("Weibull", weibull, [100, 1])
-        ]
-
-        for name, func, p0 in models:
-            try:
-                popt, _ = curve_fit(func, t_fit, q_fit, p0=p0, maxfev=10000)
-                y_pred = func(t_fit,
+            ("Zero-Order", zero_order, [1]), ("First-Order", first_order, [0.1]),
+            ("Higuchi", higuchi, [1]), ("Korsmeyer-Peppas", korsmeyer_peppas, [1, 0.5]),
+            ("Hixson-Crowell", hixson_crow
