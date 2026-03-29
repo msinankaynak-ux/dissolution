@@ -70,10 +70,10 @@ if data_loaded:
         ax1.legend()
         st.pyplot(fig1)
         
-        # İNDİRME BUTONU 1
-        img1 = io.BytesIO()
-        fig1.savefig(img1, format='png', dpi=300, bbox_inches='tight')
-        st.download_button(label="🖼️ Profili PNG Olarak İndir", data=img1.getvalue(), file_name="dissolusyon_profili.png", mime="image/png")
+        # GRAFİK İNDİRME BUTONU 1
+        buf1 = io.BytesIO()
+        fig1.savefig(buf1, format="png", dpi=300, bbox_inches='tight')
+        st.download_button(label="🖼️ Profili PNG Olarak İndir", data=buf1.getvalue(), file_name="dissolusyon_profili.png", mime="image/png")
 
     with col1_b:
         st.write("**İstatistiksel Tablo (Ortalama, SD, %CV)**")
@@ -100,24 +100,4 @@ if data_loaded:
                   ("Higuchi", higuchi, [1]), ("Korsmeyer-Peppas", korsmeyer_peppas, [1, 0.5]),
                   ("Weibull", weibull, [100, 1])]
         
-        for name, func, p0 in models:
-            try:
-                popt, _ = curve_fit(func, t_fit, q_fit, p0=p0, maxfev=10000)
-                ax2.plot(t_plot, func(t_plot, *popt), '--', label=f"{name} Eğrisi")
-                r2 = r2_score(q_fit, func(t_fit, *popt))
-                aic = calculate_aic(len(t_fit), np.sum((q_fit-func(t_fit, *popt))**2), len(p0))
-                kin_res.append({"Model": name, "R²": round(r2, 4), "AIC": round(aic, 2)})
-            except: continue
-        
-        ax2.set_xlabel("Zaman (dakika)")
-        ax2.set_ylabel("Çözünen Madde (%)")
-        ax2.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-        st.pyplot(fig2)
-        
-        # İNDİRME BUTONU 2
-        img2 = io.BytesIO()
-        fig2.savefig(img2, format='png', dpi=300, bbox_inches='tight')
-        st.download_button(label="🖼️ Kinetik Grafiği PNG Olarak İndir", data=img2.getvalue(), file_name="kinetik_modelleme.png", mime="image/png")
-
-    with col2_b:
-        if mode == "
+        for name, func,
