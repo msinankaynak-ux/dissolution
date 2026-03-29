@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import io
 from sklearn.metrics import r2_score
 
-# --- MODELLER ---
+# --- KİNETİK MODELLER ---
 def zero_order(t, k0): return k0 * t
 def first_order(t, k1): return 100 * (1 - np.exp(-k1 * t))
 def higuchi(t, kh): return kh * np.sqrt(t)
@@ -17,57 +17,86 @@ def calculate_aic(n, rss, k):
     if n <= k or rss <= 0: return 9999
     return n * np.log(rss/n) + 2*k
 
-# --- ARAYÜZ ---
-st.set_page_config(page_title="PharmTech Pro", layout="wide")
-st.title("🔬 PharmTech Dissolution Analysis")
-st.markdown("Verilerinizi yükleyin, tüm modelleri saniyeler içinde kıyaslayalım.")
+st.set_page_config(page_title="PharmTech Pro Analiz", layout="wide")
+st.title("🔬 Gelişmiş Dissolüsyon Analiz Laboratuvarı")
 
-uploaded_file = st.file_uploader("Veri Dosyası (Excel veya CSV)", type=['xlsx', 'csv', 'txt'])
+# --- DOSYA YÜKLEME ---
+uploaded_file = st.file_uploader("Veri Dosyası Yükle (Excel veya CSV)", type=['xlsx', 'csv'])
 
 if uploaded_file:
     try:
-        # Veri okuma ve temizleme (TR format desteği)
-        content = uploaded_file.read().decode("utf-8")
-        cleaned = content.replace(",", ".").replace(";", ",")
-        df = pd.read_csv(io.StringIO(cleaned))
+        # Excel veya CSV okuma
+        if uploaded_file.name.endswith('.xlsx'):
+            df = pd.read_excel(uploaded_file)
+        else:
+            df = pd.read_csv(uploaded_file)
         
-        t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
-        q = pd.to_numeric(df.iloc[:, 1], errors='coerce').values
-        valid = ~np.isnan(t) & ~np.isnan(q)
-        t, q = t[valid & (t > 0)], q[valid & (t > 0)]
-
-        results = []
-        models = [("Sıfırıncı Derece", zero_order, [1]), ("Birinci Derece", first_order, [0.1]), 
-                  ("Higuchi", higuchi, [1]), ("Korsmeyer-Peppas", korsmeyer_peppas, [1, 0.5]), 
-                  ("Hixson-Crowell", hixson_crowell, [0.01])]
-
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.scatter(t, q, color='red', label='Deneysel Veri', zorder=5)
-
-        best_aic = float('inf')
-        best_name = ""
-
-        for name, func, p0 in models:
-            try:
-                popt, _ = curve_fit(func, t, q, p0=p0, maxfev=10000)
-                y_pred = func(t, *popt)
-                aic = calculate_aic(len(t), np.sum((q-y_pred)**2), len(p0))
-                r2 = r2_score(q, y_pred)
-                results.append({"Model": name, "AIC": round(aic, 2), "R²": round(r2, 4)})
-                
-                t_plot = np.linspace(min(t), max(t), 100)
-                ax.plot(t_plot, func(t_plot, *popt), label=f"{name} (R²:{round(r2,2)})")
-                
-                if aic < best_aic:
-                    best_aic, best_name = aic, name
-            except: continue
-
-        st.subheader(f"✅ En Uygun Mekanizma: {best_name}")
+        # Veri İşleme
+        time = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
+        values = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
+        
+        mean_q = values.mean(axis=1).values
+        std_q = values.std(axis=1).values
+        cv_q = (std_q / mean_q) * 100
+        
+        # Grafik ve Kinetik Analiz
+        st.subheader("📊 Dissolüsyon Profili ve Kinetik Uyumluluk")
         col1, col2 = st.columns([2, 1])
+        
         with col1:
-            ax.set_xlabel("Zaman (dk)"); ax.set_ylabel("Salım (%)"); ax.legend(); st.pyplot(fig)
-        with col2:
-            st.table(pd.DataFrame(results).sort_values("AIC"))
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.errorbar(time, mean_q, yerr=std_q, fmt='-o', color='darkblue', capsize=5, label="Ortalama Salım ± SD")
+            ax.set_xlabel("Zaman (dakika)")
+            ax.set_ylabel("Kümülatif Salım (%)")
+            ax.grid(True, linestyle='--', alpha=0.6)
             
+            # Kinetik Fitting (Ortalama veri üzerinden)
+            t_fit = time[time > 0]
+            q_fit = mean_q[time > 0]
+            results = []
+            models = [("Sıfırıncı D.", zero_order, [1]), ("Birinci D.", first_order, [0.1]), 
+                      ("Higuchi", higuchi, [1]), ("Korsmeyer-Peppas", korsmeyer_peppas, [1, 0.5])]
+
+            for name, func, p0 in models:
+                try:
+                    popt, _ = curve_fit(func, t_fit, q_fit, p0=p0, maxfev=10000)
+                    y_pred = func(t_fit, *popt)
+                    aic = calculate_aic(len(t_fit), np.sum((q_fit-y_pred)**2), len(p0))
+                    r2 = r2_score(q_fit, y_pred)
+                    results.append({"Model": name, "AIC": aic, "R²": r2})
+                    t_plot = np.linspace(min(t_fit), max(t_fit), 100)
+                    ax.plot(t_plot, func(t_plot, *popt), '--', alpha=0.7, label=f"{name}")
+                except: continue
+            
+            ax.legend()
+            st.pyplot(fig)
+
+        with col2:
+            st.write("**İstatistiksel Özet**")
+            summary_df = pd.DataFrame({"Zaman": time, "Ortalama": mean_q, "SD": std_q, "%CV": cv_q})
+            st.dataframe(summary_df.style.format(precision=2))
+            
+            st.write("**Model Kıyaslaması**")
+            st.table(pd.DataFrame(results).sort_values("AIC"))
+
+        # --- RAPORLAMA BÖLÜMÜ ---
+        st.divider()
+        with st.expander("📝 Rapor Detaylarını Gir ve PDF Hazırla"):
+            c1, c2, c3 = st.columns(3)
+            api_name = c1.text_input("API / Etkin Madde Adı", "Atorvastatin")
+            dosage = c1.text_input("Dozaj (mg)", "10 mg")
+            batch = c1.text_input("Seri No (Batch)", "LOT-2026-001")
+            
+            medium = c2.text_input("Dissolüsyon Ortamı (pH)", "pH 6.8 Fosfat Tamponu")
+            volume = c2.text_input("Hacim (mL)", "900 mL")
+            apparatus = c2.selectbox("Aparat", ["USP 1 (Basket)", "USP 2 (Paddle)", "USP 4 (Flow-through)"])
+            
+            temp = c3.text_input("Sıcaklık (°C)", "37 ± 0.5")
+            speed = c3.text_input("Hız (rpm)", "50 rpm")
+            analyst = c3.text_input("Analist Adı", "")
+
+            if st.button("Raporu Onayla ve Yazdır"):
+                st.success(f"{api_name} için analiz raporu başarıyla oluşturuldu. (PDF indirme özelliği bir sonraki güncellemede eklenecektir.)")
+
     except Exception as e:
-        st.error(f"Hata: {e}")
+        st.error(f"Hata oluştu: {e}")
