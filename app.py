@@ -5,29 +5,28 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from sklearn.metrics import r2_score
 
-# --- SMART KİNETİK MOTOR ---
-def interpret_n(n):
-    if n <= 0.45: return "Fickian Diffusion"
-    elif 0.45 < n < 0.89: return "Anomalous Transport"
-    return "Case II / Super Case II"
-
+# --- KİNETİK MODELLER ---
 def zero_order(t, k): return k * t
 def first_order(t, k): return 100 * (1 - np.exp(-k * t))
 def higuchi(t, k): return k * np.sqrt(t)
 def korsmeyer(t, k, n): return k * (t**n)
+def hixson(t, k): return 100 * (1 - (1 - k * t)**3)
 
-# --- ARAYÜZ ---
-st.set_page_config(page_title="PharmTech Lab Pro v13", layout="wide")
-st.sidebar.title("🔬 Smart Lab v13")
+def calculate_aic(n, rss, p_count):
+    if n <= p_count or rss <= 0: return np.inf
+    return n * np.log(rss/n) + 2 * p_count
 
-menu = st.sidebar.radio("Analiz Menüsü:", ["📈 Profiller", "🧮 Akıllı Modelleme", "📊 Karşılaştırma"])
+# --- ARAYÜZ YAPISI ---
+st.set_page_config(page_title="PharmTech Lab v14", layout="wide")
+st.sidebar.title("🔬 Pro Lab v14.0")
 
-st.sidebar.divider()
-test_file = st.sidebar.file_uploader("Test Verisi", type=['xlsx', 'csv'])
-ref_file = st.sidebar.file_uploader("Referans Verisi", type=['xlsx', 'csv'])
+menu = st.sidebar.radio("İşlem Adımları:", ["📈 1. Salım Profilleri (Yayın Hazırlığı)", "🧮 2. Model Karşılaştırma & Seçim", "📊 3. Modelden Bağımsız Analiz"])
+
+test_file = st.sidebar.file_uploader("Test Verisi Yükle", type=['xlsx', 'csv'])
+ref_file = st.sidebar.file_uploader("Referans Verisi Yükle", type=['xlsx', 'csv'])
 
 def load_data(file):
-    if file is None: return None
+    if not file: return None
     try:
         df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
         t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
@@ -40,52 +39,85 @@ test = load_data(test_file)
 ref = load_data(ref_file)
 
 if test:
-    t, q = test["t"], test["mean"]
-    
-    if menu == "🧮 Akıllı Modelleme":
-        st.subheader("🔍 Akıllı Kinetik Optimizasyon")
+    t_data, q_data = test["t"], test["mean"]
+
+    # --- ADIM 1: SALIM PROFİLLERİ ---
+    if menu == "📈 1. Salım Profilleri (Yayın Hazırlığı)":
+        st.subheader("📍 Kümülatif Çözünme Profili")
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.errorbar(t_data, q_data, yerr=test["std"], fmt='-ok', label="Test Formülasyonu", capsize=5, linewidth=2, markersize=8)
+        if ref:
+            ax.errorbar(ref["t"], ref["mean"], yerr=ref["std"], fmt='--sr', label="Referans Ürün", alpha=0.7, capsize=5)
         
-        # Fit için veri hazırlığı (Hata payını sıfıra indirir)
-        f_mask = (t > 0) & (q > 0) & (q < 105)
-        tf, qf = t[f_mask], q[f_mask]
+        ax.set_xlabel("Zaman (dakika)", fontsize=12, fontweight='bold')
+        ax.set_ylabel("Kümülatif Salım (%)", fontsize=12, fontweight='bold')
+        ax.set_ylim(0, 105); ax.legend(); ax.grid(True, linestyle='--', alpha=0.6)
+        st.pyplot(fig)
+        st.info("💡 Bu grafik doğrudan yayınlarda kullanılabilir kalitededir.")
+
+    # --- ADIM 2: MODEL KARŞILAŞTIRMA ---
+    elif menu == "🧮 2. Model Karşılaştırma & Seçim":
+        st.subheader("🔍 Kinetik Model Uyumluluğu")
         
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.scatter(t, q, color='black', label="Deneysel")
+        # Fit için 0 zamanını pas geçiyoruz (matematiksel zorunluluk)
+        f_mask = (t_data > 0) & (q_data > 0)
+        tf, qf = t_data[f_mask], q_data[f_mask]
         
-        results = []
-        models = [
-            ("Sıfır Derece", zero_order, [0.1], (0, 100)),
-            ("Birinci Derece", first_order, [0.01], (0, 10)),
-            ("Higuchi", higuchi, [1.0], (0, 500)),
-            ("Korsmeyer-Peppas", korsmeyer, [1.0, 0.5], (0, [200, 2.0]))
+        model_defs = [
+            ("Sıfır Derece", zero_order, [0.1]),
+            ("Birinci Derece", first_order, [0.01]),
+            ("Higuchi", higuchi, [1.0]),
+            ("Korsmeyer-Peppas", korsmeyer, [1.0, 0.5]),
+            ("Hixson-Crowell", hixson, [0.001])
         ]
+        
+        fit_results = {}
+        summary_data = []
 
-        for name, func, p0, bnds in models:
+        for name, func, p0 in model_defs:
             try:
-                # AKILLI BAŞLANGIÇ NOKTASI (Auto-Seeding)
-                # Eğer Peppas ise log-log üzerinden n'i tahmin et
-                current_p0 = p0
-                if name == "Korsmeyer-Peppas":
-                    log_t, log_q = np.log(tf), np.log(qf)
-                    slope, intercept = np.polyfit(log_t, log_q, 1)
-                    current_p0 = [np.exp(intercept), np.clip(slope, 0.1, 1.5)]
+                popt, _ = curve_fit(func, tf, qf, p0=p0, maxfev=10000)
+                y_pred = func(tf, *popt)
+                r2 = r2_score(qf, y_pred)
+                rss = np.sum((qf - y_pred)**2)
+                aic = calculate_aic(len(tf), rss, len(p0))
                 
-                popt, _ = curve_fit(func, tf, qf, p0=current_p0, bounds=bnds, maxfev=10000)
-                y_fit = func(t, *popt)
-                r2 = r2_score(q, y_fit)
-                
-                res = {"Model": name, "R²": f"{r2:.4f}", "K": f"{popt[0]:.4f}"}
-                if name == "Korsmeyer-Peppas":
-                    res["n"] = f"{popt[1]:.3f}"
-                    res["Mekanizma"] = interpret_n(popt[1])
-                results.append(res)
-                ax.plot(t, y_fit, label=f"{name}")
+                fit_results[name] = {"func": func, "popt": popt, "r2": r2}
+                summary_data.append({"Model": name, "R²": round(r2, 4), "AIC": round(aic, 2), "Durum": "✅ Uygun"})
             except:
-                results.append({"Model": name, "R²": "Fit Edilemedi", "K": "-", "n": "-", "Mekanizma": "Veri Uyumsuz"})
+                summary_data.append({"Model": name, "R²": "-", "AIC": "-", "Durum": "❌ Bu veri için uygun değil"})
 
-        ax.legend(); st.pyplot(fig)
-        st.table(pd.DataFrame(results).fillna("-"))
+        # Tabloyu Göster
+        st.table(pd.DataFrame(summary_data))
+        
+        # İnteraktif Seçim
+        st.divider()
+        st.write("### 🛠️ Grafik Üzerinde Gösterilecek Modelleri Seçin")
+        selected_models = [m for m in fit_results.keys() if st.checkbox(m, value=(m == "Higuchi"))]
+        
+        if selected_models:
+            fig_fit, ax_fit = plt.subplots(figsize=(10, 5))
+            ax_fit.scatter(t_data, q_data, color='black', label="Deneysel Veri", s=50)
+            t_plot = np.linspace(t_data.min(), t_data.max(), 100)
+            
+            for m_name in selected_models:
+                m_info = fit_results[m_name]
+                ax_fit.plot(t_plot, m_info["func"](t_plot, *m_info["popt"]), label=f"{m_name} (R²: {m_info['r2']:.3f})")
+            
+            ax_fit.set_xlabel("Zaman"); ax_fit.set_ylabel("Salım (%)"); ax_fit.legend(); ax_fit.grid(alpha=0.3)
+            st.pyplot(fig_fit)
 
-    # Diğer sekmeler (Profiller ve Karşılaştırma) v12.1'deki gibi stabil çalışır...
+    # --- ADIM 3: MODEL BAĞIMSIZ ---
+    elif menu == "📊 3. Modelden Bağımsız Analiz":
+        st.subheader("📏 f1, f2 ve Verim Analizi")
+        de = (np.trapz(q_data, t_data) / (np.max(t_data) * 100)) * 100
+        st.metric("Çözünme Verimi (DE)", f"%{de:.2f}")
+        
+        if ref:
+            if len(ref["t"]) == len(t_data):
+                f2 = 50 * np.log10(100 / np.sqrt(1 + np.mean((ref["mean"] - q_data)**2)))
+                st.metric("f2 Benzerlik Faktörü", f"{f2:.2f}")
+            else:
+                st.warning("Zaman noktası sayıları uyuşmadığı için f2 hesaplanamadı.")
 else:
-    st.info("Hocam verileri yükleyin, gerisini akıllı algoritmaya bırakın.")
+    st.info("Hocam hoş geldiniz. Lütfen sol taraftan verileri yükleyerek başlayın.")
