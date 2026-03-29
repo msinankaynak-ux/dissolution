@@ -5,6 +5,7 @@ from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from datetime import datetime
 from sklearn.metrics import r2_score
+import io
 
 # --- KİNETİK MODELLER ---
 def zero_order(t, k0): return k0 * t
@@ -52,7 +53,7 @@ else:
         data_loaded = True
 
 if data_loaded:
-    # --- 1. GRAFİK: SADE DİSSOLÜSYON PROFİLİ VE İSTATİSTİK ---
+    # --- 1. GRAFİK: SADE DİSSOLÜSYON PROFİLİ ---
     st.markdown("### 1️⃣ Temel Dissolüsyon Profili ve Veri Özeti")
     col1_a, col1_b = st.columns([3, 2])
     
@@ -68,20 +69,20 @@ if data_loaded:
         ax1.grid(True, linestyle='--', alpha=0.3)
         ax1.legend()
         st.pyplot(fig1)
+        
+        # İNDİRME BUTONU 1
+        img1 = io.BytesIO()
+        fig1.savefig(img1, format='png', dpi=300, bbox_inches='tight')
+        st.download_button(label="🖼️ Profili PNG Olarak İndir", data=img1.getvalue(), file_name="dissolusyon_profili.png", mime="image/png")
 
     with col1_b:
         st.write("**İstatistiksel Tablo (Ortalama, SD, %CV)**")
-        summary_df = pd.DataFrame({
-            "Zaman": time,
-            "Ortalama (%)": means[0],
-            "SD": stds[0],
-            "%CV (VK)": cvs[0]
-        })
+        summary_df = pd.DataFrame({"Zaman": time, "Ortalama (%)": means[0], "SD": stds[0], "%CV (VK)": cvs[0]})
         st.dataframe(summary_df.style.format(precision=2), use_container_width=True)
 
     st.divider()
 
-    # --- 2. GRAFİK: KİNETİK MODELLER VE EĞRİLER ---
+    # --- 2. GRAFİK: KİNETİK MODELLER ---
     st.markdown("### 2️⃣ Kinetik Modelleme ve Uyumluluk Analizi")
     col2_a, col2_b = st.columns([3, 2])
     
@@ -112,41 +113,11 @@ if data_loaded:
         ax2.set_ylabel("Çözünen Madde (%)")
         ax2.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         st.pyplot(fig2)
+        
+        # İNDİRME BUTONU 2
+        img2 = io.BytesIO()
+        fig2.savefig(img2, format='png', dpi=300, bbox_inches='tight')
+        st.download_button(label="🖼️ Kinetik Grafiği PNG Olarak İndir", data=img2.getvalue(), file_name="kinetik_modelleme.png", mime="image/png")
 
     with col2_b:
-        if mode == "Referans vs Test Kıyaslama (f1/f2)":
-            mse = np.mean((means[0] - means[1])**2)
-            f2 = 50 * np.log10((1 + mse)**-0.5 * 100)
-            st.metric("f2 Benzerlik Faktörü", f"{f2:.2f}")
-        st.write("**Model Karşılaştırma Listesi**")
-        st.table(pd.DataFrame(kin_res).sort_values("AIC"))
-
-    # --- GENİŞLETİLMİŞ RAPORLAMA ---
-    st.divider()
-    st.subheader("📝 Kapsamlı Analiz Raporu")
-    if st.checkbox("Analiz sonuçlarını onaylıyorum, raporu detaylandır"):
-        with st.expander("Tüm Bilgileri Eksiksiz Doldurun", expanded=True):
-            r1, r2, r3 = st.columns(3)
-            # Ürün Bilgileri
-            api = r1.text_input("Etkin Madde / Ürün Adı", "Örn: Atorvastatin")
-            dosage = r1.text_input("Dozaj Formu ve Miktarı", "Örn: 10 mg Tablet")
-            batch = r1.text_input("Seri / Batch No", "Örn: LOT-2026-X")
-            
-            # Metod Bilgileri
-            medium = r2.text_input("Dissolüsyon Ortamı", "Örn: pH 6.8 Fosfat Tamponu")
-            volume = r2.text_input("Ortam Hacmi (mL)", "900 mL")
-            apparatus = r2.selectbox("Aparat Tipi", ["USP 1 (Basket)", "USP 2 (Paddle)", "USP 4 (Flow-Through)"])
-            rpm = r2.text_input("Dönüş Hızı / Akış Hızı", "50 rpm")
-            
-            # Deney Detayları
-            analyst = r3.text_input("Analist Adı Soyadı", "")
-            temp = r3.text_input("Sıcaklık (°C)", "37 ± 0.5")
-            now = datetime.now()
-            exp_date = r3.date_input("Deney Tarihi", now.date())
-            exp_time = r3.time_input("Deney Saati", now.time())
-            
-            notes = st.text_area("Analiz Notları ve Yorumlar", "Profiller arasında anlamlı bir fark gözlenmemiştir...")
-            
-            if st.button("Final Raporunu Sisteme İşle"):
-                st.success(f"{api} için detaylı rapor veri tabanına kaydedildi!")
-                st.balloons()
+        if mode == "
