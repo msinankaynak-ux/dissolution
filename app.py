@@ -4,12 +4,31 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit, root
 from sklearn.metrics import r2_score
+import io
 
-# --- 1. MATEMATİKSEL MODELLER VE YORUMLAMA ---
+# --- 1. DİL DESTEĞİ SÖZLÜĞÜ (TERMINOLOGY) ---
+LANG_DICT = {
+    "Türkçe": {
+        "time": "Zaman", "release": "Salım", "test": "Test", "ref": "Referans",
+        "model_fit": "Model Uygunluğu", "comment": "Yorum", "calc": "✅ Hesaplanabilir",
+        "unsuitable": "❌ Uyumsuz", "best": "🏆 En Uygun Model", "sd": "S. Sapma", "rsd": "RSD (%)"
+    },
+    "English": {
+        "time": "Time", "release": "Release", "test": "Test", "ref": "Reference",
+        "model_fit": "Model Suitability", "comment": "Comment", "calc": "✅ Calculable",
+        "unsuitable": "❌ Unsuitable", "best": "🏆 Best Fit", "sd": "Std. Dev.", "rsd": "RSD (%)"
+    },
+    "Chinese (中文)": {
+        "time": "时间", "release": "释放率", "test": "测试组", "ref": "对照组",
+        "model_fit": "模型适用性", "comment": "备注", "calc": "✅ 可计算",
+        "unsuitable": "❌ 不适用", "best": "🏆 最佳拟合", "sd": "标准差", "rsd": "相对标准偏差 (%)"
+    }
+}
 
-def interpret_peppas_n(n):
-    if n <= 0.45: return "(Fickian Difüzyon)"
-    elif 0.45 < n < 0.89: return "(Anomalous Transport)"
+# --- 2. MATEMATİKSEL MODELLER (SABİT ÇATI) ---
+def interpret_peppas_n(n, lang):
+    if n <= 0.45: return "(Fickian)" if lang != "Türkçe" else "(Fickian Difüzyon)"
+    elif 0.45 < n < 0.89: return "(Anomalous)" if lang != "Türkçe" else "(Anomalous Transport)"
     return "(Super Case II)"
 
 def zero_order(t, k): return k * t
@@ -32,47 +51,63 @@ def calculate_aic(n, rss, p_count):
     if n <= p_count or rss <= 0: return 9999
     return n * np.log(rss/n) + 2 * p_count
 
-# --- 2. ARAYÜZ YAPILANDIRMASI (SIDEBAR SABİT) ---
+# --- 3. ARAYÜZ ---
+st.set_page_config(page_title="PharmTech Lab v15.4", layout="wide")
 
-st.set_page_config(page_title="PharmTech Lab v15.3", layout="wide")
-st.sidebar.title("🔬 Pro Lab v15.3")
-
-st.sidebar.subheader("📂 Veri Girişi")
-test_file = st.sidebar.file_uploader("Test Verisi (Zorunlu)", type=['xlsx', 'csv'])
-ref_file = st.sidebar.file_uploader("Referans Verisi (Opsiyonel)", type=['xlsx', 'csv'])
+# Dil Seçimi (Sidebar'ın en üstünde)
+st.sidebar.title("🌍 Language / Dil")
+selected_lang = st.sidebar.selectbox("Select Language:", list(LANG_DICT.keys()))
+L = LANG_DICT[selected_lang]
 
 st.sidebar.divider()
-menu = st.sidebar.radio("Analiz Adımları:", ["📈 1. Salım Profilleri", "🧮 2. Tüm Modelleri Test Et"])
+st.sidebar.subheader(f"📂 {L['test']} Veri Girişi")
+test_file = st.sidebar.file_uploader(f"{L['test']} (XLSX/CSV)", type=['xlsx', 'csv'])
+ref_file = st.sidebar.file_uploader(f"{L['ref']} (Opsiyonel)", type=['xlsx', 'csv'])
+
+menu = st.sidebar.radio("Menü:", [f"📈 1. {L['release']} Profilleri", f"🧮 2. {L['model_fit']}"])
 
 def load_data(file):
     if file is None: return None
-    try:
-        df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
-        t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
-        v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
-        mask = ~np.isnan(t)
-        return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask]}
-    except: return None
+    df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
+    t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
+    v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
+    mask = ~np.isnan(t)
+    return {"t": t[mask], "raw": v.iloc[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask]}
 
 test = load_data(test_file)
-ref = load_data(ref_file)
-
-# --- 3. ANA ANALİZ DÖNGÜSÜ ---
 
 if test:
     t_raw, q_raw = test["t"], test["mean"]
 
-    if menu == "📈 1. Salım Profilleri":
-        st.subheader("📍 Kümülatif Salım Profili")
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.errorbar(t_raw, q_raw, yerr=test["std"], fmt='-ok', label="Test", capsize=5, linewidth=2)
-        if ref:
-            ax.errorbar(ref["t"], ref["mean"], yerr=ref["std"], fmt='--sr', label="Referans", alpha=0.7)
-        ax.set_xlabel("Zaman (dk)"); ax.set_ylabel("Salım (%)"); ax.legend(); ax.grid(True, alpha=0.3)
-        st.pyplot(fig)
+    if "1." in menu:
+        st.subheader(f"📍 {L['release']} Profili & İstatistik")
+        
+        # 1. TABLO: Ortalama, SD, RSD Tablosu
+        st.write("### 📊 Veri İstatistiği")
+        rsd = (test["std"] / q_raw) * 100
+        stats_df = pd.DataFrame({
+            L['time']: t_raw,
+            f"Ortalama {L['release']} (%)": q_raw,
+            L['sd']: test["std"],
+            L['rsd']: rsd
+        })
+        st.table(stats_df.format("{:.2f}").hide(axis="index"))
 
-    elif menu == "🧮 2. Tüm Modelleri Test Et":
-        st.subheader("🔍 Kinetik Model Karşılaştırma Tablosu")
+        # 2. GRAFİK VE İNDİRME
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.errorbar(t_raw, q_raw, yerr=test["std"], fmt='-ok', label=L['test'], capsize=5)
+        ax.set_xlabel(f"{L['time']} (min)", fontsize=12)
+        ax.set_ylabel(f"{L['release']} (%)", fontsize=12)
+        ax.legend(); ax.grid(True, alpha=0.3)
+        st.pyplot(fig)
+        
+        # Grafik İndirme Butonu
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=300)
+        st.download_button(label=f"🖼️ Grafiği İndir (PNG)", data=buf.getvalue(), file_name="salim_profili.png", mime="image/png")
+
+    elif "2." in menu:
+        st.subheader(f"🔍 {L['model_fit']}")
         
         fit_mask = (t_raw > 0) & (q_raw > 0)
         tf, qf = t_raw[fit_mask], q_raw[fit_mask]
@@ -90,59 +125,23 @@ if test:
         ]
         
         results = []
-        fit_data_for_plot = {}
-
-        # Baker-Lonsdale Özel Fit
-        try:
-            popt_bl, _ = curve_fit(baker_lonsdale_for_fit, t_raw, q_raw, p0=[0.001], maxfev=2000)
-            y_bl = baker_lonsdale_for_fit(t_raw, *popt_bl)
-            r2_bl = r2_score(q_raw, y_bl)
-            aic_bl = calculate_aic(len(t_raw), np.sum((q_raw-y_bl)**2), 1)
-            results.append({"Model": "Baker-Lonsdale", "R²": r2_bl, "AIC": aic_bl, "Model Uygunluğu": "✅ Hesaplanabilir", "Yorum": f"k: {popt_bl[0]:.5f}"})
-            fit_data_for_plot["Baker-Lonsdale"] = (baker_lonsdale_for_fit, popt_bl)
-        except: pass
-
-        # Diğer Tüm Modeller
         for name, func, p0, low, up in model_defs:
             try:
                 popt, _ = curve_fit(func, tf, qf, p0=p0, bounds=(low, up), maxfev=15000)
                 y_p = func(tf, *popt)
                 r2 = r2_score(qf, y_p)
                 aic = calculate_aic(len(tf), np.sum((qf-y_p)**2), len(p0))
-                
-                comment = "-"
-                if name == "Korsmeyer-Peppas": comment = f"n: {popt[1]:.3f} {interpret_peppas_n(popt[1])}"
-                
-                results.append({"Model": name, "R²": r2, "AIC": aic, "Model Uygunluğu": "✅ Hesaplanabilir", "Yorum": comment})
-                fit_data_for_plot[name] = (func, popt)
+                comment = f"n: {popt[1]:.3f} {interpret_peppas_n(popt[1], selected_lang)}" if name == "Korsmeyer-Peppas" else "-"
+                results.append({"Model": name, "R²": r2, "AIC": aic, L['model_fit']: L['calc'], L['comment']: comment})
             except:
-                results.append({"Model": name, "R²": 0, "AIC": 9999, "Model Uygunluğu": "❌ Uyumsuz", "Yorum": "-"})
+                results.append({"Model": name, "R²": 0, "AIC": 9999, L['model_fit']: L['unsuitable'], L['comment']: "-"})
 
         df_res = pd.DataFrame(results)
-        valid_models = df_res[df_res["Model Uygunluğu"] == "✅ Hesaplanabilir"]
-        best_idx = valid_models["AIC"].idxmin() if not valid_models.empty else None
-        
-        if best_idx is not None:
-            df_res.at[best_idx, "Yorum"] += " 🏆 En Uygun Model"
+        best_idx = df_res[df_res[L['model_fit']] == L['calc']]["AIC"].idxmin()
+        df_res.at[best_idx, L['comment']] += f" {L['best']}"
 
-        # Tablo Stil Uygulama (İndeks Gizli & Bold)
         st.table(df_res.style.apply(lambda x: ['font-weight: bold' if x.name == best_idx else '' for i in x], axis=1)
                  .format({"R²": "{:.4f}", "AIC": "{:.2f}"}).hide(axis="index"))
-
-        # İnteraktif Grafik
-        st.divider()
-        st.write("### 🛠️ Model Uyumu Grafiği")
-        all_m = list(fit_data_for_plot.keys())
-        selected = st.multiselect("Grafikte gösterilecek modeller:", all_m, default=all_m)
-        
-        if selected:
-            fig_f, ax_f = plt.subplots(figsize=(10, 5))
-            ax_f.scatter(t_raw, q_raw, color='black', label="Deneysel", zorder=5)
-            t_plot = np.linspace(t_raw.min(), t_raw.max(), 100)
-            for m in selected:
-                f, p = fit_data_for_plot[m]
-                ax_f.plot(t_plot, f(t_plot, *p), label=m, alpha=0.8)
-            ax_f.set_xlabel("Zaman (dk)"); ax_f.set_ylabel("Salım (%)"); ax_fit = ax_f.legend(); ax_f.grid(alpha=0.1)
-            st.pyplot(fig_f)
 else:
-    st.info("Hocam hoş geldiniz. Lütfen sol panelden 'Test Verisi' yükleyerek analize başlayın.")
+    st.info("Please upload data to start / Lütfen veri yükleyiniz.")
+    
