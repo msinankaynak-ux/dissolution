@@ -79,24 +79,36 @@ if uploaded_file:
             st.write("**Model Kıyaslaması**")
             st.table(pd.DataFrame(results).sort_values("AIC"))
 
-        # --- RAPORLAMA BÖLÜMÜ ---
+                        # --- RAPORLAMA BÖLÜMÜ ---
         st.divider()
         with st.expander("📝 Rapor Detaylarını Gir ve PDF Hazırla"):
+            from datetime import datetime
+            now = datetime.now()
+            
             c1, c2, c3 = st.columns(3)
+            
+            # 1. Sütun: Ürün Bilgileri
             api_name = c1.text_input("API / Etkin Madde Adı", "Atorvastatin")
             dosage = c1.text_input("Dozaj (mg)", "10 mg")
             batch = c1.text_input("Seri No (Batch)", "LOT-2026-001")
             
-            medium = c2.text_input("Dissolüsyon Ortamı (pH)", "pH 6.8 Fosfat Tamponu")
+            # 2. Sütun: Metod Detayları
+            medium = c2.text_input("Dissolüsyon Ortamı (pH)", "6.8 Fosfat Tamponu")
             volume = c2.text_input("Hacim (mL)", "900 mL")
             apparatus = c2.selectbox("Aparat", ["USP 1 (Basket)", "USP 2 (Paddle)", "USP 4 (Flow-through)"])
             
+            # 3. Sütun: Operasyonel ve Zaman
+            # Tarih ve saat otomatik olarak o anı gösterir ama değiştirilebilir
+            exp_date = c3.date_input("Deney Tarihi", now.date())
+            exp_time = c3.time_input("Deney Saati", now.time())
             temp = c3.text_input("Sıcaklık (°C)", "37 ± 0.5")
             speed = c3.text_input("Hız (rpm)", "50 rpm")
-            analyst = c3.text_input("Analist Adı", "")
+            analyst = st.text_input("Analist Adı / Soyadı", "")
 
             if st.button("Raporu Onayla ve Yazdır"):
-                st.success(f"{api_name} için analiz raporu başarıyla oluşturuldu. (PDF indirme özelliği bir sonraki güncellemede eklenecektir.)")
+                # Rapor özetini kullanıcıya göster
+                st.info(f"Rapor Oluşturuldu: {api_name} ({dosage}) - {exp_date} {exp_time}")
+                st.success("PDF indirme modülü bir sonraki adımda entegre edilecektir.")
 
     except Exception as e:
         st.error(f"Hata oluştu: {e}")
