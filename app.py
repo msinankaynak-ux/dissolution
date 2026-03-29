@@ -42,14 +42,22 @@ if uploaded_file:
         # Grafik ve Kinetik Analiz
         st.subheader("📊 Dissolüsyon Profili ve Kinetik Uyumluluk")
         col1, col2 = st.columns([2, 1])
-        
+
         with col1:
             fig, ax = plt.subplots(figsize=(10, 6))
-            ax.errorbar(time, mean_q, yerr=std_q, fmt='-o', color='darkblue', capsize=5, label="Ortalama Salım ± SD")
+            
+            # --- EKSENLERİ 0:0 NOKTASINDA SABİTLEME ---
+            ax.set_xlim(left=0)  # X ekseni 0'dan başlasın
+            ax.set_ylim(bottom=0, top=110)  # Y ekseni 0'dan başlasın, %110'a kadar pay bıraksın
+            
+            # Hata çubuklu ana grafik
+            ax.errorbar(time, mean_q, yerr=std_q, fmt='-o', color='darkblue', 
+                        capsize=5, label="Ortalama Salım ± SD", linewidth=2)
+            
             ax.set_xlabel("Zaman (dakika)")
             ax.set_ylabel("Kümülatif Salım (%)")
-            ax.grid(True, linestyle='--', alpha=0.6)
-            
+            ax.grid(True, linestyle='--', alpha=0.4) # Izgarayı biraz daha şeffaf yaptık
+                   
             # Kinetik Fitting (Ortalama veri üzerinden)
             t_fit = time[time > 0]
             q_fit = mean_q[time > 0]
