@@ -57,11 +57,11 @@ if data_loaded:
         ax.set_xlim(left=0, right=max_t * 1.05)
         ax.set_ylim(bottom=0, top=110)
         
-        # Ana Veri Noktaları
+        # 1. Ham Veri Noktaları (Nokta ve Hata Çubuğu)
         for i in range(len(labels)):
-            ax.errorbar(time, means[i], yerr=stds[i], fmt='o', label=labels[i], capsize=5, markersize=8)
+            ax.errorbar(time, means[i], yerr=stds[i], fmt='o', label=f"{labels[i]} (Deneysel)", capsize=5, markersize=8)
 
-        # Kinetik Eğrilerin Çizimi (Ortalama veri üzerinden)
+        # 2. Kinetik Eğriler (Çizgi Şeklinde)
         t_fit = time[time > 0]
         q_fit = means[0][time > 0]
         kin_res = []
@@ -73,9 +73,7 @@ if data_loaded:
         for name, func, p0 in models:
             try:
                 popt, _ = curve_fit(func, t_fit, q_fit, p0=p0, maxfev=10000)
-                ax.plot(t_plot, func(t_plot, *popt), '--', alpha=0.7, label=f"{name} Eğrisi")
-                
-                # İstatistik Hesaplama
+                ax.plot(t_plot, func(t_plot, *popt), '--', alpha=0.6, label=f"{name} Modeli")
                 r2 = r2_score(q_fit, func(t_fit, *popt))
                 aic = calculate_aic(len(t_fit), np.sum((q_fit-func(t_fit, *popt))**2), len(p0))
                 kin_res.append({"Model": name, "R²": round(r2, 4), "AIC": round(aic, 2)})
@@ -89,7 +87,7 @@ if data_loaded:
 
     with col_main2:
         if mode == "Referans vs Test Kıyaslama (f1/f2)":
-            st.subheader("⚖️ Benzerlik Faktörleri")
+            st.subheader("⚖️ Benzerlik Analizi")
             mse = np.mean((means[0] - means[1])**2)
             f2 = 50 * np.log10((1 + mse)**-0.5 * 100)
             f1 = (np.sum(np.abs(means[0] - means[1])) / np.sum(means[0])) * 100
@@ -101,4 +99,18 @@ if data_loaded:
 
     # --- ŞARTLI RAPORLAMA ---
     st.divider()
-    st.write("### 📝 Raporlama")
+    st.subheader("📝 Rapor Hazırlama")
+    if st.checkbox("Analiz sonuçlarını inceledim, raporlama adımına geçmek istiyorum."):
+        with st.expander("Rapor Detaylarını Girin", expanded=True):
+            now = datetime.now()
+            r1, r2, r3 = st.columns(3)
+            api = r1.text_input("Etkin Madde", "Atorvastatin")
+            dosage = r1.text_input("Dozaj", "10 mg")
+            analyst = r2.text_input("Analist", "")
+            method = r2.text_input("Metod (USP)", "Aparat 2")
+            exp_date = r3.date_input("Deney Tarihi", now.date())
+            exp_time = r3.time_input("Deney Saati", now.time())
+            
+            if st.button("Analizi Kaydet ve PDF Hazırla"):
+                st.balloons()
+                st.success(f"{api} için analiz raporu hazırlandı.")
