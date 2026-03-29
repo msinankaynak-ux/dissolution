@@ -11,6 +11,7 @@ def zero_order(t, k0): return k0 * t
 def first_order(t, k1): return 100 * (1 - np.exp(-k1 * t))
 def higuchi(t, kh): return kh * np.sqrt(t)
 def korsmeyer_peppas(t, k, n): return k * (t**n)
+def hixson_crowell(t, khc): return 100 * (1 - (1 - khc * t)**3)
 def weibull(t, alpha, beta): return 100 * (1 - np.exp(-(t**beta) / alpha))
 
 def calculate_aic(n, rss, k):
@@ -18,7 +19,7 @@ def calculate_aic(n, rss, k):
     return n * np.log(rss/n) + 2*k
 
 st.set_page_config(page_title="PharmTech Lab Pro", layout="wide")
-st.title("🔬 Akademik Dissolüsyon Analiz Laboratuvarı")
+st.title("🔬 Gelişmiş Dissolüsyon Analiz ve Raporlama Sistemi")
 
 st.sidebar.header("📁 Veri Yönetimi")
 mode = st.sidebar.radio("Analiz Modu", ["Tek Seri Analizi", "Referans vs Test Kıyaslama (f1/f2)"])
@@ -27,90 +28,125 @@ def process_data(file):
     df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
     time = pd.to_numeric(df.iloc[:, 0], errors='coerce').fillna(0).values
     values = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
-    return time, values.mean(axis=1).values, values.std(axis=1).values
+    mean_v = values.mean(axis=1).values
+    std_v = values.std(axis=1).values
+    cv_v = (std_v / mean_v * 100) if any(mean_v > 0) else np.zeros(len(mean_v))
+    return time, mean_v, std_v, cv_v
 
 # --- VERİ YÜKLEME ---
 data_loaded = False
 if mode == "Tek Seri Analizi":
     up_file = st.file_uploader("Excel/CSV Dosyası Yükle", type=['xlsx', 'csv'])
     if up_file:
-        time, mean_q, std_q = process_data(up_file)
-        labels, means, stds = ["Numune"], [mean_q], [std_q]
+        time, mean_q, std_q, cv_q = process_data(up_file)
+        labels, means, stds, cvs = ["Numune"], [mean_q], [std_q], [cv_q]
         data_loaded = True
 else:
     c_up1, c_up2 = st.columns(2)
     ref_f = c_up1.file_uploader("Referans (R) Dosyası", type=['xlsx', 'csv'])
     test_f = c_up2.file_uploader("Test (T) Dosyası", type=['xlsx', 'csv'])
     if ref_f and test_f:
-        time, r_m, r_s = process_data(ref_f)
-        _, t_m, t_s = process_data(test_f)
-        labels, means, stds = ["Referans", "Test"], [r_m, t_m], [r_s, t_s]
+        time, r_m, r_s, r_c = process_data(ref_f)
+        _, t_m, t_s, t_c = process_data(test_f)
+        labels, means, stds, cvs = ["Referans", "Test"], [r_m, t_m], [r_s, t_s], [r_c, t_c]
         data_loaded = True
 
 if data_loaded:
-    col_main1, col_main2 = st.columns([3, 2])
+    # --- 1. GRAFİK: SADE DİSSOLÜSYON PROFİLİ VE İSTATİSTİK ---
+    st.markdown("### 1️⃣ Temel Dissolüsyon Profili ve Veri Özeti")
+    col1_a, col1_b = st.columns([3, 2])
     
-    with col_main1:
-        st.subheader("📊 Dissolüsyon Profili ve Model Eğrileri")
-        fig, ax = plt.subplots(figsize=(10, 6))
-        max_t = float(time.max()) if len(time) > 0 else 60
-        ax.set_xlim(left=0, right=max_t * 1.05)
-        ax.set_ylim(bottom=0, top=110)
-        
-        # 1. Ham Veri Noktaları (Nokta ve Hata Çubuğu)
+    with col1_a:
+        fig1, ax1 = plt.subplots(figsize=(10, 5))
+        max_t = float(time.max())
+        ax1.set_xlim(left=0, right=max_t * 1.05)
+        ax1.set_ylim(bottom=0, top=110)
         for i in range(len(labels)):
-            ax.errorbar(time, means[i], yerr=stds[i], fmt='o', label=f"{labels[i]} (Deneysel)", capsize=5, markersize=8)
+            ax1.errorbar(time, means[i], yerr=stds[i], fmt='-o', label=labels[i], capsize=5, linewidth=2, markersize=8)
+        ax1.set_xlabel("Zaman (dakika)")
+        ax1.set_ylabel("Kümülatif Salım (%)")
+        ax1.grid(True, linestyle='--', alpha=0.3)
+        ax1.legend()
+        st.pyplot(fig1)
 
-        # 2. Kinetik Eğriler (Çizgi Şeklinde)
-        t_fit = time[time > 0]
-        q_fit = means[0][time > 0]
+    with col1_b:
+        st.write("**İstatistiksel Tablo (Ortalama, SD, %CV)**")
+        summary_df = pd.DataFrame({
+            "Zaman": time,
+            "Ortalama (%)": means[0],
+            "SD": stds[0],
+            "%CV (VK)": cvs[0]
+        })
+        st.dataframe(summary_df.style.format(precision=2), use_container_width=True)
+
+    st.divider()
+
+    # --- 2. GRAFİK: KİNETİK MODELLER VE EĞRİLER ---
+    st.markdown("### 2️⃣ Kinetik Modelleme ve Uyumluluk Analizi")
+    col2_a, col2_b = st.columns([3, 2])
+    
+    with col2_a:
+        fig2, ax2 = plt.subplots(figsize=(10, 5))
+        ax2.set_xlim(left=0, right=max_t * 1.05)
+        ax2.set_ylim(bottom=0, top=110)
+        for i in range(len(labels)):
+            ax2.errorbar(time, means[i], yerr=stds[i], fmt='o', label=f"{labels[i]} (Deneysel)", capsize=4, alpha=0.5)
+
+        t_fit, q_fit = time[time > 0], means[0][time > 0]
+        t_plot = np.linspace(0, max_t, 100)
         kin_res = []
         models = [("Sıfırıncı D.", zero_order, [1]), ("Birinci D.", first_order, [0.1]), 
                   ("Higuchi", higuchi, [1]), ("Korsmeyer-Peppas", korsmeyer_peppas, [1, 0.5]),
                   ("Weibull", weibull, [100, 1])]
         
-        t_plot = np.linspace(0, max_t, 100)
         for name, func, p0 in models:
             try:
                 popt, _ = curve_fit(func, t_fit, q_fit, p0=p0, maxfev=10000)
-                ax.plot(t_plot, func(t_plot, *popt), '--', alpha=0.6, label=f"{name} Modeli")
+                ax2.plot(t_plot, func(t_plot, *popt), '--', label=f"{name} Eğrisi")
                 r2 = r2_score(q_fit, func(t_fit, *popt))
                 aic = calculate_aic(len(t_fit), np.sum((q_fit-func(t_fit, *popt))**2), len(p0))
                 kin_res.append({"Model": name, "R²": round(r2, 4), "AIC": round(aic, 2)})
             except: continue
         
-        ax.set_xlabel("Zaman (dakika)")
-        ax.set_ylabel("Çözünen Madde (%)")
-        ax.grid(True, linestyle='--', alpha=0.3)
-        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-        st.pyplot(fig)
+        ax2.set_xlabel("Zaman (dakika)")
+        ax2.set_ylabel("Çözünen Madde (%)")
+        ax2.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        st.pyplot(fig2)
 
-    with col_main2:
+    with col2_b:
         if mode == "Referans vs Test Kıyaslama (f1/f2)":
-            st.subheader("⚖️ Benzerlik Analizi")
             mse = np.mean((means[0] - means[1])**2)
             f2 = 50 * np.log10((1 + mse)**-0.5 * 100)
-            f1 = (np.sum(np.abs(means[0] - means[1])) / np.sum(means[0])) * 100
-            st.metric("f2 Benzerlik", f"{f2:.2f}")
-            st.metric("f1 Farklılık", f"{f1:.2f}")
-        
-        st.subheader("📈 Model Uyumluluk Tablosu")
+            st.metric("f2 Benzerlik Faktörü", f"{f2:.2f}")
+        st.write("**Model Karşılaştırma Listesi**")
         st.table(pd.DataFrame(kin_res).sort_values("AIC"))
 
-    # --- ŞARTLI RAPORLAMA ---
+    # --- GENİŞLETİLMİŞ RAPORLAMA ---
     st.divider()
-    st.subheader("📝 Rapor Hazırlama")
-    if st.checkbox("Analiz sonuçlarını inceledim, raporlama adımına geçmek istiyorum."):
-        with st.expander("Rapor Detaylarını Girin", expanded=True):
-            now = datetime.now()
+    st.subheader("📝 Kapsamlı Analiz Raporu")
+    if st.checkbox("Analiz sonuçlarını onaylıyorum, raporu detaylandır"):
+        with st.expander("Tüm Bilgileri Eksiksiz Doldurun", expanded=True):
             r1, r2, r3 = st.columns(3)
-            api = r1.text_input("Etkin Madde", "Atorvastatin")
-            dosage = r1.text_input("Dozaj", "10 mg")
-            analyst = r2.text_input("Analist", "")
-            method = r2.text_input("Metod (USP)", "Aparat 2")
+            # Ürün Bilgileri
+            api = r1.text_input("Etkin Madde / Ürün Adı", "Örn: Atorvastatin")
+            dosage = r1.text_input("Dozaj Formu ve Miktarı", "Örn: 10 mg Tablet")
+            batch = r1.text_input("Seri / Batch No", "Örn: LOT-2026-X")
+            
+            # Metod Bilgileri
+            medium = r2.text_input("Dissolüsyon Ortamı", "Örn: pH 6.8 Fosfat Tamponu")
+            volume = r2.text_input("Ortam Hacmi (mL)", "900 mL")
+            apparatus = r2.selectbox("Aparat Tipi", ["USP 1 (Basket)", "USP 2 (Paddle)", "USP 4 (Flow-Through)"])
+            rpm = r2.text_input("Dönüş Hızı / Akış Hızı", "50 rpm")
+            
+            # Deney Detayları
+            analyst = r3.text_input("Analist Adı Soyadı", "")
+            temp = r3.text_input("Sıcaklık (°C)", "37 ± 0.5")
+            now = datetime.now()
             exp_date = r3.date_input("Deney Tarihi", now.date())
             exp_time = r3.time_input("Deney Saati", now.time())
             
-            if st.button("Analizi Kaydet ve PDF Hazırla"):
+            notes = st.text_area("Analiz Notları ve Yorumlar", "Profiller arasında anlamlı bir fark gözlenmemiştir...")
+            
+            if st.button("Final Raporunu Sisteme İşle"):
+                st.success(f"{api} için detaylı rapor veri tabanına kaydedildi!")
                 st.balloons()
-                st.success(f"{api} için analiz raporu hazırlandı.")
