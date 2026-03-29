@@ -2,103 +2,104 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+from sklearn.metrics import r2_score
 
-# --- HESAPLAMA FONKSİYONLARI ---
+# --- GÜVENLİ HESAPLAMA MOTORLARI ---
+def safe_div(n, d): return n / d if d != 0 else 0
+
 def calculate_de(t, q):
     if len(t) < 2: return 0
     auc = np.trapz(q, t)
     total_area = np.max(t) * 100
-    return (auc / total_area) * 100 if total_area > 0 else 0
+    return safe_div(auc * 100, total_area)
 
 def calculate_mdt(t, q):
     if len(t) < 2 or np.max(q) <= 0: return 0
-    delta_q = np.diff(q, prepend=0)
-    mid_t = []
-    for i in range(len(t)):
-        if i == 0: mid_t.append(t[i]/2)
-        else: mid_t.append((t[i] + t[i-1])/2)
-    mdt = np.sum(delta_q * np.array(mid_t)) / np.max(q)
-    return mdt
+    dq = np.diff(q, prepend=0)
+    # Negatif farkları (veri hataları) sıfırla
+    dq = np.maximum(dq, 0)
+    mid_t = [t[0]/2] + [(t[i] + t[i-1])/2 for i in range(1, len(t))]
+    return safe_div(np.sum(dq * np.array(mid_t)), np.max(q))
 
-# --- SAYFA AYARLARI ---
-st.set_page_config(page_title="PharmTech Lab Pro v7.1", layout="wide")
+def calculate_f2(r, t_val):
+    n = len(r)
+    if n == 0: return 0
+    sum_sq = np.sum((r - t_val)**2)
+    # f2 formülü: 50 * log10([1 + (1/n)*sum(sq)]^-0.5 * 100)
+    val = 1 + (sum_sq / n)
+    return 50 * np.log10(100 / np.sqrt(val))
 
-st.sidebar.title("🔬 PharmTech Pro")
-menu = st.sidebar.radio("Analiz Paneli:", ["📈 Profil Analizi", "📊 Model-Bağımsız Özet", "🧮 Kinetik Modelleme"])
+# --- KİNETİK MODELLER (Hata Korumalı) ---
+def zero_order(t, k): return k * t
+def first_order(t, k): return 100 * (1 - np.exp(-np.clip(k * t, 0, 10)))
+def higuchi(t, k): return k * np.sqrt(t)
+def korsmeyer(t, k, n): return k * (t**np.clip(n, 0.1, 2.0))
 
-test_file = st.sidebar.file_uploader("Test Verisi", type=['xlsx', 'csv'])
-ref_file = st.sidebar.file_uploader("Referans Verisi", type=['xlsx', 'csv'])
+# --- ANA UYGULAMA ---
+st.set_page_config(page_title="PharmTech Lab Pro v8.0", layout="wide")
+st.sidebar.title("🔬 Pro Engineer v8.0")
 
-def load_data(file):
-    if file is None: return None
+test_file = st.sidebar.file_uploader("Test (Excel/CSV)", type=['xlsx', 'csv'])
+ref_file = st.sidebar.file_uploader("Referans (Excel/CSV)", type=['xlsx', 'csv'])
+
+def process_data(file):
+    if not file: return None
     try:
         df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
-        t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
-        v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
-        mask = ~np.isnan(t)
-        return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask]}
+        time = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
+        vals = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
+        # NaN ve negatif zamanları temizle
+        valid = ~np.isnan(time) & (time >= 0)
+        return {"t": time[valid], "mean": vals.mean(axis=1).values[valid], "std": vals.std(axis=1).values[valid]}
     except: return None
 
-test = load_data(test_file)
-ref = load_data(ref_file)
+test = process_data(test_file)
+ref = process_data(ref_file)
+
+menu = st.sidebar.selectbox("İşlem Seçin:", ["Genel Bakış", "Model-Bağımsız Analiz", "Kinetik Modelleme"])
 
 if test:
-    t_t, m_t, s_t = test["t"], test["mean"], test["std"]
-
-    if menu == "📊 Model-Bağımsız Özet":
-        st.subheader("📋 Farmasötik Karşılaştırma Özeti")
+    t, q = test["t"], test["mean"]
+    
+    if menu == "Model-Bağımsız Analiz":
+        st.header("📊 Modelden Bağımsız Karşılaştırma")
         
-        # Test Verisi Hesaplamaları
-        de_t = calculate_de(t_t, m_t)
-        mdt_t = calculate_mdt(t_t, m_t)
-        mdr_t = m_t.max() / mdt_t if mdt_t > 0 else 0
+        # Temel Metrikler
+        de = calculate_de(t, q)
+        mdt = calculate_mdt(t, q)
+        mdr = safe_div(np.max(q), mdt)
         
-        # UI Kartları
-        c1, c2, c3 = st.columns(3)
-        c1.metric("DE (Çözünme Verimi)", f"%{de_t:.2f}")
-        c2.metric("MDT (Ort. Çözünme Süresi)", f"{mdt_t:.2f} dk")
-        c3.metric("MDR (Ort. Çözünme Hızı)", f"{mdr_t:.2f} %/dk")
-
-        st.divider()
-
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Dissolution Efficiency (DE)", f"%{de:.2f}")
+        col2.metric("Mean Dissolution Time (MDT)", f"{mdt:.2f} dk")
+        col3.metric("Mean Dissolution Rate (MDR)", f"{mdr:.2f} %/dk")
+        
         if ref:
-            t_r, m_r = ref["t"], ref["mean"]
-            if len(m_r) == len(m_t):
-                # f1 / f2 Hesaplama
-                f1 = (np.sum(np.abs(m_r - m_t)) / np.sum(m_r)) * 100
-                diff_sq = (m_r - m_t)**2
-                f2 = 50 * np.log10((1 + (1/len(m_r)) * np.sum(diff_sq))**-0.5 * 100)
+            st.divider()
+            # FDA kuralı: f2 için %85 salımdan sonraki tek noktayı al
+            # Mühendislik notu: Veri seti boyutları aynı olmalı
+            if len(ref["t"]) == len(t):
+                f1 = safe_div(np.sum(np.abs(ref["mean"] - q)) * 100, np.sum(ref["mean"]))
+                f2 = calculate_f2(ref["mean"], q)
                 
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    st.write("### Benzerlik Analizi")
-                    st.success(f"**f2 (Similarity):** {f2:.2f}") if f2 >= 50 else st.error(f"**f2 (Similarity):** {f2:.2f}")
-                    st.info(f"**f1 (Difference):** {f1:.2f}")
-                
-                with col_b:
-                    st.write("### Referans Verileri")
-                    de_r = calculate_de(t_r, m_r)
-                    st.write(f"Referans DE: %{de_r:.2f}")
-                    st.write(f"Referans MDT: {calculate_mdt(t_r, m_r):.2f} dk")
+                c1, c2 = st.columns(2)
+                c1.write(f"**f1 (Fark Faktörü):** {f1:.2f}")
+                c2.write(f"**f2 (Benzerlik Faktörü):** {f2:.2f}")
+                if f2 >= 50: st.success("✅ Formülasyonlar Benzer (f2 >= 50)")
+                else: st.error("❌ Benzerlik Şartı Sağlanmadı")
             else:
-                st.warning("⚠️ Test ve Referans zaman noktaları (satır sayısı) uyuşmuyor!")
+                st.warning("⚠️ Satır sayıları farklı olduğu için f1/f2 hesaplanamadı.")
 
-        # Akademik Bilgi Notu
-        with st.expander("📝 Parametrelerin Anlamı ve FDA Kriterleri"):
-            st.markdown("""
-            - **f2 Faktörü:** İki profilin benzer kabul edilmesi için 50-100 arasında olmalıdır.
-            - **f1 Faktörü:** İki profil arasındaki farkı gösterir, 0-15 arası kabul edilebilirdir.
-            - **MDT (Mean Dissolution Time):** İlacın salım hızı karakteristiğidir. Düşük değer hızlı salımı temsil eder.
-            - **DE (Dissolution Efficiency):** Eğri altındaki alanın toplam dikdörtgen alana oranıdır.
-            """)
-
-    elif menu == "📈 Profil Analizi":
-        st.subheader("📈 Kümülatif Çözünme Grafiği")
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.errorbar(t_t, m_t, yerr=s_t, fmt='-ob', label="Test", capsize=5)
-        if ref: ax.errorbar(ref["t"], ref["mean"], yerr=ref["std"], fmt='--sr', label="Referans", alpha=0.6)
-        ax.set_ylim(0, 105); ax.set_xlabel("Zaman (dk)"); ax.set_ylabel("Salım (%)"); ax.legend(); ax.grid(True, alpha=0.2)
-        st.pyplot(fig)
-
-else:
-    st.info("👋 Hocam, lütfen sol panelden verilerinizi yükleyin.")
+    elif menu == "Kinetik Modelleme":
+        st.header("🧮 Kinetik Fit Sonuçları")
+        mask = (t > 0) & (q > 0) & (q < 100) # Fit bölgesini optimize et
+        tf, qf = t[mask], q[mask]
+        
+        results = []
+        models = [("Sıfır Derece", zero_order, [1]), ("Higuchi", higuchi, [1]), ("Korsmeyer-Peppas", korsmeyer, [1, 0.5])]
+        
+        for name, func, p0 in models:
+            try:
+                popt, _ = curve_fit(func, tf, qf, p0=p0, maxfev=2000)
+                r2 = r2_score
