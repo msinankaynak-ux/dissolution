@@ -144,4 +144,3 @@ if test:
                  .format({"R²": "{:.4f}", "AIC": "{:.2f}"}).hide(axis="index"))
 else:
     st.info("Please upload data to start / Lütfen veri yükleyiniz.")
-    
