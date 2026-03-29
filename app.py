@@ -101,4 +101,4 @@ if data_loaded:
 
     # --- ŞARTLI RAPORLAMA ---
     st.divider()
-    st.write("### 📝 Raporlama
+    st.write("### 📝 Raporlama")
