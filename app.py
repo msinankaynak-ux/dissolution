@@ -5,14 +5,16 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from sklearn.metrics import r2_score
 
-# --- GÜVENLİ MATEMATİKSEL FONKSİYONLAR ---
-def safe_div(n, d): return n / d if d != 0 else 0
+# --- HESAPLAMA MOTORLARI (HAM VERİ DOSTU) ---
+def safe_calc_f2(ref_mean, test_mean):
+    n = len(ref_mean)
+    sum_sq = np.sum((ref_mean - test_mean)**2)
+    return 50 * np.log10(100 / np.sqrt(1 + sum_sq/n))
 
 def interpret_n(n):
-    if n <= 0.45: return "Fickian Diffusion (Case I)"
-    elif 0.45 < n < 0.89: return "Anomalous Transport (Non-Fickian)"
-    elif n >= 0.89: return "Case II Transport (Relaxation/Erosion)"
-    return "Unknown"
+    if n <= 0.45: return "Fickian Diffusion"
+    elif 0.45 < n < 0.89: return "Anomalous Transport"
+    return "Case II / Super Case II"
 
 # --- MODELLER ---
 def zero_order(t, k): return k * t
@@ -20,94 +22,95 @@ def first_order(t, k): return 100 * (1 - np.exp(-k * t))
 def higuchi(t, k): return k * np.sqrt(t)
 def korsmeyer(t, k, n): return k * (t**n)
 
-# --- UYGULAMA ---
-st.set_page_config(page_title="PharmTech Lab Pro v10.0", layout="wide")
-st.sidebar.title("🚀 Pro Engineer v10.0")
+# --- ARAYÜZ YAPILANDIRMASI (BEĞENDİĞİNİZ SİDEBAR) ---
+st.set_page_config(page_title="PharmTech Lab Pro v11", layout="wide")
+st.sidebar.title("🔬 PharmTech Lab")
 
+# İlk sevdiğiniz Radio Button yapısı
+menu = st.sidebar.radio(
+    "Analiz Menüsü:",
+    ["📈 Dissolüsyon Profilleri", "🧮 Model-Bağımlı Analiz", "📊 Model-Bağımsız Analiz"]
+)
+
+st.sidebar.divider()
 test_file = st.sidebar.file_uploader("Test Verisi (Excel/CSV)", type=['xlsx', 'csv'])
 ref_file = st.sidebar.file_uploader("Referans Verisi", type=['xlsx', 'csv'])
 
-def load_data(file):
+def load_full_data(file):
     if not file: return None
-    try:
-        df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
-        t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
-        v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
-        # Sadece NaN temizliği yapıyoruz, modelleri kısıtlamıyoruz
-        mask = ~np.isnan(t) & (t >= 0)
-        return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask]}
-    except: return None
+    df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
+    t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
+    v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
+    # Kısıtlama YOK: Sadece NaN olan satırları temizle
+    mask = ~np.isnan(t)
+    return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask]}
 
-test = load_data(test_file)
-ref = load_data(ref_file)
+test = load_full_data(test_file)
+ref = load_full_data(ref_file)
 
 if test:
-    t, q = test["t"], test["mean"]
-    
-    # --- MODEL BAĞIMSIZ ANALİZ ---
-    st.subheader("📋 Karşılaştırmalı Parametreler")
-    c1, c2, c3 = st.columns(3)
-    
-    # MDT ve DE hesaplama
-    dq = np.maximum(np.diff(q, prepend=0), 0)
-    mid_t = [t[0]/2] + [(t[i] + t[i-1])/2 for i in range(1, len(t))]
-    mdt = safe_div(np.sum(dq * np.array(mid_t)), np.max(q))
-    de = safe_div(np.trapz(q, t) * 100, np.max(t) * 100)
-    
-    c1.metric("DE (Dissolution Efficiency)", f"%{de:.2f}")
-    c2.metric("MDT (Mean Dissolution Time)", f"{mdt:.2f} dk")
-    
-    if ref:
-        sum_sq = np.sum((ref["mean"] - q)**2)
-        f2 = 50 * np.log10(100 / np.sqrt(1 + sum_sq/len(q)))
-        c3.metric("f2 (Similarity Factor)", f"{f2:.2f}")
+    t_raw, q_raw = test["t"], test["mean"]
 
-    st.divider()
+    # --- 1. SEKMELİ YAPI: PROFİLLER ---
+    if menu == "📈 Dissolüsyon Profilleri":
+        st.subheader("📍 Kümülatif Salım Profili (Tam Veri)")
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.errorbar(t_raw, q_raw, yerr=test["std"], fmt='-ok', label="Test", capsize=4)
+        if ref:
+            ax.errorbar(ref["t"], ref["mean"], yerr=ref["std"], fmt='--sr', label="Referans", alpha=0.6)
+        ax.set_xlabel("Zaman (dk)"); ax.set_ylabel("Salım (%)"); ax.legend(); ax.grid(True, alpha=0.2)
+        st.pyplot(fig)
 
-    # --- KİNETİK MODELLER VE FİT ---
-    st.subheader("🧮 Kinetik Modelleme ve Salım Mekanizması")
-    
-    # Fit için 0 zamanını ve 0 salımını filtrele (logaritmik modeller için şart)
-    fit_mask = (t > 0) & (q > 0)
-    tf, qf = t[fit_mask], q[fit_mask]
-    
-    fig, ax = plt.subplots(figsize=(10, 4))
-    ax.scatter(t, q, color='black', label="Deneysel Veri", zorder=3)
-    
-    results = []
-    # Modeller: (İsim, Fonksiyon, [Başlangıç Parametreleri], [Alt Sınır], [Üst Sınır])
-    model_list = [
-        ("Sıfır Derece", zero_order, [0.1], [0], [100]),
-        ("Birinci Derece", first_order, [0.01], [0], [5]),
-        ("Higuchi", higuchi, [1.0], [0], [500]),
-        ("Korsmeyer-Peppas", korsmeyer, [1.0, 0.5], [0, 0.01], [100, 2.0])
-    ]
+    # --- 2. SEKMELİ YAPI: KİNETİK ---
+    elif menu == "🧮 Model-Bağımlı Analiz":
+        st.subheader("🔍 Kinetik Modelleme ve Mekanizma")
+        
+        # Grafik için tam veri
+        fig_m, ax_m = plt.subplots(figsize=(10, 5))
+        ax_m.scatter(t_raw, q_raw, color='black', label="Deneysel", zorder=5)
+        
+        results = []
+        models = [
+            ("Sıfır Derece", zero_order, [0.1]),
+            ("Birinci Derece", first_order, [0.01]),
+            ("Higuchi", higuchi, [1.0]),
+            ("Korsmeyer-Peppas", korsmeyer, [1.0, 0.5])
+        ]
 
-    for name, func, p0, b_low, b_up in model_list:
-        try:
-            popt, _ = curve_fit(func, tf, qf, p0=p0, bounds=(b_low, b_up), maxfev=10000)
-            y_fit = func(tf, *popt)
-            r2 = r2_score(qf, y_fit)
-            
-            # Mekanizma Yorumu (Sadece Peppas için)
-            note = ""
-            if name == "Korsmeyer-Peppas":
-                note = interpret_n(popt[1])
-            
-            results.append({
-                "Model": name, 
-                "R²": f"{r2:.4f}", 
-                "K Değeri": f"{popt[0]:.4f}", 
-                "n Değeri": f"{popt[1]:.4f}" if len(popt)>1 else "-",
-                "Mekanizma / Not": note
-            })
-            ax.plot(tf, y_fit, label=f"{name} (R²:{r2:.3f})")
-        except:
-            results.append({"Model": name, "R²": "Hata", "K Değeri": "-", "n Değeri": "-", "Mekanizma / Not": "Fit Edilemedi"})
+        for name, func, p0 in models:
+            try:
+                # Modellerde 0 noktasında patlama olmaması için fit sırasında t > 0 filtrelemesi (Sadece fit için!)
+                fit_mask = (t_raw > 0) & (q_raw > 0)
+                popt, _ = curve_fit(func, t_raw[fit_mask], q_raw[fit_mask], p0=p0, maxfev=5000)
+                
+                y_fit = func(t_raw, *popt) # Grafiği tüm zamanlar için çiz
+                r2 = r2_score(q_raw, y_fit)
+                
+                note = interpret_n(popt[1]) if name == "Korsmeyer-Peppas" else "-"
+                results.append({"Model": name, "R²": f"{r2:.4f}", "K": f"{popt[0]:.4f}", "n": popt[1] if len(popt)>1 else "-", "Yorum": note})
+                ax_m.plot(t_raw, y_fit, label=f"{name} (R²:{r2:.3f})")
+            except:
+                results.append({"Model": name, "R²": "Hata", "K": "-", "n": "-", "Yorum": "Yakınsama Sağlanamadı"})
 
-    ax.set_xlabel("Zaman (dk)"); ax.set_ylabel("Kümülatif Salım (%)"); ax.legend(); ax.grid(True, alpha=0.3)
-    st.pyplot(fig)
-    st.table(pd.DataFrame(results))
+        ax_m.legend(); ax_m.grid(alpha=0.2)
+        st.pyplot(fig_m)
+        st.table(pd.DataFrame(results))
+
+    # --- 3. SEKMELİ YAPI: MODEL BAĞIMSIZ ---
+    elif menu == "📊 Model-Bağımsız Analiz":
+        st.subheader("📏 Parametrik Özet")
+        # DE ve MDT Hesaplama (Tüm veri üzerinden)
+        de = (np.trapz(q_raw, t_raw) / (np.max(t_raw) * 100)) * 100
+        
+        c1, c2 = st.columns(2)
+        c1.metric("Dissolution Efficiency (DE)", f"%{de:.2f}")
+        
+        if ref:
+            if len(ref["t"]) == len(t_raw):
+                f2 = safe_calc_f2(ref["mean"], q_raw)
+                c2.metric("f2 Similarity", f"{f2:.2f}")
+                if f2 >= 50: st.success("Profiller Benzer.")
+                else: st.error("Profiller Benzer Değil.")
 
 else:
-    st.info("Hocam verileri yüklediğinde tüm kinetikler burada görünecek.")
+    st.info("Hocam hoş geldiniz. Sidebar üzerinden dosyalarınızı yükleyerek başlayabilirsiniz.")
