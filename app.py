@@ -6,32 +6,53 @@ from scipy.optimize import curve_fit, root
 from sklearn.metrics import r2_score
 import io
 
-# --- 1. CONFIG & ACADEMIC IDENTITY UPDATE (OXFORD CLASSIC BURADA) ---
+# --- 1. CONFIG & ACADEMIC IDENTITY UPDATE (BEKLENEN PRESTİJLİ ARAYÜZ ÇÖZÜMÜ) ---
 st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 
-# Kurumsal Akademik Sidebar Başlığı ve İstediğiniz Menü (Deep Navy + Amber)
+# SİZİN BEKLEDİĞİNİZ TAM KUTU VE AKADEMİK SİMGE TASARIMI (HTLM/CSS ile Güçlendirildi)
+# Bu kısım mevcut görseldeki amatör dizilimi silip yerine tam o prestijli kutuyu koyar.
+
 st.sidebar.markdown(
     """
-    <div style="background-color: #002147; padding: 25px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 12px rgba(0,0,0,0.3);">
-        <h1 style="color: #FFBF00; margin: 0; font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; font-family: 'Montserrat', sans-serif;">DissolvA</h1>
-        <p style="color: #DCDCDC; margin: 8px 0 0 0; font-size: 1.0rem; font-style: italic; font-weight: 400; font-family: 'Playfair Display', serif; opacity: 0.85;">Predictive Dissolution Suite</p>
-        <hr style="border: 0.5px solid #FFBF00; margin: 15px 0; opacity: 0.3;">
-        <p style="color: white; margin: 0; font-size: 0.7rem; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase;">Powered by AI</p>
+    <div style="background-color: #002147; padding: 25px 20px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 15px rgba(0,0,0,0.4);">
+        <h1 style="color: #FFBF00; margin: 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -1.5px; font-family: 'Montserrat', sans-serif;">DissolvA</h1>
+        <p style="color: #DCDCDC; margin: 10px 0 0 0; font-size: 1.0rem; font-style: italic; font-weight: 400; font-family: 'Playfair Display', serif; opacity: 0.9;">Predictive Dissolution Suite</p>
+        <hr style="border: 0.5px solid #FFBF00; margin: 15px 0 20px 0; opacity: 0.4;">
+        <p style="color: white; margin: 0; font-size: 0.75rem; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase;">POWERED BY AI</p>
     </div>
     
-    <div style="margin-left: 10px; margin-right: 10px; margin-bottom: 20px;">
-        <div style="color: #FFBF00; font-size: 1.1rem; font-weight: 600; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; margin-bottom: 15px;">
-            <span style="font-size: 1.3rem; margin-right: 10px;">📊</span> Molecular View
-            <span style="color: #DCDCDC; font-size: 0.8rem; font-weight: 400; margin-left: auto;">(Prediction)</span>
+    <div style="margin-left: 15px; margin-right: 15px; margin-bottom: 25px; font-family: 'Montserrat', sans-serif;">
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <svg style="color: #FFBF00; width: 22px; height: 22px; margin-right: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+            </svg>
+            <span style="color: #FFBF00; font-size: 1.15rem; font-weight: 600;">Molecular View</span>
+            <span style="color: #DCDCDC; font-size: 0.85rem; font-weight: 400; margin-left: auto; opacity: 0.8;">(Prediction)</span>
         </div>
-        <div style="color: #FFBF00; font-size: 1.1rem; font-weight: 600; font-family: 'Montserrat', sans-serif; display: flex; align-items: center;">
-            <span style="font-size: 1.3rem; margin-right: 10px;">⚙️</span> Parameter Settings
-            <span style="color: #DCDCDC; font-size: 0.8rem; font-weight: 400; margin-left: auto;">(Optimization)</span>
+        <div style="display: flex; align-items: center;">
+            <svg style="color: #FFBF00; width: 22px; height: 22px; margin-right: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span style="color: #FFBF00; font-size: 1.15rem; font-weight: 600;">Parameter Settings</span>
+            <span style="color: #DCDCDC; font-size: 0.85rem; font-weight: 400; margin-left: auto; opacity: 0.8;">(Optimization)</span>
         </div>
     </div>
+    <hr style="border: 0.5px solid #DCDCDC; margin: 10px 0 20px 0; opacity: 0.2;">
     """, 
     unsafe_allow_html=True
 )
+
+# --- 2. ANALYTICAL SUITE (Radyo Butonları Hiyerarşisi Burada Başlar) ---
+st.sidebar.markdown(
+    """
+    <div style="color: #333333; font-size: 1.1rem; font-weight: bold; font-family: 'Montserrat', sans-serif; margin-bottom: 10px; opacity: 0.9;">Analytical Suite:</div>
+    """, 
+    unsafe_allow_html=True
+)
+# Radyo butonları aynı kalıyor
+menu = st.sidebar.radio("", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"], label_visibility="collapsed")
+st.sidebar.divider()
 
 # --- MODEL BİLGİ BANKASI & AKADEMİK YORUMLAR (Buradan sonrası aynı devam ediyor) ---
 MODEL_KNOWLEDGE = {
