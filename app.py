@@ -1,4 +1,4 @@
-import streamlit as st
+mport streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,7 +9,7 @@ import io
 # --- 1. CONFIG ---
 st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 
-# --- 2. SIDEBAR LOGO VE TASARIM (HATASIZ VE TEMİZ RENDER) ---
+# --- 2. SIDEBAR LOGO VE TASARIM ---
 sidebar_header_html = """
 <div style="background-color: #002147; padding: 25px 20px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 15px rgba(0,0,0,0.4);">
     <h1 style="color: #FFBF00; margin: 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -1px; font-family: 'Montserrat', sans-serif;">DissolvA™</h1>
@@ -38,7 +38,7 @@ sidebar_header_html = """
 st.sidebar.markdown(sidebar_header_html, unsafe_allow_html=True)
 
 # --- 3. ANALYTICAL SUITE SELECTION ---
-st.sidebar.markdown("### Analytical Suite:")
+st.sidebar.markdown('<div style="color: #333333; font-size: 1.1rem; font-weight: bold; margin-bottom: 10px;">Analytical Suite:</div>', unsafe_allow_html=True)
 menu = st.sidebar.radio(
     label="Menu Selection",
     options=["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"],
@@ -46,42 +46,7 @@ menu = st.sidebar.radio(
 )
 st.sidebar.divider()
 
-# --- MODEL BİLGİ BANKASI VE GERİ KALAN KODLARINIZ BURADAN İTİBAREN DEVAM EDER ---
-# --- 4. MODEL BİLGİ BANKASI VE DEVAMI ---
-# Kodunuzun geri kalanı buradan itibaren (MODEL_KNOWLEDGE...) devam etmeli
-
-<div style="margin-left: 15px; margin-right: 15px; margin-bottom: 25px;">
-    <div style="display: flex; align-items: center; margin-bottom: 15px;">
-        <span style="font-size: 1.2rem; margin-right: 12px;">🧬</span>
-        <span style="color: #FFBF00; font-size: 1.15rem; font-weight: 600;">Molecular View</span>
-        <span style="color: #DCDCDC; font-size: 0.85rem; font-weight: 400; margin-left: auto; opacity: 0.8;">(Prediction)</span>
-    </div>
-    <div style="display: flex; align-items: center;">
-        <span style="font-size: 1.2rem; margin-right: 12px;">⚙️</span>
-        <span style="color: #FFBF00; font-size: 1.15rem; font-weight: 600;">Parameter Settings</span>
-        <span style="color: #DCDCDC; font-size: 0.85rem; font-weight: 400; margin-left: auto; opacity: 0.8;">(Optimization)</span>
-    </div>
-</div>
-<hr style="border: 0.5px solid #DCDCDC; margin: 10px 0 20px 0; opacity: 0.2;">
-"""
-
-# HTML'i güvenli bir şekilde sidebar'a basıyoruz
-st.sidebar.markdown(logo_ve_ai_html, unsafe_allow_html=True)
-
-# --- 3. ANALYTICAL SUITE SELECTION ---
-st.sidebar.markdown("### Analytical Suite:")
-menu = st.sidebar.radio("", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"], label_visibility="collapsed")
-Neyi düzelttik?
-
-# --- 2. ANALYTICAL SUITE SELECTION ---
-st.sidebar.markdown(
-    """<div style="color: #333333; font-size: 1.1rem; font-weight: bold; font-family: 'Montserrat', sans-serif; margin-bottom: 10px; opacity: 0.9;">Analytical Suite:</div>""", 
-    unsafe_allow_html=True
-)
-menu = st.sidebar.radio("", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"], label_visibility="collapsed")
-st.sidebar.divider()
-
-# --- MODEL BİLGİ BANKASI (Orijinal Detaylı Liste) ---
+# --- 4. MODEL BİLGİ BANKASI ---
 MODEL_KNOWLEDGE = {
     "Türkçe": {
         "Sıfır Derece": "Sıfır derece kinetiğine uymaktadır. Zamandan bağımsız sabit hızda salımı açıklar.",
@@ -139,7 +104,7 @@ LANG_DICT = {
     }
 }
 
-# --- 3. MATEMATİKSEL FONKSİYONLAR ---
+# --- 5. MATEMATİKSEL FONKSİYONLAR ---
 def zero_order(t, k): return k * t
 def first_order(t, k): return 100 * (1 - np.exp(-k * t))
 def higuchi(t, k): return k * np.sqrt(t)
@@ -194,22 +159,18 @@ def generate_excel_report(test_data, model_results, best_model, mdt_de, f1f2=Non
         if f1f2:
             summary_data["Parametre"].extend(["f1 (Farklılık Faktörü)", "f2 (Benzerlik Faktörü)"])
             summary_data["Değer"].extend([f"{f1f2[0]:.2f}", f"{f1f2[1]:.2f}"])
-            
         pd.DataFrame(summary_data).to_excel(writer, sheet_name='Genel_Ozet', index=False)
-        
         if model_results is not None:
             pd.DataFrame(model_results).to_excel(writer, sheet_name='Kinetik_Modeller', index=False)
-        
         data_sheet = pd.DataFrame({
             "Zaman": test_data['t'],
             "Ortalama Salım (%)": test_data['mean'],
             "Standart Sapma": test_data['std']
         })
         data_sheet.to_excel(writer, sheet_name='Analiz_Verileri', index=False)
-        
     return output.getvalue()
 
-# --- 4. VERİ GİRİŞİ VE İŞLEME ---
+# --- 6. VERİ GİRİŞİ VE İŞLEME ---
 test_file = st.sidebar.file_uploader("Test Verisi (XLSX/CSV)", type=['xlsx', 'csv'])
 ref_file = st.sidebar.file_uploader("Referans Verisi (Opsiyonel)", type=['xlsx', 'csv'])
 st.sidebar.divider()
@@ -218,11 +179,14 @@ L = LANG_DICT[selected_lang]
 
 def process_data(file):
     if file is None: return None
-    df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
-    t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
-    v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
-    mask = ~np.isnan(t)
-    return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask], "n": v.shape[1]}
+    try:
+        df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
+        t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
+        v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
+        mask = ~np.isnan(t)
+        return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask], "n": v.shape[1]}
+    except:
+        return None
 
 test_data = process_data(test_file)
 ref_data = process_data(ref_file)
@@ -243,8 +207,7 @@ if test_data:
             L['time']: t_raw, 
             f"Mean (n={test_data['n']})": q_raw, 
             "SD": test_data["std"], 
-            "RSD (%)": rsd,
-            "VK (%)": rsd
+            "RSD (%)": rsd
         })
         st.table(stats_df.style.format("{:.2f}").hide(axis="index"))
         
@@ -259,10 +222,8 @@ if test_data:
         c1, c2 = st.columns(2)
         with c1:
             st.metric("Dissolution Efficiency (DE %)", f"{de:.2f}%")
-            st.caption("Salım eğrisi altındaki alanın verimliliği.")
         with c2:
             st.metric("Mean Dissolution Time (MDT)", f"{mdt:.2f} {L['unit']}")
-            st.caption(f"Ortalama çözünme süresi ({L['unit']}).")
 
     elif menu == "🧮 Kinetik Model Fitting":
         st.subheader(L['model_title'])
@@ -305,9 +266,6 @@ if test_data:
         st.divider(); st.subheader(L['report'])
         st.info(f"🏆 **{best_name}**: {MODEL_KNOWLEDGE[selected_lang].get(best_name, '')}")
         
-        with st.expander("Uyumsuz Modeller Hakkında Notlar / Notes on Unsuitable Models"):
-            st.write(UNSUITABLE_DESC[selected_lang])
-
         st.subheader(L['graph'])
         sel = st.multiselect("Grafik Modelleri:", list(fit_plots.keys()), default=[best_name])
         if sel:
@@ -333,41 +291,25 @@ if test_data:
         st.subheader("f1 & f2 Faktörleri (Similarity & Difference Factors)")
         if ref_data is not None:
             common_len = min(len(test_data["t"]), len(ref_data["t"]))
-            t_eval = test_data["t"][:common_len]
             test_mean = test_data["mean"][:common_len]
             ref_mean = ref_data["mean"][:common_len]
             f1, f2 = calculate_f1_f2(ref_mean, test_mean)
             
             col1, col2 = st.columns(2)
-            with col1:
-                st.metric(label="f1 (Difference Factor)", value=f"{f1:.2f}")
-                st.caption("Beklenen: 0 - 15")
-            with col2:
-                st.metric(label="f2 (Similarity Factor)", value=f"{f2:.2f}")
-                st.caption("Beklenen: 50 - 100")
+            with col1: st.metric(label="f1 (Difference Factor)", value=f"{f1:.2f}")
+            with col2: st.metric(label="f2 (Similarity Factor)", value=f"{f2:.2f}")
 
-            if f2 >= 50:
-                st.success(f"✅ PROFİLLER BENZER: f2 değeri {f2:.2f} ile limitlerin üzerindedir.")
-            else:
-                st.error(f"❌ PROFİLLER FARKLI: f2 değeri {f2:.2f} ile limitlerin altındadır.")
-
-            fig_comp, ax_comp = plt.subplots(figsize=(10,4))
-            ax_comp.plot(t_eval, ref_mean, 's--b', label="Referans")
-            ax_comp.plot(t_eval, test_mean, 'o-r', label="Test")
-            ax_comp.set_title(f"Profil Karşılaştırma (n_nokta={common_len})")
-            ax_comp.set_xlabel(L['time']); ax_comp.set_ylabel(L['release'] + " (%)")
-            ax_comp.legend(); ax_comp.grid(True, alpha=0.2)
-            st.pyplot(fig_comp)
+            if f2 >= 50: st.success(f"✅ PROFİLLER BENZER")
+            else: st.error(f"❌ PROFİLLER FARKLI")
         else:
             st.info("💡 f1 ve f2 hesaplaması için lütfen sol menüden 'Referans Verisi' yükleyiniz.")
 
-# --- RAPORLAMA BUTONU VE ALT BİLGİ ---
+# --- 7. RAPORLAMA BUTONU ---
 st.sidebar.divider()
 if test_data:
     report_mdt_de = (de, mdt)
     report_f1f2 = (f1, f2) if (f1 is not None and f2 is not None) else None
     excel_data = generate_excel_report(test_data, results, best_name, report_mdt_de, report_f1f2)
-    
     st.sidebar.download_button(
         label="📥 DissolvA Raporunu İndir",
         data=excel_data,
