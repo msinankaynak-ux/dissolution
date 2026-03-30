@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit, root
 from sklearn.metrics import r2_score
+import io
 
 # --- 1. MODEL BİLGİ BANKASI & AKADEMİK YORUMLAR ---
 MODEL_KNOWLEDGE = {
@@ -14,7 +15,7 @@ MODEL_KNOWLEDGE = {
         "Korsmeyer-Peppas": "Korsmeyer-Peppas modeline uymaktadır. Mekanizma 'n' üsteli ile tanımlanır.",
         "Hixson-Crowell": "Hixson-Crowell kinetiğine uymaktadır. Yüzey alanı ve çapın zamanla küçüldüğü (erozyon) durumları açıklar.",
         "Hopfenberg": "Hopfenberg modeline uymaktadır. Yüzeyden aşınan (surface-eroding) polimerlerin geometrik (levha, silindir, küre) erozyonunu açıklar.",
-        "Makoid-Banakar": "Makoid-Banakar modeline uymaktadır. Hem difüzyon hem de birinci dereceyi kapsar; başlangıçtaki 'burst release' (ani salım) etkisini ölçer.",
+        "Makoid-Banakar": "Makoid-Banakar modeline uymaktadır. Hem difüzyon nem de birinci dereceyi kapsar; başlangıçtaki 'burst release' (ani salım) etkisini ölçer.",
         "Square Root of Mass": "Kütle karekök modeline uymaktadır. Hixson-Crowell'e benzer ancak erozyonu kütle değişimi üzerinden hesaplar.",
         "Peppas-Sahlin": "Peppas-Sahlin modeline uymaktadır. Difüzyonel ve polimer relaksasyonu (erozyon) katkısını birbirinden ayırır.",
         "Gompertz": "Gompertz modeline uymaktadır. Gecikmeli başlayan sigmoid (S-tipi) profilleri açıklar.",
@@ -75,189 +76,4 @@ def gompertz(t, xmax, k, i): return xmax * np.exp(-np.exp(k * (t - i)))
 def weibull_complex(t, alpha, beta, td): return 100 * (1 - np.exp(- (np.maximum(t - td, 0)**beta) / alpha))
 def hopfenberg(t, k, n): return 100 * (1 - (1 - np.maximum(k * t, 0))**n)
 def makoid_banakar(t, k, n, c): return k * (t**n) * np.exp(-c * t)
-def sq_root_mass(t, k): return 100 * (1 - np.sqrt(np.maximum(1 - k * t, 0)))
-def quadratic(t, a, b): return a*t + b*(t**2)
-def logistic(t, a, b, c): return a / (1 + np.exp(-b * (t - c)))
-def peppas_rincon(t, k, n): return k * (t**n)
-
-def baker_lonsdale_for_fit(t_data, k):
-    def bl_root(q_guess, t_single, k_fit):
-        q_norm = np.clip(q_guess / 100.0, 0.0001, 0.9999)
-        return 1.5 * (1 - (1 - q_norm)**(2/3)) - q_norm - k_fit * t_single
-    return np.array([root(bl_root, 50.0, args=(ts, k)).x[0] for ts in t_data])
-
-def calculate_aic(n, rss, p_count):
-    if n <= p_count or rss <= 0: return 9999
-    return n * np.log(rss/n) + 2 * p_count
-
-def calculate_f1_f2(ref_mean, test_mean):
-    R = np.array(ref_mean)
-    T = np.array(test_mean)
-    n = len(R)
-    f1 = (np.sum(np.abs(R - T)) / np.sum(R)) * 100
-    sum_sq_diff = np.sum((R - T)**2)
-    f2 = 50 * np.log10((1 + (1/n) * sum_sq_diff)**-0.5 * 100)
-    return f1, f2
-
-def calculate_model_independent(t, q):
-    dt = np.diff(t, prepend=0)
-    auc = np.cumsum(q * dt)
-    de = (auc[-1] / (t[-1] * 100)) * 100
-    dq = np.diff(q, prepend=0)
-    t_mid = t - (dt / 2)
-    mdt = np.sum(t_mid * dq) / q[-1] if q[-1] > 0 else 0
-    return de, mdt
-
-# --- 3. ARAYÜZ VE VERİ İŞLEME ---
-st.set_page_config(page_title="PharmTech Lab v16.0", layout="wide")
-st.sidebar.title("🔬 PharmTech Lab")
-
-menu = st.sidebar.radio("Ana İşlemler:", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"])
-st.sidebar.divider()
-test_file = st.sidebar.file_uploader("Test Verisi (XLSX/CSV)", type=['xlsx', 'csv'])
-ref_file = st.sidebar.file_uploader("Referans Verisi (Opsiyonel)", type=['xlsx', 'csv'])
-st.sidebar.divider()
-selected_lang = st.sidebar.selectbox("Dil / Language:", ["Türkçe", "English"])
-L = LANG_DICT[selected_lang]
-
-def process_data(file):
-    if file is None: return None
-    df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
-    t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
-    v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
-    mask = ~np.isnan(t)
-    return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask], "n": v.shape[1]}
-
-test_data = process_data(test_file)
-ref_data = process_data(ref_file)
-
-if test_data:
-    t_raw, q_raw = test_data["t"], test_data["mean"]
-    
-    if menu == "📈 Salım Profilleri":
-        st.subheader(L['stats'])
-        rsd = (test_data["std"] / np.where(q_raw==0, 1, q_raw)) * 100
-        stats_df = pd.DataFrame({
-            L['time']: t_raw, 
-            f"Mean (n={test_data['n']})": q_raw, 
-            "SD": test_data["std"], 
-            "RSD (%)": rsd,
-            "VK (%)": rsd
-        })
-        st.table(stats_df.style.format("{:.2f}").hide(axis="index"))
-        
-        fig, ax = plt.subplots(figsize=(10,5))
-        ax.errorbar(t_raw, q_raw, yerr=test_data["std"], fmt='-ok', label="Test", capsize=5)
-        if ref_data:
-            ax.errorbar(ref_data["t"], ref_data["mean"], yerr=ref_data["std"], fmt='--sr', label="Referans", capsize=5)
-        ax.set_xlabel(L['time']); ax.set_ylabel(L['release'] + " (%)"); ax.legend(); ax.grid(alpha=0.3)
-        st.pyplot(fig)
-        
-        de, mdt = calculate_model_independent(t_raw, q_raw)
-        
-        st.divider()
-        c1, c2 = st.columns(2)
-        with c1:
-            st.metric("Dissolution Efficiency (DE %)", f"{de:.2f}%")
-            st.caption("Salım eğrisi altındaki alanın verimliliği.")
-        with c2:
-            st.metric("Mean Dissolution Time (MDT)", f"{mdt:.2f} {L['unit']}")
-            st.caption(f"Ortalama çözünme süresi ({L['unit']}).")
-
-    elif menu == "🧮 Kinetik Model Fitting":
-        st.subheader(L['model_title'])
-        tf, qf = t_raw[(t_raw>0)&(q_raw>0)], q_raw[(t_raw>0)&(q_raw>0)]
-        
-        model_defs = [
-            ("Sıfır Derece", zero_order, [0.1], [0], [100]), ("Birinci Derece", first_order, [0.01], [0], [10]),
-            ("Higuchi", higuchi, [1.0], [0], [500]), ("Korsmeyer-Peppas", korsmeyer, [1.0, 0.5], [0, 0.1], [500, 2.0]),
-            ("Hixson-Crowell", hixson, [0.001], [0], [1]), ("Hopfenberg", hopfenberg, [0.01, 1.0], [0, 1.0], [1, 3.0]),
-            ("Makoid-Banakar", makoid_banakar, [1.0, 0.5, 0.01], [0, 0, 0], [500, 2, 1]),
-            ("Square Root of Mass", sq_root_mass, [0.01], [0], [1]), ("Kopcha", kopcha, [1.0, 0.1], [0, -10], [500, 100]),
-            ("Peppas-Sahlin", peppas_sahlin, [0.1, 0.1, 0.5], [0, 0, 0.1], [100, 100, 1.5]),
-            ("Gompertz", gompertz, [100, 0.1, 10], [50, 0, 0], [110, 5, 500]),
-            ("Weibull (w/ Td)", weibull_complex, [50, 1.0, 1.0], [1, 0.1, 0], [10000, 10.0, 100]),
-            ("Quadratic", quadratic, [0.1, 0.01], [0, -1], [100, 1]), ("Logistic", logistic, [100, 0.1, 10], [50, 0, 0], [110, 2, 500]),
-            ("Peppas-Rincon", peppas_rincon, [1.0, 0.5], [0, 0.1], [500, 2.0])
-        ]
-        
-        results = []; fit_plots = {}
-        try:
-            popt_bl, _ = curve_fit(baker_lonsdale_for_fit, t_raw, q_raw, p0=[0.001])
-            y_bl = baker_lonsdale_for_fit(t_raw, *popt_bl)
-            results.append({"Model": "Baker-Lonsdale", "R²": r2_score(q_raw, y_bl), "AIC": calculate_aic(len(t_raw), np.sum((q_raw-y_bl)**2), 1), "Durum": L['calc']})
-            fit_plots["Baker-Lonsdale"] = (baker_lonsdale_for_fit, popt_bl)
-        except: results.append({"Model": "Baker-Lonsdale", "R²": 0, "AIC": 9999, "Durum": L['unsuitable']})
-
-        for name, func, p0, low, up in model_defs:
-            try:
-                popt, _ = curve_fit(func, tf, qf, p0=p0, bounds=(low, up), maxfev=15000)
-                y_p = func(tf, *popt)
-                results.append({"Model": name, "R²": r2_score(qf, y_p), "AIC": calculate_aic(len(tf), np.sum((qf-y_p)**2), len(p0)), "Durum": L['calc']})
-                fit_plots[name] = (func, popt)
-            except: results.append({"Model": name, "R²": 0, "AIC": 9999, "Durum": L['unsuitable']})
-
-        df_res = pd.DataFrame(results)
-        best_idx = df_res[df_res["Durum"] == L['calc']]["AIC"].idxmin()
-        best_name = df_res.loc[best_idx, "Model"]
-        st.table(df_res.style.format({"R²": "{:.4f}", "AIC": "{:.2f}"}).hide(axis="index"))
-
-        st.divider(); st.subheader(L['report'])
-        st.info(f"🏆 **{best_name}**: {MODEL_KNOWLEDGE[selected_lang].get(best_name, '')}")
-        
-        with st.expander("Uyumsuz Modeller Hakkında Notlar / Notes on Unsuitable Models"):
-            st.write(UNSUITABLE_DESC[selected_lang])
-
-        st.subheader(L['graph'])
-        sel = st.multiselect("Grafik Modelleri:", list(fit_plots.keys()), default=[best_name])
-        if sel:
-            fig_m, ax_m = plt.subplots(figsize=(10,6)); ax_m.scatter(t_raw, q_raw, c='k', label="Data")
-            t_plot = np.linspace(0, t_raw.max(), 100)
-            for m in sel:
-                f, p = fit_plots[m]; ax_m.plot(t_plot, f(t_plot, *p), label=m)
-            ax_m.legend(); ax_m.set_xlabel(L['time']); ax_m.set_ylabel(L['release']+" (%)"); st.pyplot(fig_m)
-
-    elif menu == "🧬 IVIVC Analizi":
-        st.subheader("Wagner-Nelson Absorbsiyon Tahmini")
-        ke = st.number_input("Eliminasyon Sabiti (ke) [1/h]:", value=0.1500, format="%.4f")
-        dt = np.diff(t_raw, prepend=0)
-        cum_auc = np.cumsum(q_raw * dt)
-        total_auc = cum_auc[-1] + (q_raw[-1] / ke if ke > 0 else 0)
-        f_abs = (q_raw + ke * cum_auc) / (ke * total_auc if total_auc > 0 else 1)
-        ivivc_df = pd.DataFrame({L['time']: t_raw, "Release (%)": q_raw, "Fraction Absorbed": f_abs})
-        st.table(ivivc_df.style.format("{:.4f}").hide(axis="index"))
-        fig_iv, ax_iv = plt.subplots(); ax_iv.plot(t_raw, f_abs, 'r-o')
-        ax_iv.set_xlabel(L['time']); ax_iv.set_ylabel("Absorbe Olan Fraksiyon (Fa)"); st.pyplot(fig_iv)
-        
-    elif menu == "📊 f1 & f2 Benzerlik Analizi":
-        st.subheader("f1 & f2 Faktörleri (Similarity & Difference Factors)")
-        
-        if ref_data is not None:
-            common_len = min(len(test_data["t"]), len(ref_data["t"]))
-            t_eval = test_data["t"][:common_len]
-            test_mean = test_data["mean"][:common_len]
-            ref_mean = ref_data["mean"][:common_len]
-            f1, f2 = calculate_f1_f2(ref_mean, test_mean)
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric(label="f1 (Difference Factor)", value=f"{f1:.2f}")
-                st.caption("Beklenen: 0 - 15")
-            with col2:
-                st.metric(label="f2 (Similarity Factor)", value=f"{f2:.2f}")
-                st.caption("Beklenen: 50 - 100")
-
-            if f2 >= 50:
-                st.success(f"✅ PROFİLLER BENZER: f2 değeri {f2:.2f} ile limitlerin üzerindedir.")
-            else:
-                st.error(f"❌ PROFİLLER FARKLI: f2 değeri {f2:.2f} ile limitlerin altındadır.")
-
-            fig_comp, ax_comp = plt.subplots(figsize=(10,4))
-            ax_comp.plot(t_eval, ref_mean, 's--b', label="Referans")
-            ax_comp.plot(t_eval, test_mean, 'o-r', label="Test")
-            ax_comp.set_title(f"Profil Karşılaştırma (n_nokta={common_len})")
-            ax_comp.set_xlabel(L['time']); ax_comp.set_ylabel(L['release'] + " (%)")
-            ax_comp.legend(); ax_comp.grid(True, alpha=0.2)
-            st.pyplot(fig_comp)
-        else:
-            st.info("💡 f1 ve f2 hesaplaması için lütfen sol menüden 'Referans Verisi' yükleyiniz.")
+def
