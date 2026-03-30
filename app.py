@@ -1,4 +1,4 @@
-mport streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -53,42 +53,37 @@ MODEL_KNOWLEDGE = {
         "Birinci Derece": "Birinci derece kinetiğine uymaktadır. Salım hızı, kalan ilaç konsantrasyonuna bağlıdır.",
         "Higuchi": "Higuchi kinetiğine uymaktadır. Matris sistemlerinden difüzyon temelli salımı açıklar.",
         "Korsmeyer-Peppas": "Korsmeyer-Peppas modeline uymaktadır. Mekanizma 'n' üsteli ile tanımlanır.",
-        "Hixson-Crowell": "Hixson-Crowell kinetiğine uymaktadır. Yüzey alanı ve çapın zamanla küçüldüğü (erozyon) durumları açıklar.",
-        "Hopfenberg": "Hopfenberg modeline uymaktadır. Yüzeyden aşınan (surface-eroding) polimerlerin geometrik (levha, silindir, küre) erozyonunu açıklar.",
-        "Makoid-Banakar": "Makoid-Banakar modeline uymaktadır. Hem difüzyon hem de birinci dereceyi kapsar; başlangıçtaki 'burst release' etkisini ölçer.",
-        "Square Root of Mass": "Kütle karekök modeline uymaktadır. Hixson-Crowell'e benzer ancak erozyonu kütle değişimi üzerinden hesaplar.",
-        "Peppas-Sahlin": "Peppas-Sahlin modeline uymaktadır. Difüzyonel ve polimer relaksasyonu (erozyon) katkısını birbirinden ayırır.",
-        "Gompertz": "Gompertz modeline uymaktadır. Gecikmeli başlayan sigmoid (S-tipi) profilleri açıklar.",
-        "Weibull (w/ Td)": "Weibull modeline uymaktadır. Profilin ölçek, şekil ve gecikme süresini karakterize eder.",
+        "Hixson-Crowell": "Hixson-Crowell kinetiğine uymaktadır. Yüzey alanı ve çapın zamanla küçüldüğü erozyonu açıklar.",
+        "Hopfenberg": "Hopfenberg modeline uymaktadır. Yüzeyden aşınan polimerlerin geometrik erozyonunu açıklar.",
+        "Makoid-Banakar": "Makoid-Banakar modeline uymaktadır. Hem difüzyon hem de birinci dereceyi kapsar.",
+        "Square Root of Mass": "Kütle karekök modeline uymaktadır. Erozyonu kütle değişimi üzerinden hesaplar.",
+        "Peppas-Sahlin": "Peppas-Sahlin modeline uymaktadır. Difüzyonel ve erozyon katkısını birbirinden ayırır.",
+        "Gompertz": "Gompertz modeline uymaktadır. Gecikmeli başlayan sigmoid profilleri açıklar.",
+        "Weibull (w/ Td)": "Weibull modeline uymaktadır. Ölçek, şekil ve gecikme süresini karakterize eder.",
         "Baker-Lonsdale": "Baker-Lonsdale modeline uymaktadır. Küresel matrislerden salımı açıklar.",
         "Kopcha": "Kopcha modeline uymaktadır. Difüzyon ve erozyon oranlarını ayrıştırır.",
-        "Quadratic": "Quadratic modeline uymaktadır. Çok kısa süreli ve doğrusal olmayan salımları açıklar.",
-        "Peppas-Rincon": "Peppas-Rincon modeline uymaktadır. Çok katmanlı veya karmaşık geometriler için geliştirilmiş versiyondur.",
+        "Quadratic": "Quadratic modeline uymaktadır. Kısa süreli ve doğrusal olmayan salımları açıklar.",
+        "Peppas-Rincon": "Peppas-Rincon modeline uymaktadır. Karmaşık geometriler için geliştirilmiştir.",
         "Logistic": "Lojistik modele uymaktadır. Simetrik sigmoid (S-tipi) salımları açıklar."
     },
     "English": {
-        "Sıfır Derece": "fits Zero-Order kinetics, describing a constant release rate independent of time.",
-        "Birinci Derece": "fits First-Order kinetics. The release rate is concentration-dependent.",
-        "Higuchi": "fits the Higuchi model, describing diffusion-based release from matrix systems.",
-        "Korsmeyer-Peppas": "fits the Korsmeyer-Peppas model, where the mechanism is defined by the 'n' exponent.",
-        "Hixson-Crowell": "fits Hixson-Crowell kinetics, explaining cases where surface area and particle diameter decrease (erosion) over time.",
-        "Hopfenberg": "fits the Hopfenberg model, explaining surface-eroding polymers for specific geometries (slab, cylinder, sphere).",
-        "Makoid-Banakar": "fits the Makoid-Banakar model, covering both diffusion and first-order release while accounting for initial 'burst release'.",
-        "Square Root of Mass": "fits the Square Root of Mass model, similar to Hixson-Crowell but based on mass change erosion.",
-        "Peppas-Sahlin": "fits the Peppas-Sahlin model, separating diffusion and relaxation contributions.",
-        "Gompertz": "fits the Gompertz model, explaining sigmoid (S-type) lag-time profiles.",
-        "Weibull (w/ Td)": "fits the Weibull model, characterizing profile scale, shape, and lag time.",
-        "Baker-Lonsdale": "fits the Baker-Lonsdale model, explaining release from spherical matrices.",
-        "Kopcha": "fits the Kopcha model, decoupling diffusion and erosion rates.",
-        "Quadratic": "fits the Quadratic model, explaining short-term non-linear release.",
-        "Peppas-Rincon": "fits the Peppas-Rincon model, developed for multi-layer or complex geometries.",
-        "Logistic": "fits the Logistic model, explaining symmetric sigmoid (S-type) profiles."
+        "Sıfır Derece": "fits Zero-Order kinetics.",
+        "Birinci Derece": "fits First-Order kinetics.",
+        "Higuchi": "fits the Higuchi model.",
+        "Korsmeyer-Peppas": "fits the Korsmeyer-Peppas model.",
+        "Hixson-Crowell": "fits Hixson-Crowell kinetics.",
+        "Hopfenberg": "fits the Hopfenberg model.",
+        "Makoid-Banakar": "fits the Makoid-Banakar model.",
+        "Square Root of Mass": "fits the Square Root of Mass model.",
+        "Peppas-Sahlin": "fits the Peppas-Sahlin model.",
+        "Gompertz": "fits the Gompertz model.",
+        "Weibull (w/ Td)": "fits the Weibull model.",
+        "Baker-Lonsdale": "fits the Baker-Lonsdale model.",
+        "Kopcha": "fits the Kopcha model.",
+        "Quadratic": "fits the Quadratic model.",
+        "Peppas-Rincon": "fits the Peppas-Rincon model.",
+        "Logistic": "fits the Logistic model."
     }
-}
-
-UNSUITABLE_DESC = {
-    "Türkçe": "⚠️ Veri yapısı bu modelin matematiksel varsayımlarına (örneğin sigmoid yapı, erozyon hızı veya gecikme süresi) istatistiksel olarak uymuyor.",
-    "English": "⚠️ Data structure does not statistically fit the model's mathematical assumptions (e.g., sigmoid shape, erosion rate, or lag-time)."
 }
 
 LANG_DICT = {
@@ -132,8 +127,7 @@ def calculate_aic(n, rss, p_count):
     return n * np.log(rss/n) + 2 * p_count
 
 def calculate_f1_f2(ref_mean, test_mean):
-    R = np.array(ref_mean)
-    T = np.array(test_mean)
+    R, T = np.array(ref_mean), np.array(test_mean)
     n = len(R)
     f1 = (np.sum(np.abs(R - T)) / np.sum(R)) * 100
     sum_sq_diff = np.sum((R - T)**2)
@@ -153,27 +147,20 @@ def generate_excel_report(test_data, model_results, best_model, mdt_de, f1f2=Non
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         summary_data = {
-            "Parametre": ["En Uygun Model", "MDT (Ort. Çözünme Süresi)", "DE (Salım Verimliliği %)", "Örnek Sayısı (n)"],
+            "Parametre": ["En Uygun Model", "MDT", "DE (%)", "n"],
             "Değer": [best_model, f"{mdt_de[1]:.2f}", f"{mdt_de[0]:.2f}", test_data['n']]
         }
         if f1f2:
-            summary_data["Parametre"].extend(["f1 (Farklılık Faktörü)", "f2 (Benzerlik Faktörü)"])
+            summary_data["Parametre"].extend(["f1", "f2"])
             summary_data["Değer"].extend([f"{f1f2[0]:.2f}", f"{f1f2[1]:.2f}"])
-        pd.DataFrame(summary_data).to_excel(writer, sheet_name='Genel_Ozet', index=False)
+        pd.DataFrame(summary_data).to_excel(writer, sheet_name='Ozet', index=False)
         if model_results is not None:
-            pd.DataFrame(model_results).to_excel(writer, sheet_name='Kinetik_Modeller', index=False)
-        data_sheet = pd.DataFrame({
-            "Zaman": test_data['t'],
-            "Ortalama Salım (%)": test_data['mean'],
-            "Standart Sapma": test_data['std']
-        })
-        data_sheet.to_excel(writer, sheet_name='Analiz_Verileri', index=False)
+            pd.DataFrame(model_results).to_excel(writer, sheet_name='Modeller', index=False)
     return output.getvalue()
 
-# --- 6. VERİ GİRİŞİ VE İŞLEME ---
+# --- 6. VERİ GİRİŞİ ---
 test_file = st.sidebar.file_uploader("Test Verisi (XLSX/CSV)", type=['xlsx', 'csv'])
 ref_file = st.sidebar.file_uploader("Referans Verisi (Opsiyonel)", type=['xlsx', 'csv'])
-st.sidebar.divider()
 selected_lang = st.sidebar.selectbox("Dil / Language:", ["Türkçe", "English"])
 L = LANG_DICT[selected_lang]
 
@@ -185,16 +172,11 @@ def process_data(file):
         v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
         mask = ~np.isnan(t)
         return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask], "n": v.shape[1]}
-    except:
-        return None
+    except: return None
 
 test_data = process_data(test_file)
 ref_data = process_data(ref_file)
-
-results = None
-best_name = "Analiz Edilmedi"
-de, mdt = 0, 0
-f1, f2 = None, None
+results, best_name, de, mdt, f1, f2 = None, "Analiz Edilmedi", 0, 0, None, None
 
 if test_data:
     t_raw, q_raw = test_data["t"], test_data["mean"]
@@ -202,33 +184,15 @@ if test_data:
     
     if menu == "📈 Salım Profilleri":
         st.subheader(L['stats'])
-        rsd = (test_data["std"] / np.where(q_raw==0, 1, q_raw)) * 100
-        stats_df = pd.DataFrame({
-            L['time']: t_raw, 
-            f"Mean (n={test_data['n']})": q_raw, 
-            "SD": test_data["std"], 
-            "RSD (%)": rsd
-        })
+        stats_df = pd.DataFrame({L['time']: t_raw, "Mean": q_raw, "SD": test_data["std"]})
         st.table(stats_df.style.format("{:.2f}").hide(axis="index"))
-        
-        fig, ax = plt.subplots(figsize=(10,5))
-        ax.errorbar(t_raw, q_raw, yerr=test_data["std"], fmt='-ok', label="Test", capsize=5)
-        if ref_data:
-            ax.errorbar(ref_data["t"], ref_data["mean"], yerr=ref_data["std"], fmt='--sr', label="Referans", capsize=5)
-        ax.set_xlabel(L['time']); ax.set_ylabel(L['release'] + " (%)"); ax.legend(); ax.grid(alpha=0.3)
-        st.pyplot(fig)
-        
-        st.divider()
-        c1, c2 = st.columns(2)
-        with c1:
-            st.metric("Dissolution Efficiency (DE %)", f"{de:.2f}%")
-        with c2:
-            st.metric("Mean Dissolution Time (MDT)", f"{mdt:.2f} {L['unit']}")
+        fig, ax = plt.subplots(); ax.errorbar(t_raw, q_raw, yerr=test_data["std"], fmt='-ok', label="Test")
+        if ref_data: ax.errorbar(ref_data["t"], ref_data["mean"], yerr=ref_data["std"], fmt='--sr', label="Ref")
+        ax.legend(); st.pyplot(fig)
 
     elif menu == "🧮 Kinetik Model Fitting":
         st.subheader(L['model_title'])
         tf, qf = t_raw[(t_raw>0)&(q_raw>0)], q_raw[(t_raw>0)&(q_raw>0)]
-        
         model_defs = [
             ("Sıfır Derece", zero_order, [0.1], [0], [100]), ("Birinci Derece", first_order, [0.01], [0], [10]),
             ("Higuchi", higuchi, [1.0], [0], [500]), ("Korsmeyer-Peppas", korsmeyer, [1.0, 0.5], [0, 0.1], [500, 2.0]),
@@ -241,78 +205,33 @@ if test_data:
             ("Quadratic", quadratic, [0.1, 0.01], [0, -1], [100, 1]), ("Logistic", logistic, [100, 0.1, 10], [50, 0, 0], [110, 2, 500]),
             ("Peppas-Rincon", peppas_rincon, [1.0, 0.5], [0, 0.1], [500, 2.0])
         ]
-        
-        results_list = []; fit_plots = {}
-        try:
-            popt_bl, _ = curve_fit(baker_lonsdale_for_fit, t_raw, q_raw, p0=[0.001])
-            y_bl = baker_lonsdale_for_fit(t_raw, *popt_bl)
-            results_list.append({"Model": "Baker-Lonsdale", "R²": r2_score(q_raw, y_bl), "AIC": calculate_aic(len(t_raw), np.sum((q_raw-y_bl)**2), 1), "Durum": L['calc']})
-            fit_plots["Baker-Lonsdale"] = (baker_lonsdale_for_fit, popt_bl)
-        except: results_list.append({"Model": "Baker-Lonsdale", "R²": 0, "AIC": 9999, "Durum": L['unsuitable']})
-
+        res_list = []
         for name, func, p0, low, up in model_defs:
             try:
-                popt, _ = curve_fit(func, tf, qf, p0=p0, bounds=(low, up), maxfev=15000)
+                popt, _ = curve_fit(func, tf, qf, p0=p0, bounds=(low, up), maxfev=10000)
                 y_p = func(tf, *popt)
-                results_list.append({"Model": name, "R²": r2_score(qf, y_p), "AIC": calculate_aic(len(tf), np.sum((qf-y_p)**2), len(p0)), "Durum": L['calc']})
-                fit_plots[name] = (func, popt)
-            except: results_list.append({"Model": name, "R²": 0, "AIC": 9999, "Durum": L['unsuitable']})
-
-        results = pd.DataFrame(results_list)
+                res_list.append({"Model": name, "R²": r2_score(qf, y_p), "AIC": calculate_aic(len(tf), np.sum((qf-y_p)**2), len(p0)), "Durum": L['calc']})
+            except: res_list.append({"Model": name, "R²": 0, "AIC": 9999, "Durum": L['unsuitable']})
+        results = pd.DataFrame(res_list)
         best_idx = results[results["Durum"] == L['calc']]["AIC"].idxmin()
         best_name = results.loc[best_idx, "Model"]
         st.table(results.style.format({"R²": "{:.4f}", "AIC": "{:.2f}"}).hide(axis="index"))
-
-        st.divider(); st.subheader(L['report'])
-        st.info(f"🏆 **{best_name}**: {MODEL_KNOWLEDGE[selected_lang].get(best_name, '')}")
-        
-        st.subheader(L['graph'])
-        sel = st.multiselect("Grafik Modelleri:", list(fit_plots.keys()), default=[best_name])
-        if sel:
-            fig_m, ax_m = plt.subplots(figsize=(10,6)); ax_m.scatter(t_raw, q_raw, c='k', label="Data")
-            t_plot = np.linspace(0, t_raw.max(), 100)
-            for m in sel:
-                f, p = fit_plots[m]; ax_m.plot(t_plot, f(t_plot, *p), label=m)
-            ax_m.legend(); ax_m.set_xlabel(L['time']); ax_m.set_ylabel(L['release']+" (%)"); st.pyplot(fig_m)
+        st.info(f"🏆 {best_name}: {MODEL_KNOWLEDGE[selected_lang].get(best_name, '')}")
 
     elif menu == "🧬 IVIVC Analizi":
-        st.subheader("Wagner-Nelson Absorbsiyon Tahmini")
-        ke = st.number_input("Eliminasyon Sabiti (ke) [1/h]:", value=0.1500, format="%.4f")
+        ke = st.number_input("ke [1/h]:", value=0.1500, format="%.4f")
         dt = np.diff(t_raw, prepend=0)
         cum_auc = np.cumsum(q_raw * dt)
-        total_auc = cum_auc[-1] + (q_raw[-1] / ke if ke > 0 else 0)
-        f_abs = (q_raw + ke * cum_auc) / (ke * total_auc if total_auc > 0 else 1)
-        ivivc_df = pd.DataFrame({L['time']: t_raw, "Release (%)": q_raw, "Fraction Absorbed": f_abs})
-        st.table(ivivc_df.style.format("{:.4f}").hide(axis="index"))
-        fig_iv, ax_iv = plt.subplots(); ax_iv.plot(t_raw, f_abs, 'r-o')
-        ax_iv.set_xlabel(L['time']); ax_iv.set_ylabel("Absorbe Olan Fraksiyon (Fa)"); st.pyplot(fig_iv)
-        
+        f_abs = (q_raw + ke * cum_auc) / (ke * (cum_auc[-1] + q_raw[-1]/ke))
+        st.line_chart(f_abs)
+
     elif menu == "📊 f1 & f2 Benzerlik Analizi":
-        st.subheader("f1 & f2 Faktörleri (Similarity & Difference Factors)")
-        if ref_data is not None:
-            common_len = min(len(test_data["t"]), len(ref_data["t"]))
-            test_mean = test_data["mean"][:common_len]
-            ref_mean = ref_data["mean"][:common_len]
-            f1, f2 = calculate_f1_f2(ref_mean, test_mean)
-            
-            col1, col2 = st.columns(2)
-            with col1: st.metric(label="f1 (Difference Factor)", value=f"{f1:.2f}")
-            with col2: st.metric(label="f2 (Similarity Factor)", value=f"{f2:.2f}")
+        if ref_data:
+            c_len = min(len(t_raw), len(ref_data["t"]))
+            f1, f2 = calculate_f1_f2(ref_data["mean"][:c_len], q_raw[:c_len])
+            st.metric("f1", f"{f1:.2f}"); st.metric("f2", f"{f2:.2f}")
+        else: st.info("Ref yükleyin.")
 
-            if f2 >= 50: st.success(f"✅ PROFİLLER BENZER")
-            else: st.error(f"❌ PROFİLLER FARKLI")
-        else:
-            st.info("💡 f1 ve f2 hesaplaması için lütfen sol menüden 'Referans Verisi' yükleyiniz.")
-
-# --- 7. RAPORLAMA BUTONU ---
-st.sidebar.divider()
 if test_data:
-    report_mdt_de = (de, mdt)
-    report_f1f2 = (f1, f2) if (f1 is not None and f2 is not None) else None
-    excel_data = generate_excel_report(test_data, results, best_name, report_mdt_de, report_f1f2)
-    st.sidebar.download_button(
-        label="📥 DissolvA Raporunu İndir",
-        data=excel_data,
-        file_name=f"DissolvA_Analiz_Raporu.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    excel_data = generate_excel_report(test_data, results, best_name, (de, mdt), (f1, f2) if f1 else None)
+    st.sidebar.download_button("📥 Raporu İndir", excel_data, "DissolvA_Report.xlsx")
