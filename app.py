@@ -125,7 +125,7 @@ st.sidebar.title(L['title'])
 st.sidebar.caption(L['sub'])
 st.sidebar.divider()
 
-menu = st.sidebar.radio("İşlem Merkezi:", ["📈 Release Profiles", "🧮 Kinetic Model Fitting", "🧬 IVIVC Analyses", "📊 Similarity Analysis (f1/f2)"])
+menu = st.sidebar.radio("İşlem Merkezi:", ["📈 Release Profiles", "🧮 Kinetic Model Fitting", "🧬 IVIVC Analysis", "📊 Similarity Analysis (f1/f2)"])
 
 test_files = st.sidebar.file_uploader("Test Verileri (Çoklu)", type=['xlsx', 'csv'], accept_multiple_files=True)
 ref_file = st.sidebar.file_uploader("Referans Verisi", type=['xlsx', 'csv'])
