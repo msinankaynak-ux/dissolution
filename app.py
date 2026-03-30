@@ -6,15 +6,18 @@ from scipy.optimize import curve_fit, root
 from sklearn.metrics import r2_score
 import io
 
-# --- 1. CONFIG & DISSOLVA IDENTITY (GÜNCELLENEN KISIM) ---
+
+# --- 1. CONFIG & IDENTITY UPDATE ---
 st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 
-# Kurumsal Sarı-Lacivert Sidebar Başlığı
+# Kurumsal Sarı-Lacivert Sidebar Başlığı ve Alt Başlık
 st.sidebar.markdown(
     """
-    <div style="background-color: #002D72; padding: 20px; border-radius: 15px; border: 3px solid #FFD700; margin-bottom: 25px;">
-        <h1 style="color: #FFD700; margin: 0; font-size: 2.2rem; text-align: center;"> DissolvA</h1>
-        <p style="color: white; margin: 0; font-size: 0.8rem; text-align: center; font-weight: bold;">Powered by AI</p>
+    <div style="background-color: #002D72; padding: 20px; border-radius: 15px; border: 3px solid #FFD700; margin-bottom: 25px; text-align: center;">
+        <h1 style="color: #FFD700; margin: 0; font-size: 2.2rem; font-weight: bold;">💊 DissolvA</h1>
+        <p style="color: #DCDCDC; margin: 5px 0 0 0; font-size: 0.9rem; font-style: italic; opacity: 0.9;">Predictive Dissolution Suite</p>
+        <hr style="border: 0.5px solid #FFD700; margin: 10px 0;">
+        <p style="color: white; margin: 0; font-size: 0.75rem; font-weight: bold; letter-spacing: 1px;">POWERED BY AI</p>
     </div>
     """, 
     unsafe_allow_html=True
