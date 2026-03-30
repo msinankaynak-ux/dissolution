@@ -135,10 +135,10 @@ def generate_excel_report(test_data, model_results, best_model, mdt_de, f1f2=Non
     return output.getvalue()
     
 # --- 3. ARAYÜZ VE VERİ İŞLEME ---
-st.set_page_config(page_title="SmartDissolve AI", layout="wide")
-st.sidebar.title("🔬 SmartDissolve AI: Predictive Dissolution Suite")
+st.set_page_config(page_title="PharmTech Lab v16.0", layout="wide")
+st.sidebar.title("🔬 PharmTech Lab")
 
-menu = st.sidebar.radio("Analysis Hub:", ["📈 Release Profiles", "🧮 Kinetic Model Fitting", "🧬 IVIVC Analysis", "📊 f1 & f2 Similarity Analysis"])
+menu = st.sidebar.radio("Ana İşlemler:", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"])
 st.sidebar.divider()
 test_file = st.sidebar.file_uploader("Test Verisi (XLSX/CSV)", type=['xlsx', 'csv'])
 ref_file = st.sidebar.file_uploader("Referans Verisi (Opsiyonel)", type=['xlsx', 'csv'])
