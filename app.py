@@ -14,7 +14,7 @@ st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 st.sidebar.markdown(
     """
     <div style="background-color: #002D72; padding: 20px; border-radius: 15px; border: 3px solid #FFD700; margin-bottom: 25px; text-align: center;">
-        <h1 style="color: #FFD700; margin: 0; font-size: 2.2rem; font-weight: bold;">💊 DissolvA</h1>
+        <h1 style="color: #FFD700; margin: 0; font-size: 2.2rem; font-weight: bold;"> DissolvA</h1>
         <p style="color: #DCDCDC; margin: 5px 0 0 0; font-size: 0.9rem; font-style: italic; opacity: 0.9;">Predictive Dissolution Suite</p>
         <hr style="border: 0.5px solid #FFD700; margin: 10px 0;">
         <p style="color: white; margin: 0; font-size: 0.75rem; font-weight: bold; letter-spacing: 1px;">POWERED BY AI</p>
