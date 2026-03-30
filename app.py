@@ -48,13 +48,13 @@ MODEL_KNOWLEDGE = {
 
 LANG_DICT = {
     "Türkçe": {
-        "title": "🧠 SmartDissolve AI", "sub": "Predictive Dissolution Suite",
+        "title": "💊 SmartDissolve AI", "sub": "Predictive Dissolution Suite",
         "time": "Zaman (Dakika)", "release": "Kümülatif İlaç Salımı", "calc": "✅ Hesaplandı", "unsuitable": "❌ Uyumsuz", 
         "best": "🏆 En Uygun Model", "stats": "📊 Veri İstatistiği & Profil", "graph": "🛠️ Model Uyumu Grafiği", 
         "report": "📝 Akademik Değerlendirme", "model_title": "16 Kinetik Model Analizi", "unit": "dk"
     },
     "English": {
-        "title": "🧠 SmartDissolve AI", "sub": "Predictive Dissolution Suite",
+        "title": "💊 SmartDissolve AI", "sub": "Predictive Dissolution Suite",
         "time": "Time (Minutes)", "release": "Cumulative Drug Release", "calc": "✅ Calculated", "unsuitable": "❌ Unsuitable", 
         "best": "🏆 Best Fit Model", "stats": "📊 Statistics & Profile", "graph": "🛠️ Model Fit Graph", 
         "report": "📝 Academic Evaluation", "model_title": "16 Kinetic Model Analysis", "unit": "min"
