@@ -6,14 +6,14 @@ from scipy.optimize import curve_fit, root
 from sklearn.metrics import r2_score
 import io
 
-# --- 1. CONFIG & ACADEMIC IDENTITY (OXFORD CLASSIC - DISSOLVA™) ---
+# --- 1. CONFIG ---
 st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 
-# Sidebar Görselleştirme ve Prestij Logosu
-# --- LOGO VE AI GÖRÜNÜMÜ (BURAYA YAPIŞTIRILACAK) ---
-logo_ve_ai_html = """
+# --- 2. SIDEBAR LOGO VE TASARIM (HATASIZ RENDER) ---
+# HTML içeriğini tek bir blokta tanımlıyoruz
+sidebar_header_html = """
 <div style="background-color: #002147; padding: 25px 20px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 15px rgba(0,0,0,0.4);">
-    <h1 style="color: #FFBF00; margin: 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -1.5px; font-family: 'Montserrat', sans-serif;">DissolvA™</h1>
+    <h1 style="color: #FFBF00; margin: 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -1px; font-family: 'Montserrat', sans-serif;">DissolvA™</h1>
     <p style="color: #DCDCDC; margin: 10px 0 0 0; font-size: 1.0rem; font-style: italic; font-weight: 400; opacity: 0.9;">Predictive Dissolution Suite</p>
     <hr style="border: 0.5px solid #FFBF00; margin: 15px 0 20px 0; opacity: 0.4;">
     <div style="border: 1px solid rgba(255,191,0,0.3); padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.05);">
@@ -36,30 +36,21 @@ logo_ve_ai_html = """
 <hr style="border: 0.5px solid #DCDCDC; margin: 10px 0 20px 0; opacity: 0.2;">
 """
 
-# HTML'i güvenli bir şekilde basıyoruz
-st.sidebar.markdown(logo_ve_ai_html, unsafe_allow_html=True)
+# Tek bir seferde güvenli render yapıyoruz
+st.sidebar.markdown(sidebar_header_html, unsafe_allow_html=True)
+
+# --- 3. ANALYTICAL SUITE SELECTION ---
+# Başlığı markdown ile değil doğrudan sidebar elemanı olarak ekleyelim
+st.sidebar.write("### Analytical Suite:")
+menu = st.sidebar.radio(
+    label="Menu Selection",
+    options=["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"],
+    label_visibility="collapsed"
 )
-import streamlit as st
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit, root
-from sklearn.metrics import r2_score
-import io
+st.sidebar.divider()
 
-# --- 1. CONFIG ---
-st.set_page_config(page_title="DissolvA v16.0", layout="wide")
-
-# --- 2. SIDEBAR LOGO VE AI GÖRÜNÜMÜ ---
-logo_ve_ai_html = """
-<div style="background-color: #002147; padding: 25px 20px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 15px rgba(0,0,0,0.4);">
-    <h1 style="color: #FFBF00; margin: 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -1px; font-family: 'Montserrat', sans-serif;">DissolvA™</h1>
-    <p style="color: #DCDCDC; margin: 10px 0 0 0; font-size: 1.0rem; font-style: italic; font-weight: 400; opacity: 0.9;">Predictive Dissolution Suite</p>
-    <hr style="border: 0.5px solid #FFBF00; margin: 15px 0 20px 0; opacity: 0.4;">
-    <div style="border: 1px solid rgba(255,191,0,0.3); padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.05);">
-         <p style="color: white; margin: 0; font-size: 0.75rem; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase;">POWERED BY AI</p>
-    </div>
-</div>
+# --- 4. MODEL BİLGİ BANKASI VE DEVAMI ---
+# Kodunuzun geri kalanı buradan itibaren (MODEL_KNOWLEDGE...) devam etmeli
 
 <div style="margin-left: 15px; margin-right: 15px; margin-bottom: 25px;">
     <div style="display: flex; align-items: center; margin-bottom: 15px;">
