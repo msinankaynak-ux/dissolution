@@ -136,7 +136,7 @@ def generate_excel_report(test_data, model_results, best_model, mdt_de, f1f2=Non
     
 # --- 3. ARAYÜZ VE VERİ İŞLEME ---
 st.set_page_config(page_title="PharmTech Lab v16.0", layout="wide")
-st.sidebar.title("🔬 PharmTech Lab")
+st.sidebar.title("🔬 Smart Dissolution AI")
 
 menu = st.sidebar.radio("Ana İşlemler:", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"])
 st.sidebar.divider()
