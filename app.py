@@ -89,12 +89,22 @@ def baker_lonsdale_for_fit(t_data, k):
 def calculate_aic(n, rss, p_count):
     if n <= p_count or rss <= 0: return 9999
     return n * np.log(rss/n) + 2 * p_count
+    def calculate_f1_f2(ref_mean, test_mean):
+    R = np.array(ref_mean)
+    T = np.array(test_mean)
+    n = len(R)
+    # f1: Farklılık Faktörü
+    f1 = (np.sum(np.abs(R - T)) / np.sum(R)) * 100
+    # f2: Benzerlik Faktörü
+    sum_sq_diff = np.sum((R - T)**2)
+    f2 = 50 * np.log10((1 + (1/n) * sum_sq_diff)**-0.5 * 100)
+    return f1, f2
 
 # --- 3. ARAYÜZ VE VERİ İŞLEME ---
 st.set_page_config(page_title="PharmTech Lab v16.0", layout="wide")
 st.sidebar.title("🔬 PharmTech Lab")
 
-menu = st.sidebar.radio("Ana İşlemler:", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi"])
+menu = st.sidebar.radio("Ana İşlemler:", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"])
 st.sidebar.divider()
 test_file = st.sidebar.file_uploader("Test Verisi (XLSX/CSV)", type=['xlsx', 'csv'])
 ref_file = st.sidebar.file_uploader("Referans Verisi (Opsiyonel)", type=['xlsx', 'csv'])
@@ -201,5 +211,47 @@ if test_data:
         ivivc_df = pd.DataFrame({L['time']: t_raw, "Release (%)": q_raw, "Fraction Absorbed": f_abs})
         st.table(ivivc_df.style.format("{:.4f}").hide(axis="index"))
         fig_iv, ax_iv = plt.subplots(); ax_iv.plot(t_raw, f_abs, 'r-o'); st.pyplot(fig_iv)
+    elif menu == "📊 f1 & f2 Benzerlik Analizi":
+        st.subheader("f1 & f2 Faktörleri (Similarity & Difference Factors)")
+        
+        if ref_data is not None:
+            # Zaman noktalarının eşleştiğinden emin olalım
+            if len(test_data["t"]) != len(ref_data["t"]):
+                st.error("⚠️ Hata: Test ve Referans verilerinin satır sayısı aynı olmalıdır!")
+            else:
+                f1, f2 = calculate_f1_f2(ref_data["mean"], test_data["mean"])
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric(label="f1 (Difference Factor)", value=f"{f1:.2f}")
+                    if f1 <= 15:
+                        st.success("✅ f1 Uygun (0-15)")
+                    else:
+                        st.warning("❌ f1 Uygun Değil (>15)")
+                
+                with col2:
+                    st.metric(label="f2 (Similarity Factor)", value=f"{f2:.2f}")
+                    if f2 >= 50:
+                        st.success("✅ f2 Benzer (50-100)")
+                    else:
+                        st.error("❌ f2 Benzer Değil (<50)")
+                
+                st.divider()
+                st.write("### 📝 Akademik Analiz Notu")
+                if f2 >= 50:
+                    st.info(f"Hesaplanan f2 değeri ({f2:.2f}), iki profilin istatistiksel olarak benzer olduğunu göstermektedir. Bu durum formülasyonun referans ürünle eşdeğer salım karakteristiğine sahip olduğu şeklinde yorumlanabilir.")
+                else:
+                    st.error("Düşük f2 değeri, test ve referans profillerinin anlamlı derecede farklı olduğunu gösterir.")
+
+                # Görsel Karşılaştırma
+                fig_f12, ax_f12 = plt.subplots(figsize=(10,5))
+                ax_f12.plot(ref_data["t"], ref_data["mean"], 's--b', label="Referans")
+                ax_f12.plot(test_data["t"], test_data["mean"], 'o-r', label="Test")
+                ax_f12.set_title("Test vs Referans Salım Kıyaslaması")
+                ax_f12.set_xlabel("Zaman"); ax_f12.set_ylabel("Salım (%)")
+                ax_f12.legend(); ax_f12.grid(True, alpha=0.2)
+                st.pyplot(fig_f12)
+        else:
+            st.warning("Bu analizi yapabilmek için sol menüden 'Referans Verisi' yüklemelisiniz.")
 else:
     st.info("Lütfen bir test verisi yükleyerek başlayın.")
