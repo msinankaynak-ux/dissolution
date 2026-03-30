@@ -89,7 +89,8 @@ def baker_lonsdale_for_fit(t_data, k):
 def calculate_aic(n, rss, p_count):
     if n <= p_count or rss <= 0: return 9999
     return n * np.log(rss/n) + 2 * p_count
-    def calculate_f1_f2(ref_mean, test_mean):
+
+def calculate_f1_f2(ref_mean, test_mean):
     R = np.array(ref_mean)
     T = np.array(test_mean)
     n = len(R)
@@ -211,6 +212,7 @@ if test_data:
         ivivc_df = pd.DataFrame({L['time']: t_raw, "Release (%)": q_raw, "Fraction Absorbed": f_abs})
         st.table(ivivc_df.style.format("{:.4f}").hide(axis="index"))
         fig_iv, ax_iv = plt.subplots(); ax_iv.plot(t_raw, f_abs, 'r-o'); st.pyplot(fig_iv)
+        
     elif menu == "📊 f1 & f2 Benzerlik Analizi":
         st.subheader("f1 & f2 Faktörleri (Similarity & Difference Factors)")
         
