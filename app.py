@@ -13,7 +13,7 @@ st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 st.sidebar.markdown(
     """
     <div style="background-color: #002D72; padding: 20px; border-radius: 15px; border: 3px solid #FFD700; margin-bottom: 25px;">
-        <h1 style="color: #FFD700; margin: 0; font-size: 2.2rem; text-align: center;">💊 DissolvA</h1>
+        <h1 style="color: #FFD700; margin: 0; font-size: 2.2rem; text-align: center;"> DissolvA</h1>
         <p style="color: white; margin: 0; font-size: 0.8rem; text-align: center; font-weight: bold;">Powered by AI</p>
     </div>
     """, 
