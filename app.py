@@ -10,33 +10,34 @@ import io
 st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 
 # Sidebar Görselleştirme ve Prestij Logosu
-st.sidebar.markdown(
-    """
-    <div style="background-color: #002147; padding: 25px 20px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 15px rgba(0,0,0,0.4);">
-        <h1 style="color: #FFBF00; margin: 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -1.5px; font-family: 'Montserrat', sans-serif;">DissolvA<span style="font-size: 1.2rem; vertical-align: super; color: #FFFFFF;">™</span></h1>
-        <p style="color: #DCDCDC; margin: 10px 0 0 0; font-size: 1.0rem; font-style: italic; font-weight: 400; font-family: 'Playfair Display', serif; opacity: 0.9;">Predictive Dissolution Suite</p>
-        <hr style="border: 0.5px solid #FFBF00; margin: 15px 0 20px 0; opacity: 0.4;">
-        
-        <div style="border: 1px solid rgba(255,191,0,0.3); padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.05);">
-             <p style="color: white; margin: 0; font-size: 0.75rem; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase;">POWERED BY AI</p>
-        </div>
+# --- LOGO VE AI GÖRÜNÜMÜ (BURAYA YAPIŞTIRILACAK) ---
+logo_ve_ai_html = """
+<div style="background-color: #002147; padding: 25px 20px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 15px rgba(0,0,0,0.4);">
+    <h1 style="color: #FFBF00; margin: 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -1.5px; font-family: 'Montserrat', sans-serif;">DissolvA™</h1>
+    <p style="color: #DCDCDC; margin: 10px 0 0 0; font-size: 1.0rem; font-style: italic; font-weight: 400; opacity: 0.9;">Predictive Dissolution Suite</p>
+    <hr style="border: 0.5px solid #FFBF00; margin: 15px 0 20px 0; opacity: 0.4;">
+    <div style="border: 1px solid rgba(255,191,0,0.3); padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.05);">
+         <p style="color: white; margin: 0; font-size: 0.75rem; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase;">POWERED BY AI</p>
     </div>
-    
-    <div style="margin-left: 15px; margin-right: 15px; margin-bottom: 25px; font-family: 'Montserrat', sans-serif;">
-        <div style="display: flex; align-items: center; margin-bottom: 15px;">
-            <span style="font-size: 1.2rem; margin-right: 12px;">🧬</span>
-            <span style="color: #FFBF00; font-size: 1.15rem; font-weight: 600;">Molecular View</span>
-            <span style="color: #DCDCDC; font-size: 0.85rem; font-weight: 400; margin-left: auto; opacity: 0.8;">(Prediction)</span>
-        </div>
-        <div style="display: flex; align-items: center;">
-            <span style="font-size: 1.2rem; margin-right: 12px;">⚙️</span>
-            <span style="color: #FFBF00; font-size: 1.15rem; font-weight: 600;">Parameter Settings</span>
-            <span style="color: #DCDCDC; font-size: 0.85rem; font-weight: 400; margin-left: auto; opacity: 0.8;">(Optimization)</span>
-        </div>
+</div>
+
+<div style="margin-left: 15px; margin-right: 15px; margin-bottom: 25px;">
+    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+        <span style="font-size: 1.2rem; margin-right: 12px;">🧬</span>
+        <span style="color: #FFBF00; font-size: 1.15rem; font-weight: 600;">Molecular View</span>
+        <span style="color: #DCDCDC; font-size: 0.85rem; font-weight: 400; margin-left: auto; opacity: 0.8;">(Prediction)</span>
     </div>
-    <hr style="border: 0.5px solid #DCDCDC; margin: 10px 0 20px 0; opacity: 0.2;">
-    """, 
-    unsafe_allow_html=True
+    <div style="display: flex; align-items: center;">
+        <span style="font-size: 1.2rem; margin-right: 12px;">⚙️</span>
+        <span style="color: #FFBF00; font-size: 1.15rem; font-weight: 600;">Parameter Settings</span>
+        <span style="color: #DCDCDC; font-size: 0.85rem; font-weight: 400; margin-left: auto; opacity: 0.8;">(Optimization)</span>
+    </div>
+</div>
+<hr style="border: 0.5px solid #DCDCDC; margin: 10px 0 20px 0; opacity: 0.2;">
+"""
+
+# HTML'i güvenli bir şekilde basıyoruz
+st.sidebar.markdown(logo_ve_ai_html, unsafe_allow_html=True)
 )
 
 # --- 2. ANALYTICAL SUITE SELECTION ---
