@@ -9,18 +9,6 @@ import io
 # --- 1. CONFIG & ACADEMIC IDENTITY UPDATE (ÇİFT BAŞLIK HATASI SİLİNDİ, TEK RADIO ÇÖZÜMÜ) ---
 st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 
-# Sizin kodunuzdaki ilk tasarım kutusu (Mevcut Görünüm)
-st.sidebar.markdown(
-    """
-    <div style="background-color: #002147; padding: 25px 20px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 15px rgba(0,0,0,0.4);">
-        <h1 style="color: #FFBF00; margin: 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -1.5px; font-family: 'Montserrat', sans-serif;">DissolvA</h1>
-        <p style="color: #DCDCDC; margin: 10px 0 0 0; font-size: 1.0rem; font-style: italic; font-weight: 400; font-family: 'Playfair Display', serif; opacity: 0.9;">Predictive Dissolution Suite</p>
-        <hr style="border: 0.5px solid #FFBF00; margin: 15px 0 20px 0; opacity: 0.4;">
-        <p style="color: white; margin: 0; font-size: 0.75rem; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase;">POWERED BY AI</p>
-    </div>
-    """, 
-    unsafe_allow_html=True
-)
 
 # Sizin kodunuzdaki hiyerarşik menü (Mevcut Görünüm, Emojili Simgeler)
 st.sidebar.markdown(
@@ -54,9 +42,6 @@ st.sidebar.markdown(
 menu = st.sidebar.radio("", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"], label_visibility="collapsed")
 st.sidebar.divider()
 
-# !!! BU HATALI İKİNCİ ÇAĞRIYI SİLİN !!! (Hiyerarşiyi Temizlemek İçin Silindi)
-# menu = st.sidebar.radio("Analytical Suite:", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"])
-# st.sidebar.divider()
 
 # --- MODEL BİLGİ BANKASI & AKADEMİK YORUMLAR (Buradan sonrası aynı devam ediyor) ---
 MODEL_KNOWLEDGE = {
