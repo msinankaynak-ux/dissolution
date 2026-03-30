@@ -217,43 +217,34 @@ if test_data:
         st.subheader("f1 & f2 Faktörleri (Similarity & Difference Factors)")
         
         if ref_data is not None:
-            # Zaman noktalarının eşleştiğinden emin olalım
-            if len(test_data["t"]) != len(ref_data["t"]):
-                st.error("⚠️ Hata: Test ve Referans verilerinin satır sayısı aynı olmalıdır!")
-            else:
-                f1, f2 = calculate_f1_f2(ref_data["mean"], test_data["mean"])
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric(label="f1 (Difference Factor)", value=f"{f1:.2f}")
-                    if f1 <= 15:
-                        st.success("✅ f1 Uygun (0-15)")
-                    else:
-                        st.warning("❌ f1 Uygun Değil (>15)")
-                
-                with col2:
-                    st.metric(label="f2 (Similarity Factor)", value=f"{f2:.2f}")
-                    if f2 >= 50:
-                        st.success("✅ f2 Benzer (50-100)")
-                    else:
-                        st.error("❌ f2 Benzer Değil (<50)")
-                
-                st.divider()
-                st.write("### 📝 Akademik Analiz Notu")
-                if f2 >= 50:
-                    st.info(f"Hesaplanan f2 değeri ({f2:.2f}), iki profilin istatistiksel olarak benzer olduğunu göstermektedir. Bu durum formülasyonun referans ürünle eşdeğer salım karakteristiğine sahip olduğu şeklinde yorumlanabilir.")
-                else:
-                    st.error("Düşük f2 değeri, test ve referans profillerinin anlamlı derecede farklı olduğunu gösterir.")
+            # ÖNEMLİ: Farklı pH'lar yüklendiğinde zaman noktaları uyuşmazsa sistem hata vermesin diye kontrol
+            common_len = min(len(test_data["t"]), len(ref_data["t"]))
+            t_eval = test_data["t"][:common_len]
+            test_mean = test_data["mean"][:common_len]
+            ref_mean = ref_data["mean"][:common_len]
 
-                # Görsel Karşılaştırma
-                fig_f12, ax_f12 = plt.subplots(figsize=(10,5))
-                ax_f12.plot(ref_data["t"], ref_data["mean"], 's--b', label="Referans")
-                ax_f12.plot(test_data["t"], test_data["mean"], 'o-r', label="Test")
-                ax_f12.set_title("Test vs Referans Salım Kıyaslaması")
-                ax_f12.set_xlabel("Zaman"); ax_f12.set_ylabel("Salım (%)")
-                ax_f12.legend(); ax_f12.grid(True, alpha=0.2)
-                st.pyplot(fig_f12)
+            f1, f2 = calculate_f1_f2(ref_mean, test_mean)
+            
+            # Sonuç Ekranı
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric(label="f1 (Difference Factor)", value=f"{f1:.2f}")
+                st.caption("Beklenen: 0 - 15")
+            with col2:
+                st.metric(label="f2 (Similarity Factor)", value=f"{f2:.2f}")
+                st.caption("Beklenen: 50 - 100")
+
+            if f2 >= 50:
+                st.success(f"✅ PROFİLLER BENZER: f2 değeri {f2:.2f} ile limitlerin üzerindedir.")
+            else:
+                st.error(f"❌ PROFİLLER FARKLI: f2 değeri {f2:.2f} ile limitlerin altındadır.")
+
+            # Grafik
+            fig_comp, ax_comp = plt.subplots(figsize=(10,4))
+            ax_comp.plot(t_eval, ref_mean, 's--b', label="Referans (Yüklenen pH)")
+            ax_comp.plot(t_eval, test_mean, 'o-r', label="Test (Yüklenen pH)")
+            ax_comp.set_title(f"Profil Karşılaştırma (n_nokta={common_len})")
+            ax_comp.legend(); ax_comp.grid(True, alpha=0.2)
+            st.pyplot(fig_comp)
         else:
-            st.warning("Bu analizi yapabilmek için sol menüden 'Referans Verisi' yüklemelisiniz.")
-else:
-    st.info("Lütfen bir test verisi yükleyerek başlayın.")
+            st.info("💡 f1 ve f2 hesaplaması için lütfen sol menüden 'Referans Verisi' (ilgili pH ortamına ait) yükleyiniz.")
