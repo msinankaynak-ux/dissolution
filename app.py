@@ -100,6 +100,23 @@ def calculate_f1_f2(ref_mean, test_mean):
     sum_sq_diff = np.sum((R - T)**2)
     f2 = 50 * np.log10((1 + (1/n) * sum_sq_diff)**-0.5 * 100)
     return f1, f2
+def calculate_model_independent(t, q):
+    # Delta t (zaman aralıkları)
+    dt = np.diff(t, prepend=0)
+    # Area Under the Curve (AUC) - Trapezoidal rule
+    auc = np.cumsum(q * dt)
+    
+    # 1. Dissolution Efficiency (DE %)
+    # DE = (AUC_final / (Zaman_final * 100)) * 100
+    de = (auc[-1] / (t[-1] * 100)) * 100
+    
+    # 2. Mean Dissolution Time (MDT)
+    # MDT = Sum(t_orta * delta_q) / Sum(delta_q)
+    dq = np.diff(q, prepend=0)
+    t_mid = t - (dt / 2)
+    mdt = np.sum(t_mid * dq) / q[-1] if q[-1] > 0 else 0
+    
+    return de, mdt
 
 # --- 3. ARAYÜZ VE VERİ İŞLEME ---
 st.set_page_config(page_title="PharmTech Lab v16.0", layout="wide")
@@ -145,6 +162,16 @@ if test_data:
             ax.errorbar(ref_data["t"], ref_data["mean"], yerr=ref_data["std"], fmt='--sr', label="Referans", capsize=5)
         ax.set_xlabel(L['time']); ax.set_ylabel(L['release'] + " (%)"); ax.legend(); ax.grid(alpha=0.3)
         st.pyplot(fig)
+        de, mdt = calculate_model_independent(t_raw, q_raw)
+        
+        st.divider()
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("Dissolution Efficiency (DE %)", f"{de:.2f}%")
+            st.caption("Salım eğrisi altındaki alanın verimliliği.")
+        with c2:
+            st.metric("Mean Dissolution Time (MDT)", f"{mdt:.2f} {L['time']}")
+            st.caption("Ortalama çözünme süresi (İlacın %50'den fazlasının salındığı nokta civarı).")
 
     elif menu == "🧮 Kinetik Model Fitting":
         st.subheader(L['model_title'])
