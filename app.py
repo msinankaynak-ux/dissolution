@@ -6,18 +6,28 @@ from scipy.optimize import curve_fit, root
 from sklearn.metrics import r2_score
 import io
 
-
-# --- 1. CONFIG & IDENTITY UPDATE ---
+# --- 1. CONFIG & ACADEMIC IDENTITY UPDATE (OXFORD CLASSIC BURADA) ---
 st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 
-# Kurumsal Sarı-Lacivert Sidebar Başlığı ve Alt Başlık
+# Kurumsal Akademik Sidebar Başlığı ve İstediğiniz Menü (Deep Navy + Amber)
 st.sidebar.markdown(
     """
-    <div style="background-color: #002D72; padding: 20px; border-radius: 15px; border: 3px solid #FFD700; margin-bottom: 25px; text-align: center;">
-        <h1 style="color: #FFD700; margin: 0; font-size: 2.2rem; font-weight: bold;"> DissolvA</h1>
-        <p style="color: #DCDCDC; margin: 5px 0 0 0; font-size: 0.9rem; font-style: italic; opacity: 0.9;">Predictive Dissolution Suite</p>
-        <hr style="border: 0.5px solid #FFD700; margin: 10px 0;">
-        <p style="color: white; margin: 0; font-size: 0.75rem; font-weight: bold; letter-spacing: 1px;">POWERED BY AI</p>
+    <div style="background-color: #002147; padding: 25px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 12px rgba(0,0,0,0.3);">
+        <h1 style="color: #FFBF00; margin: 0; font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; font-family: 'Montserrat', sans-serif;">DissolvA</h1>
+        <p style="color: #DCDCDC; margin: 8px 0 0 0; font-size: 1.0rem; font-style: italic; font-weight: 400; font-family: 'Playfair Display', serif; opacity: 0.85;">Predictive Dissolution Suite</p>
+        <hr style="border: 0.5px solid #FFBF00; margin: 15px 0; opacity: 0.3;">
+        <p style="color: white; margin: 0; font-size: 0.7rem; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase;">Powered by AI</p>
+    </div>
+    
+    <div style="margin-left: 10px; margin-right: 10px; margin-bottom: 20px;">
+        <div style="color: #FFBF00; font-size: 1.1rem; font-weight: 600; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; margin-bottom: 15px;">
+            <span style="font-size: 1.3rem; margin-right: 10px;">📊</span> Molecular View
+            <span style="color: #DCDCDC; font-size: 0.8rem; font-weight: 400; margin-left: auto;">(Prediction)</span>
+        </div>
+        <div style="color: #FFBF00; font-size: 1.1rem; font-weight: 600; font-family: 'Montserrat', sans-serif; display: flex; align-items: center;">
+            <span style="font-size: 1.3rem; margin-right: 10px;">⚙️</span> Parameter Settings
+            <span style="color: #DCDCDC; font-size: 0.8rem; font-weight: 400; margin-left: auto;">(Optimization)</span>
+        </div>
     </div>
     """, 
     unsafe_allow_html=True
