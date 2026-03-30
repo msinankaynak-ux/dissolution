@@ -6,11 +6,11 @@ from scipy.optimize import curve_fit, root
 from sklearn.metrics import r2_score
 import io
 
-# --- 1. CONFIG & ACADEMIC IDENTITY UPDATE (BEKLENEN PRESTİJLİ ARAYÜZ ÇÖZÜMÜ) ---
+# --- 1. CONFIG & ACADEMIC IDENTITY UPDATE (ÇİFT BAŞLIK HATASI SİLİNDİ, BEKLENEN PRESTİJLİ ARAYÜZ) ---
 st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 
-# SİZİN BEKLEDİĞİNİZ TAM KUTU VE AKADEMİK SİMGE TASARIMI (HTLM/CSS ile Güçlendirildi)
-# Bu kısım mevcut görseldeki amatör dizilimi silip yerine tam o prestijli kutuyu koyar.
+# SİZİN BEKLEDİĞİNİZ TAM KUTU HİYERARŞİSİ VE ANALİTİK MENÜ (HTLM/CSS ile Güçlendirildi)
+# Bu kısım çift başlık hatasını sildi ve görseldeki o tam prestijli kutuyu koydu.
 
 st.sidebar.markdown(
     """
@@ -43,14 +43,17 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# --- 2. ANALYTICAL SUITE (Radyo Butonları Hiyerarşisi Burada Başlar) ---
+# --- 2. ANALYTICAL SUITE (Radyo Butonları Hiyerarşisi Burada Temiz Başlar) ---
+# Buradaki başlığı, o çift başlık hatasını sildiğimiz hiyerarşinin hemen altına koyuyoruz.
 st.sidebar.markdown(
     """
     <div style="color: #333333; font-size: 1.1rem; font-weight: bold; font-family: 'Montserrat', sans-serif; margin-bottom: 10px; opacity: 0.9;">Analytical Suite:</div>
     """, 
     unsafe_allow_html=True
 )
-# Radyo butonları aynı kalıyor
+
+# Buradaki `st.radio` işlevini, o çift başlık hatasını sildiğimiz hiyerarşinin hemen altına koyuyoruz.
+# Streamlit'in varsayılan başlığını 'label_visibility="collapsed"' ile gizleyerek, HTML başlığımızın hemen altına koyuyoruz.
 menu = st.sidebar.radio("", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"], label_visibility="collapsed")
 st.sidebar.divider()
 
