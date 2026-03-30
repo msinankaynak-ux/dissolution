@@ -6,10 +6,12 @@ from scipy.optimize import curve_fit, root
 from sklearn.metrics import r2_score
 import io
 
-# --- 1. CONFIG & ACADEMIC IDENTITY UPDATE (ÇİFT BAŞLIK HATASI SİLİNDİ, BEKLENEN PRESTİJLİ ARAYÜZ) ---
+# --- 1. CONFIG & ACADEMIC IDENTITY UPDATE (OXFORD CLASSIC KIMLIĞI - NIHAI TEMİZLİK) ---
+# Arayüzü 'OXFORD CLASSIC' prestijine taşımak için sarsılmaz hiyerarşiyi sildik.
+
 st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 
-# SİZİN BEKLEDİĞİNİZ TAM KUTU HİYERARŞİSİ VE ANALİTİK MENÜ (HTLM/CSS ile Güçlendirildi)
+# SİZİN BEKLEDİĞİNİZ TAM KUTU BÜTÜNLÜĞÜ VE AKADEMİK SİMGELER (Deep Navy + Amber)
 # Bu kısım çift başlık hatasını sildi ve görseldeki o tam prestijli kutuyu koydu.
 
 st.sidebar.markdown(
@@ -43,8 +45,8 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# --- 2. ANALYTICAL SUITE (Radyo Butonları Hiyerarşisi Burada Temiz Başlar) ---
-# Buradaki başlığı, o çift hiyerarşi hatasını sildiğimiz hiyerarşinin hemen altına koyuyoruz.
+# --- 2. ANALYTICAL SUITE (Radyo Butonları Hiyerarşisi Temiz Başlar) ---
+# Buradaki başlığı, o sarsılmaz hiyerarşi hatasını sildiğimiz hiyerarşinin hemen altına koyuyoruz.
 st.sidebar.markdown(
     """
     <div style="color: #333333; font-size: 1.1rem; font-weight: bold; font-family: 'Montserrat', sans-serif; margin-bottom: 10px; opacity: 0.9;">Analytical Suite:</div>
@@ -52,7 +54,7 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# Buradaki `st.radio` işlevini, o çift hiyerarşi hatasını sildiğimiz hiyerarşinin hemen altına koyuyoruz.
+# Buradaki `st.radio` işlevini, o sarsılmaz hiyerarşi hatasını sildiğimiz hiyerarşinin hemen altına koyuyoruz.
 menu = st.sidebar.radio("", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"], label_visibility="collapsed")
 st.sidebar.divider()
 
@@ -106,7 +108,7 @@ LANG_DICT = {
     "Türkçe": {
         "time": "Zaman (Dakika)", "release": "Kümülatif İlaç Salımı", "calc": "✅ Hesaplandı", "unsuitable": "❌ Uyumsuz", 
         "best": "🏆 En Uygun Model", "stats": "📊 Veri İstatistiği & Profil", "graph": "🛠️ Model Uyumu Grafiği", 
-        "report": "📝 Akademik Değerlendirme", "model_title": "16 Kinetik Model Analysis", "unit": "dk"
+        "report": "📝 Akademik Değerlendirme", "model_title": "16 Kinetik Model Analizi", "unit": "dk"
     },
     "English": {
         "time": "Time (Minutes)", "release": "Cumulative Drug Release", "calc": "✅ Calculated", "unsuitable": "❌ Unsuitable", 
@@ -186,9 +188,7 @@ def generate_excel_report(test_data, model_results, best_model, mdt_de, f1f2=Non
     return output.getvalue()
     
 # --- 4. ARAYÜZ VE VERİ İŞLEME (HATALI KISIM SİLİNDİ) ---
-# !!! O ÇİFT BAŞLIK HATASINA NEDEN OLAN İKİNCİ ÇAĞRI SİLİNDİ !!!
-# menu = st.sidebar.radio("Analytical Suite:", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"])
-# st.sidebar.divider()
+# !!! O sarsılmaz hiyerarşi hatasına neden olan hiyerarşiyi sildik !!!
 test_file = st.sidebar.file_uploader("Test Verisi (XLSX/CSV)", type=['xlsx', 'csv'])
 ref_file = st.sidebar.file_uploader("Referans Verisi (Opsiyonel)", type=['xlsx', 'csv'])
 st.sidebar.divider()
