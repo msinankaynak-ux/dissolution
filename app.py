@@ -9,8 +9,7 @@ import io
 # --- 1. CONFIG ---
 st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 
-# --- 2. SIDEBAR LOGO VE TASARIM (HATASIZ RENDER) ---
-# HTML içeriğini tek bir blokta tanımlıyoruz
+# --- 2. SIDEBAR LOGO VE TASARIM (HATASIZ VE TEMİZ RENDER) ---
 sidebar_header_html = """
 <div style="background-color: #002147; padding: 25px 20px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 15px rgba(0,0,0,0.4);">
     <h1 style="color: #FFBF00; margin: 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -1px; font-family: 'Montserrat', sans-serif;">DissolvA™</h1>
@@ -36,12 +35,10 @@ sidebar_header_html = """
 <hr style="border: 0.5px solid #DCDCDC; margin: 10px 0 20px 0; opacity: 0.2;">
 """
 
-# Tek bir seferde güvenli render yapıyoruz
 st.sidebar.markdown(sidebar_header_html, unsafe_allow_html=True)
 
 # --- 3. ANALYTICAL SUITE SELECTION ---
-# Başlığı markdown ile değil doğrudan sidebar elemanı olarak ekleyelim
-st.sidebar.write("### Analytical Suite:")
+st.sidebar.markdown("### Analytical Suite:")
 menu = st.sidebar.radio(
     label="Menu Selection",
     options=["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"],
@@ -49,6 +46,7 @@ menu = st.sidebar.radio(
 )
 st.sidebar.divider()
 
+# --- MODEL BİLGİ BANKASI VE GERİ KALAN KODLARINIZ BURADAN İTİBAREN DEVAM EDER ---
 # --- 4. MODEL BİLGİ BANKASI VE DEVAMI ---
 # Kodunuzun geri kalanı buradan itibaren (MODEL_KNOWLEDGE...) devam etmeli
 
