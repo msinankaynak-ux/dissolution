@@ -5,56 +5,61 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit, root
 from sklearn.metrics import r2_score
 
-# --- 1. MODEL BİLGİ BANKASI ---
+# --- 1. MODEL BİLGİ BANKASI & AKADEMİK YORUMLAR ---
 MODEL_KNOWLEDGE = {
     "Türkçe": {
         "Sıfır Derece": "Sıfır derece kinetiğine uymaktadır. Zamandan bağımsız sabit hızda salımı açıklar.",
-        "Birinci Derece": "Birinci derece kinetiğine uymaktadır. Salım hızı konsantrasyona bağlıdır.",
+        "Birinci Derece": "Birinci derece kinetiğine uymaktadır. Salım hızı, kalan ilaç konsantrasyonuna bağlıdır.",
         "Higuchi": "Higuchi kinetiğine uymaktadır. Matris sistemlerinden difüzyon temelli salımı açıklar.",
-        "Korsmeyer-Peppas": "Korsmeyer-Peppas modeline uymaktadır. n üsteli ile mekanizma tanımlanır.",
-        "Hixson-Crowell": "Hixson-Crowell kinetiğine uymaktadır. Erozyonla küçülen yüzey alanını açıklar.",
-        "Hopfenberg": "Hopfenberg modeline uymaktadır. Yüzeyden aşınan polimer geometrisini açıklar.",
-        "Makoid-Banakar": "Makoid-Banakar modeline uymaktadır. Burst release etkisini ölçer.",
-        "Square Root of Mass": "Kütle karekök modeline uymaktadır. Kütle değişimi bazlı erozyonu açıklar.",
-        "Peppas-Sahlin": "Peppas-Sahlin modeline uymaktadır. Difüzyon ve erozyon katkısını ayırır.",
-        "Gompertz": "Gompertz modeline uymaktadır. Sigmoid (S-tipi) gecikmeli profilleri açıklar.",
-        "Weibull (w/ Td)": "Weibull modeline uymaktadır. Profil şekli ve gecikme süresini tanımlar.",
-        "Baker-Lonsdale": "Baker-Lonsdale modeline uymaktadır. Küresel matris salımını açıklar.",
-        "Kopcha": "Kopcha modeline uymaktadır. Difüzyon/erozyon oranlarını verir.",
-        "Quadratic": "Quadratic modeline uymaktadır. Kısa süreli non-lineer salımları açıklar.",
-        "Peppas-Rincon": "Peppas-Rincon modeline uymaktadır. Çok katmanlı sistemleri açıklar.",
-        "Logistic": "Lojistik modele uymaktadır. Simetrik S-tipi profilleri açıklar."
+        "Korsmeyer-Peppas": "Korsmeyer-Peppas modeline uymaktadır. Mekanizma 'n' üsteli ile tanımlanır.",
+        "Hixson-Crowell": "Hixson-Crowell kinetiğine uymaktadır. Yüzey alanı ve çapın zamanla küçüldüğü (erozyon) durumları açıklar.",
+        "Hopfenberg": "Hopfenberg modeline uymaktadır. Yüzeyden aşınan (surface-eroding) polimerlerin geometrik (levha, silindir, küre) erozyonunu açıklar.",
+        "Makoid-Banakar": "Makoid-Banakar modeline uymaktadır. Hem difüzyon hem de birinci dereceyi kapsar; başlangıçtaki 'burst release' (ani salım) etkisini ölçer.",
+        "Square Root of Mass": "Kütle karekök modeline uymaktadır. Hixson-Crowell'e benzer ancak erozyonu kütle değişimi üzerinden hesaplar.",
+        "Peppas-Sahlin": "Peppas-Sahlin modeline uymaktadır. Difüzyonel ve polimer relaksasyonu (erozyon) katkısını birbirinden ayırır.",
+        "Gompertz": "Gompertz modeline uymaktadır. Gecikmeli başlayan sigmoid (S-tipi) profilleri açıklar.",
+        "Weibull (w/ Td)": "Weibull modeline uymaktadır. Profilin ölçek, şekil ve gecikme süresini karakterize eder.",
+        "Baker-Lonsdale": "Baker-Lonsdale modeline uymaktadır. Küresel matrislerden salımı açıklar.",
+        "Kopcha": "Kopcha modeline uymaktadır. Difüzyon ve erozyon oranlarını ayrıştırır.",
+        "Quadratic": "Quadratic modeline uymaktadır. Çok kısa süreli ve doğrusal olmayan salımları açıklar.",
+        "Peppas-Rincon": "Peppas-Rincon modeline uymaktadır. Çok katmanlı veya karmaşık geometriler için geliştirilmiş versiyondur.",
+        "Logistic": "Lojistik modele uymaktadır. Simetrik sigmoid (S-tipi) salımları açıklar."
     },
     "English": {
-        "Sıfır Derece": "fits Zero-Order kinetics. Describes constant rate release.",
-        "Birinci Derece": "fits First-Order kinetics. Concentration-dependent release.",
-        "Higuchi": "fits the Higuchi model. Diffusion-based matrix release.",
-        "Korsmeyer-Peppas": "fits Korsmeyer-Peppas. Mechanism defined by n exponent.",
-        "Hixson-Crowell": "fits Hixson-Crowell. Erosion-based surface area reduction.",
-        "Hopfenberg": "fits Hopfenberg. Geometric erosion of surface-eroding polymers.",
-        "Makoid-Banakar": "fits Makoid-Banakar. Measures burst release effect.",
-        "Square Root of Mass": "fits Square Root of Mass. Erosion via mass change.",
-        "Peppas-Sahlin": "fits Peppas-Sahlin. Separates diffusion and relaxation.",
-        "Gompertz": "fits Gompertz. Sigmoid lag-time profiles.",
-        "Weibull (w/ Td)": "fits Weibull. Defines profile shape and lag time.",
-        "Baker-Lonsdale": "fits Baker-Lonsdale. Spherical matrix release.",
-        "Kopcha": "fits Kopcha. Decouples diffusion and erosion.",
-        "Quadratic": "fits Quadratic. Short-term non-linear release.",
-        "Peppas-Rincon": "fits Peppas-Rincon. Multi-layer systems.",
-        "Logistic": "fits Logistic. Symmetric S-type profiles."
+        "Sıfır Derece": "fits Zero-Order kinetics, describing a constant release rate independent of time.",
+        "Birinci Derece": "fits First-Order kinetics. The release rate is concentration-dependent.",
+        "Higuchi": "fits the Higuchi model, describing diffusion-based release from matrix systems.",
+        "Korsmeyer-Peppas": "fits the Korsmeyer-Peppas model, where the mechanism is defined by the 'n' exponent.",
+        "Hixson-Crowell": "fits Hixson-Crowell kinetics, explaining cases where surface area and particle diameter decrease (erosion) over time.",
+        "Hopfenberg": "fits the Hopfenberg model, explaining surface-eroding polymers for specific geometries (slab, cylinder, sphere).",
+        "Makoid-Banakar": "fits the Makoid-Banakar model, covering both diffusion and first-order release while accounting for initial 'burst release'.",
+        "Square Root of Mass": "fits the Square Root of Mass model, similar to Hixson-Crowell but based on mass change erosion.",
+        "Peppas-Sahlin": "fits the Peppas-Sahlin model, separating diffusion and relaxation contributions.",
+        "Gompertz": "fits the Gompertz model, explaining sigmoid (S-type) lag-time profiles.",
+        "Weibull (w/ Td)": "fits the Weibull model, characterizing profile scale, shape, and lag time.",
+        "Baker-Lonsdale": "fits the Baker-Lonsdale model, explaining release from spherical matrices.",
+        "Kopcha": "fits the Kopcha model, decoupling diffusion and erosion rates.",
+        "Quadratic": "fits the Quadratic model, explaining short-term non-linear release.",
+        "Peppas-Rincon": "fits the Peppas-Rincon model, developed for multi-layer or complex geometries.",
+        "Logistic": "fits the Logistic model, explaining symmetric sigmoid (S-type) profiles."
     }
+}
+
+UNSUITABLE_DESC = {
+    "Türkçe": "⚠️ Veri yapısı bu modelin matematiksel varsayımlarına (örneğin sigmoid yapı, erozyon hızı veya gecikme süresi) istatistiksel olarak uymuyor.",
+    "English": "⚠️ Data structure does not statistically fit the model's mathematical assumptions (e.g., sigmoid shape, erosion rate, or lag-time)."
 }
 
 LANG_DICT = {
     "Türkçe": {
         "time": "Zaman", "release": "Salım", "calc": "✅ Hesaplandı", "unsuitable": "❌ Uyumsuz", 
-        "best": "🏆 En Uygun", "stats": "📊 Veri İstatistiği & Profil", "graph": "🛠️ Model Uyumu Grafiği", 
-        "report": "📝 Akademik Değerlendirme", "ref_comp": "🔄 Referans Karşılaştırma"
+        "best": "🏆 En Uygun Model", "stats": "📊 Veri İstatistiği & Profil", "graph": "🛠️ Model Uyumu Grafiği", 
+        "report": "📝 Akademik Değerlendirme", "model_title": "16 Kinetik Model Analizi"
     },
     "English": {
         "time": "Time", "release": "Release", "calc": "✅ Calculated", "unsuitable": "❌ Unsuitable", 
-        "best": "🏆 Best Fit", "stats": "📊 Statistics & Profile", "graph": "🛠️ Model Fit Graph", 
-        "report": "📝 Academic Evaluation", "ref_comp": "🔄 Reference Comparison"
+        "best": "🏆 Best Fit Model", "stats": "📊 Statistics & Profile", "graph": "🛠️ Model Fit Graph", 
+        "report": "📝 Academic Evaluation", "model_title": "16 Kinetic Model Analysis"
     }
 }
 
@@ -85,8 +90,8 @@ def calculate_aic(n, rss, p_count):
     if n <= p_count or rss <= 0: return 9999
     return n * np.log(rss/n) + 2 * p_count
 
-# --- 3. ARAYÜZ ---
-st.set_page_config(page_title="PharmTech Lab v15.9", layout="wide")
+# --- 3. ARAYÜZ VE VERİ İŞLEME ---
+st.set_page_config(page_title="PharmTech Lab v16.0", layout="wide")
 st.sidebar.title("🔬 PharmTech Lab")
 
 menu = st.sidebar.radio("Ana İşlemler:", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi"])
@@ -103,8 +108,7 @@ def process_data(file):
     t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
     v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
     mask = ~np.isnan(t)
-    n_count = v.shape[1]
-    return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask], "n": n_count}
+    return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask], "n": v.shape[1]}
 
 test_data = process_data(test_file)
 ref_data = process_data(ref_file)
@@ -114,14 +118,13 @@ if test_data:
     
     if menu == "📈 Salım Profilleri":
         st.subheader(L['stats'])
-        # Resim 1 Talebi: Mean yanına n, RSD ve VK ekleme
         rsd = (test_data["std"] / np.where(q_raw==0, 1, q_raw)) * 100
         stats_df = pd.DataFrame({
             L['time']: t_raw, 
             f"Mean (n={test_data['n']})": q_raw, 
             "SD": test_data["std"], 
             "RSD (%)": rsd,
-            "VK (%)": rsd # VK ve RSD farmasötik tabloda genelde aynıdır
+            "VK (%)": rsd
         })
         st.table(stats_df.style.format("{:.2f}").hide(axis="index"))
         
@@ -133,7 +136,7 @@ if test_data:
         st.pyplot(fig)
 
     elif menu == "🧮 Kinetik Model Fitting":
-        st.subheader("16 Kinetik Model Analizi")
+        st.subheader(L['model_title'])
         tf, qf = t_raw[(t_raw>0)&(q_raw>0)], q_raw[(t_raw>0)&(q_raw>0)]
         
         model_defs = [
@@ -150,7 +153,7 @@ if test_data:
         ]
         
         results = []; fit_plots = {}
-        # Baker-Lonsdale Root
+        # Baker-Lonsdale
         try:
             popt_bl, _ = curve_fit(baker_lonsdale_for_fit, t_raw, q_raw, p0=[0.001])
             y_bl = baker_lonsdale_for_fit(t_raw, *popt_bl)
@@ -160,7 +163,7 @@ if test_data:
 
         for name, func, p0, low, up in model_defs:
             try:
-                popt, _ = curve_fit(func, tf, qf, p0=p0, bounds=(low, up), maxfev=10000)
+                popt, _ = curve_fit(func, tf, qf, p0=p0, bounds=(low, up), maxfev=15000)
                 y_p = func(tf, *popt)
                 results.append({"Model": name, "R²": r2_score(qf, y_p), "AIC": calculate_aic(len(tf), np.sum((qf-y_p)**2), len(p0)), "Durum": L['calc']})
                 fit_plots[name] = (func, popt)
@@ -171,11 +174,18 @@ if test_data:
         best_name = df_res.loc[best_idx, "Model"]
         st.table(df_res.style.format({"R²": "{:.4f}", "AIC": "{:.2f}"}).hide(axis="index"))
 
-        # Resim 2 Talebi: Grafikleri Göster
-        st.divider(); st.subheader(L['graph'])
+        # Akademik Değerlendirme & Uygunsuzluk Notları
+        st.divider(); st.subheader(L['report'])
+        st.info(f"🏆 **{best_name}**: {MODEL_KNOWLEDGE[selected_lang].get(best_name, '')}")
+        
+        with st.expander("Uyumsuz Modeller Hakkında Notlar / Notes on Unsuitable Models"):
+            st.write(UNSUITABLE_DESC[selected_lang])
+
+        # Model Grafiği
+        st.subheader(L['graph'])
         sel = st.multiselect("Grafik Modelleri:", list(fit_plots.keys()), default=[best_name])
         if sel:
-            fig_m, ax_m = plt.subplots(figsize=(10,6)); ax_m.scatter(t_raw, q_raw, c='k', label="Deneysel")
+            fig_m, ax_m = plt.subplots(figsize=(10,6)); ax_m.scatter(t_raw, q_raw, c='k', label="Data")
             t_plot = np.linspace(0, t_raw.max(), 100)
             for m in sel:
                 f, p = fit_plots[m]; ax_m.plot(t_plot, f(t_plot, *p), label=m)
@@ -184,12 +194,10 @@ if test_data:
     elif menu == "🧬 IVIVC Analizi":
         st.subheader("Wagner-Nelson Absorbsiyon Tahmini")
         ke = st.number_input("Eliminasyon Sabiti (ke) [1/h]:", value=0.1500, format="%.4f")
-        # Resim 3 Hatası Giderildi: trapz -> trapezoid (veya manuel integral)
         dt = np.diff(t_raw, prepend=0)
         cum_auc = np.cumsum(q_raw * dt)
         total_auc = cum_auc[-1] + (q_raw[-1] / ke if ke > 0 else 0)
         f_abs = (q_raw + ke * cum_auc) / (ke * total_auc if total_auc > 0 else 1)
-        
         ivivc_df = pd.DataFrame({L['time']: t_raw, "Release (%)": q_raw, "Fraction Absorbed": f_abs})
         st.table(ivivc_df.style.format("{:.4f}").hide(axis="index"))
         fig_iv, ax_iv = plt.subplots(); ax_iv.plot(t_raw, f_abs, 'r-o'); st.pyplot(fig_iv)
