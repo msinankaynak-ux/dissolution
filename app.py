@@ -33,7 +33,7 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# --- MODEL BİLGİ BANKASI & AKADEMİK YORUMLAR (ORİJİNAL KOD DEVAMI) ---
+# --- MODEL BİLGİ BANKASI & AKADEMİK YORUMLAR (Buradan sonrası aynı devam ediyor) ---
 MODEL_KNOWLEDGE = {
     "Türkçe": {
         "Sıfır Derece": "Sıfır derece kinetiğine uymaktadır. Zamandan bağımsız sabit hızda salımı açıklar.",
