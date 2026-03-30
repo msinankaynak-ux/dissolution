@@ -136,7 +136,7 @@ def generate_excel_report(test_data, model_results, best_model, mdt_de, f1f2=Non
     
 # --- 3. ARAYÜZ VE VERİ İŞLEME ---
 st.set_page_config(page_title="SmartDissolve AI", layout="wide")
-st.sidebar.title("🔬 Predictive Dissolution Suite")
+st.sidebar.title("🔬 SmartDissolve AI: Predictive Dissolution Suite")
 
 menu = st.sidebar.radio("Analysis Hub:", ["📈 Release Profiles", "🧮 Kinetic Model Fitting", "🧬 IVIVC Analysis", "📊 f1 & f2 Similarity Analysis"])
 st.sidebar.divider()
