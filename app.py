@@ -6,7 +6,21 @@ from scipy.optimize import curve_fit, root
 from sklearn.metrics import r2_score
 import io
 
-# --- 1. MODEL BİLGİ BANKASI & AKADEMİK YORUMLAR ---
+# --- 1. CONFIG & DISSOLVA IDENTITY (GÜNCELLENEN KISIM) ---
+st.set_page_config(page_title="DissolvA v16.0", layout="wide")
+
+# Kurumsal Sarı-Lacivert Sidebar Başlığı
+st.sidebar.markdown(
+    """
+    <div style="background-color: #002D72; padding: 20px; border-radius: 15px; border: 3px solid #FFD700; margin-bottom: 25px;">
+        <h1 style="color: #FFD700; margin: 0; font-size: 2.2rem; text-align: center;">💊 DissolvA</h1>
+        <p style="color: white; margin: 0; font-size: 0.8rem; text-align: center; font-weight: bold;">Powered by AI</p>
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
+
+# --- MODEL BİLGİ BANKASI & AKADEMİK YORUMLAR (ORİJİNAL KOD DEVAMI) ---
 MODEL_KNOWLEDGE = {
     "Türkçe": {
         "Sıfır Derece": "Sıfır derece kinetiğine uymaktadır. Zamandan bağımsız sabit hızda salımı açıklar.",
@@ -135,10 +149,7 @@ def generate_excel_report(test_data, model_results, best_model, mdt_de, f1f2=Non
     return output.getvalue()
     
 # --- 3. ARAYÜZ VE VERİ İŞLEME ---
-st.set_page_config(page_title="PharmTech Lab v16.0", layout="wide")
-st.sidebar.title("🔬 SmartDissolve AI")
-
-menu = st.sidebar.radio("Ana İşlemler:", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"])
+menu = st.sidebar.radio("Analytical Suite:", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"])
 st.sidebar.divider()
 test_file = st.sidebar.file_uploader("Test Verisi (XLSX/CSV)", type=['xlsx', 'csv'])
 ref_file = st.sidebar.file_uploader("Referans Verisi (Opsiyonel)", type=['xlsx', 'csv'])
@@ -295,20 +306,15 @@ if test_data:
 # --- RAPORLAMA BUTONU ---
 st.sidebar.divider()
 if test_data:
-    # Verilerin tanımlı olduğundan emin olalım (Error Handling)
     current_mdt = mdt if 'mdt' in locals() else 0
     current_de = de if 'de' in locals() else 0
     report_mdt_de = (current_de, current_mdt)
-    
-    # f1/f2 sadece ilgili menüdeyken ve referans varken çekilir
     report_f1f2 = (f1, f2) if (menu == "📊 f1 & f2 Benzerlik Analizi" and ref_data is not None and f1 is not None) else None
-    
-    # Raporu oluştur
     excel_data = generate_excel_report(test_data, results, best_name, report_mdt_de, report_f1f2)
     
     st.sidebar.download_button(
-        label="📥 Excel Raporunu İndir",
+        label="📥 DissolvA Raporunu İndir",
         data=excel_data,
-        file_name=f"PharmTech_Analiz_Raporu_{selected_lang}.xlsx",
+        file_name=f"DissolvA_Analiz_Raporu_{selected_lang}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
