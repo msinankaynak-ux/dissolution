@@ -6,67 +6,48 @@ from scipy.optimize import curve_fit, root
 from sklearn.metrics import r2_score
 import io
 
-# --- 1. CONFIG & PRESTIGE IDENTITY (DISSOLVA™ - AI & LAB INTEGRATION) ---
-st.set_page_config(page_title="DissolvA™ v16.0", layout="wide")
+# --- 1. CONFIG & ACADEMIC IDENTITY (OXFORD CLASSIC - DISSOLVA™) ---
+st.set_page_config(page_title="DissolvA v16.0", layout="wide")
 
-# Sidebar: Tescilli Marka + AI Değerlendirme Görseli
+# Sidebar Görselleştirme ve Prestij Logosu
 st.sidebar.markdown(
     """
-    <div style="background-color: #002147; padding: 25px 20px; border-radius: 12px; border-left: 6px solid #FFBF00; margin-bottom: 5px; text-align: center; box-shadow: 0px 10px 20px rgba(0,0,0,0.3);">
-        <h1 style="color: #FFFFFF; margin: 0; font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; font-family: 'Montserrat', sans-serif;">DissolvA<span style="font-size: 1.2rem; vertical-align: super; color: #FFBF00;">™</span></h1>
-        <p style="color: #DCDCDC; margin: 5px 0 0 0; font-size: 0.95rem; font-style: italic; font-weight: 300; font-family: 'Playfair Display', serif; opacity: 0.8;">Predictive Dissolution Suite</p>
-        <hr style="border: 0.5px solid #FFBF00; margin: 15px 0; opacity: 0.3;">
+    <div style="background-color: #002147; padding: 25px 20px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center; box-shadow: 0px 4px 15px rgba(0,0,0,0.4);">
+        <h1 style="color: #FFBF00; margin: 0; font-size: 2.8rem; font-weight: 800; letter-spacing: -1.5px; font-family: 'Montserrat', sans-serif;">DissolvA<span style="font-size: 1.2rem; vertical-align: super; color: #FFFFFF;">™</span></h1>
+        <p style="color: #DCDCDC; margin: 10px 0 0 0; font-size: 1.0rem; font-style: italic; font-weight: 400; font-family: 'Playfair Display', serif; opacity: 0.9;">Predictive Dissolution Suite</p>
+        <hr style="border: 0.5px solid #FFBF00; margin: 15px 0 20px 0; opacity: 0.4;">
         
-        <div style="background: linear-gradient(135deg, rgba(255,191,0,0.1) 0%, rgba(0,33,71,0.5) 100%); border-radius: 8px; padding: 10px; margin-top: 10px; border: 1px solid rgba(255,191,0,0.2);">
-            <svg viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="20" cy="30" r="3" fill="#FFBF00" />
-                <circle cx="50" cy="15" r="3" fill="#FFBF00" />
-                <circle cx="50" cy="45" r="3" fill="#FFBF00" />
-                <circle cx="80" cy="30" r="3" fill="#FFBF00" />
-                <line x1="20" y1="30" x2="50" y2="15" stroke="#FFBF00" stroke-width="0.5" opacity="0.5" />
-                <line x1="20" y1="30" x2="50" y2="45" stroke="#FFBF00" stroke-width="0.5" opacity="0.5" />
-                <line x1="50" y1="15" x2="80" y2="30" stroke="#FFBF00" stroke-width="0.5" opacity="0.5" />
-                <line x1="50" y1="45" x2="80" y2="30" stroke="#FFBF00" stroke-width="0.5" opacity="0.5" />
-                
-                <rect x="100" y="15" width="30" height="30" rx="3" fill="none" stroke="#FFBF00" stroke-width="1.5" />
-                <text x="105" y="35" fill="#FFBF00" font-family="Arial" font-size="10" font-weight="bold">AI</text>
-                <line x1="115" y1="10" x2="115" y2="15" stroke="#FFBF00" stroke-width="1" />
-                <line x1="115" y1="45" x2="115" y2="50" stroke="#FFBF00" stroke-width="1" />
-                <line x1="95" y1="30" x2="100" y2="30" stroke="#FFBF00" stroke-width="1" />
-                <line x1="130" y1="30" x2="135" y2="30" stroke="#FFBF00" stroke-width="1" />
-            </svg>
-            <p style="color: #FFFFFF; margin: 5px 0 0 0; font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;">POWERED BY AI</p>
+        <div style="border: 1px solid rgba(255,191,0,0.3); padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.05);">
+             <p style="color: white; margin: 0; font-size: 0.75rem; font-weight: bold; letter-spacing: 2.5px; text-transform: uppercase;">POWERED BY AI</p>
         </div>
     </div>
     
-    <div style="padding: 20px 15px; background: rgba(0,33,71,0.03); border-radius: 0 0 12px 12px; margin-bottom: 20px; font-family: 'Montserrat', sans-serif;">
-        <div style="display: flex; align-items: center; margin-bottom: 12px;">
-            <span style="color: #002147; font-size: 1.2rem; margin-right: 10px;">🧬</span>
-            <span style="color: #002147; font-size: 1.0rem; font-weight: 700;">Molecular View</span>
-            <span style="color: #666; font-size: 0.75rem; margin-left: auto; opacity: 0.6;">(Prediction)</span>
+    <div style="margin-left: 15px; margin-right: 15px; margin-bottom: 25px; font-family: 'Montserrat', sans-serif;">
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <span style="font-size: 1.2rem; margin-right: 12px;">🧬</span>
+            <span style="color: #FFBF00; font-size: 1.15rem; font-weight: 600;">Molecular View</span>
+            <span style="color: #DCDCDC; font-size: 0.85rem; font-weight: 400; margin-left: auto; opacity: 0.8;">(Prediction)</span>
         </div>
         <div style="display: flex; align-items: center;">
-            <span style="color: #002147; font-size: 1.2rem; margin-right: 10px;">⚙️</span>
-            <span style="color: #002147; font-size: 1.0rem; font-weight: 700;">Parameter Settings</span>
-            <span style="color: #666; font-size: 0.75rem; margin-left: auto; opacity: 0.6;">(Optimization)</span>
+            <span style="font-size: 1.2rem; margin-right: 12px;">⚙️</span>
+            <span style="color: #FFBF00; font-size: 1.15rem; font-weight: 600;">Parameter Settings</span>
+            <span style="color: #DCDCDC; font-size: 0.85rem; font-weight: 400; margin-left: auto; opacity: 0.8;">(Optimization)</span>
         </div>
     </div>
+    <hr style="border: 0.5px solid #DCDCDC; margin: 10px 0 20px 0; opacity: 0.2;">
     """, 
     unsafe_allow_html=True
 )
 
-# --- 2. ANALYTICAL SUITE & TOOLS ---
-st.sidebar.markdown("<p style='font-weight: bold; color: #333; margin-bottom: -10px;'>Analytical Suite:</p>", unsafe_allow_html=True)
+# --- 2. ANALYTICAL SUITE SELECTION ---
+st.sidebar.markdown(
+    """<div style="color: #333333; font-size: 1.1rem; font-weight: bold; font-family: 'Montserrat', sans-serif; margin-bottom: 10px; opacity: 0.9;">Analytical Suite:</div>""", 
+    unsafe_allow_html=True
+)
 menu = st.sidebar.radio("", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"], label_visibility="collapsed")
 st.sidebar.divider()
 
-# Veri Yükleme Alanları
-test_file = st.sidebar.file_uploader("Test Verisi (XLSX/CSV)", type=['xlsx', 'csv'])
-ref_file = st.sidebar.file_uploader("Referans Verisi (Opsiyonel)", type=['xlsx', 'csv'])
-st.sidebar.divider()
-selected_lang = st.sidebar.selectbox("Dil / Language:", ["Türkçe", "English"])
-
-# --- MODEL BİLGİ BANKASI ---
+# --- MODEL BİLGİ BANKASI (Orijinal Detaylı Liste) ---
 MODEL_KNOWLEDGE = {
     "Türkçe": {
         "Sıfır Derece": "Sıfır derece kinetiğine uymaktadır. Zamandan bağımsız sabit hızda salımı açıklar.",
@@ -179,26 +160,35 @@ def generate_excel_report(test_data, model_results, best_model, mdt_de, f1f2=Non
         if f1f2:
             summary_data["Parametre"].extend(["f1 (Farklılık Faktörü)", "f2 (Benzerlik Faktörü)"])
             summary_data["Değer"].extend([f"{f1f2[0]:.2f}", f"{f1f2[1]:.2f}"])
+            
         pd.DataFrame(summary_data).to_excel(writer, sheet_name='Genel_Ozet', index=False)
+        
         if model_results is not None:
             pd.DataFrame(model_results).to_excel(writer, sheet_name='Kinetik_Modeller', index=False)
-        data_sheet = pd.DataFrame({"Zaman": test_data['t'], "Ortalama Salım (%)": test_data['mean'], "SD": test_data['std']})
+        
+        data_sheet = pd.DataFrame({
+            "Zaman": test_data['t'],
+            "Ortalama Salım (%)": test_data['mean'],
+            "Standart Sapma": test_data['std']
+        })
         data_sheet.to_excel(writer, sheet_name='Analiz_Verileri', index=False)
+        
     return output.getvalue()
 
-# --- 4. VERİ İŞLEME VE ARAYÜZ ---
+# --- 4. VERİ GİRİŞİ VE İŞLEME ---
+test_file = st.sidebar.file_uploader("Test Verisi (XLSX/CSV)", type=['xlsx', 'csv'])
+ref_file = st.sidebar.file_uploader("Referans Verisi (Opsiyonel)", type=['xlsx', 'csv'])
+st.sidebar.divider()
+selected_lang = st.sidebar.selectbox("Dil / Language:", ["Türkçe", "English"])
 L = LANG_DICT[selected_lang]
 
 def process_data(file):
     if file is None: return None
-    try:
-        df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
-        t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
-        v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
-        mask = ~np.isnan(t)
-        return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask], "n": v.shape[1]}
-    except:
-        return None
+    df = pd.read_excel(file) if file.name.endswith('.xlsx') else pd.read_csv(file)
+    t = pd.to_numeric(df.iloc[:, 0], errors='coerce').values
+    v = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
+    mask = ~np.isnan(t)
+    return {"t": t[mask], "mean": v.mean(axis=1).values[mask], "std": v.std(axis=1).values[mask], "n": v.shape[1]}
 
 test_data = process_data(test_file)
 ref_data = process_data(ref_file)
@@ -215,21 +205,35 @@ if test_data:
     if menu == "📈 Salım Profilleri":
         st.subheader(L['stats'])
         rsd = (test_data["std"] / np.where(q_raw==0, 1, q_raw)) * 100
-        stats_df = pd.DataFrame({L['time']: t_raw, f"Mean (n={test_data['n']})": q_raw, "SD": test_data["std"], "RSD (%)": rsd})
+        stats_df = pd.DataFrame({
+            L['time']: t_raw, 
+            f"Mean (n={test_data['n']})": q_raw, 
+            "SD": test_data["std"], 
+            "RSD (%)": rsd,
+            "VK (%)": rsd
+        })
         st.table(stats_df.style.format("{:.2f}").hide(axis="index"))
+        
         fig, ax = plt.subplots(figsize=(10,5))
         ax.errorbar(t_raw, q_raw, yerr=test_data["std"], fmt='-ok', label="Test", capsize=5)
-        if ref_data: ax.errorbar(ref_data["t"], ref_data["mean"], yerr=ref_data["std"], fmt='--sr', label="Referans", capsize=5)
+        if ref_data:
+            ax.errorbar(ref_data["t"], ref_data["mean"], yerr=ref_data["std"], fmt='--sr', label="Referans", capsize=5)
         ax.set_xlabel(L['time']); ax.set_ylabel(L['release'] + " (%)"); ax.legend(); ax.grid(alpha=0.3)
         st.pyplot(fig)
+        
         st.divider()
         c1, c2 = st.columns(2)
-        with c1: st.metric("Dissolution Efficiency (DE %)", f"{de:.2f}%")
-        with c2: st.metric("Mean Dissolution Time (MDT)", f"{mdt:.2f} {L['unit']}")
+        with c1:
+            st.metric("Dissolution Efficiency (DE %)", f"{de:.2f}%")
+            st.caption("Salım eğrisi altındaki alanın verimliliği.")
+        with c2:
+            st.metric("Mean Dissolution Time (MDT)", f"{mdt:.2f} {L['unit']}")
+            st.caption(f"Ortalama çözünme süresi ({L['unit']}).")
 
     elif menu == "🧮 Kinetik Model Fitting":
         st.subheader(L['model_title'])
         tf, qf = t_raw[(t_raw>0)&(q_raw>0)], q_raw[(t_raw>0)&(q_raw>0)]
+        
         model_defs = [
             ("Sıfır Derece", zero_order, [0.1], [0], [100]), ("Birinci Derece", first_order, [0.01], [0], [10]),
             ("Higuchi", higuchi, [1.0], [0], [500]), ("Korsmeyer-Peppas", korsmeyer, [1.0, 0.5], [0, 0.1], [500, 2.0]),
@@ -242,48 +246,97 @@ if test_data:
             ("Quadratic", quadratic, [0.1, 0.01], [0, -1], [100, 1]), ("Logistic", logistic, [100, 0.1, 10], [50, 0, 0], [110, 2, 500]),
             ("Peppas-Rincon", peppas_rincon, [1.0, 0.5], [0, 0.1], [500, 2.0])
         ]
+        
         results_list = []; fit_plots = {}
         try:
             popt_bl, _ = curve_fit(baker_lonsdale_for_fit, t_raw, q_raw, p0=[0.001])
-            y_bl = baker_lonsdale_for_fit(t_raw, *popt_bl); results_list.append({"Model": "Baker-Lonsdale", "R²": r2_score(q_raw, y_bl), "AIC": calculate_aic(len(t_raw), np.sum((q_raw-y_bl)**2), 1), "Durum": L['calc']})
+            y_bl = baker_lonsdale_for_fit(t_raw, *popt_bl)
+            results_list.append({"Model": "Baker-Lonsdale", "R²": r2_score(q_raw, y_bl), "AIC": calculate_aic(len(t_raw), np.sum((q_raw-y_bl)**2), 1), "Durum": L['calc']})
             fit_plots["Baker-Lonsdale"] = (baker_lonsdale_for_fit, popt_bl)
         except: results_list.append({"Model": "Baker-Lonsdale", "R²": 0, "AIC": 9999, "Durum": L['unsuitable']})
+
         for name, func, p0, low, up in model_defs:
             try:
                 popt, _ = curve_fit(func, tf, qf, p0=p0, bounds=(low, up), maxfev=15000)
-                y_p = func(tf, *popt); results_list.append({"Model": name, "R²": r2_score(qf, y_p), "AIC": calculate_aic(len(tf), np.sum((qf-y_p)**2), len(p0)), "Durum": L['calc']})
+                y_p = func(tf, *popt)
+                results_list.append({"Model": name, "R²": r2_score(qf, y_p), "AIC": calculate_aic(len(tf), np.sum((qf-y_p)**2), len(p0)), "Durum": L['calc']})
                 fit_plots[name] = (func, popt)
             except: results_list.append({"Model": name, "R²": 0, "AIC": 9999, "Durum": L['unsuitable']})
-        results = pd.DataFrame(results_list); best_idx = results[results["Durum"] == L['calc']]["AIC"].idxmin(); best_name = results.loc[best_idx, "Model"]
+
+        results = pd.DataFrame(results_list)
+        best_idx = results[results["Durum"] == L['calc']]["AIC"].idxmin()
+        best_name = results.loc[best_idx, "Model"]
         st.table(results.style.format({"R²": "{:.4f}", "AIC": "{:.2f}"}).hide(axis="index"))
-        st.divider(); st.subheader(L['report']); st.info(f"🏆 **{best_name}**: {MODEL_KNOWLEDGE[selected_lang].get(best_name, '')}")
-        st.subheader(L['graph']); sel = st.multiselect("Grafik Modelleri:", list(fit_plots.keys()), default=[best_name])
+
+        st.divider(); st.subheader(L['report'])
+        st.info(f"🏆 **{best_name}**: {MODEL_KNOWLEDGE[selected_lang].get(best_name, '')}")
+        
+        with st.expander("Uyumsuz Modeller Hakkında Notlar / Notes on Unsuitable Models"):
+            st.write(UNSUITABLE_DESC[selected_lang])
+
+        st.subheader(L['graph'])
+        sel = st.multiselect("Grafik Modelleri:", list(fit_plots.keys()), default=[best_name])
         if sel:
-            fig_m, ax_m = plt.subplots(figsize=(10,6)); ax_m.scatter(t_raw, q_raw, c='k', label="Data"); t_plot = np.linspace(0, t_raw.max(), 100)
-            for m in sel: f, p = fit_plots[m]; ax_m.plot(t_plot, f(t_plot, *p), label=m)
+            fig_m, ax_m = plt.subplots(figsize=(10,6)); ax_m.scatter(t_raw, q_raw, c='k', label="Data")
+            t_plot = np.linspace(0, t_raw.max(), 100)
+            for m in sel:
+                f, p = fit_plots[m]; ax_m.plot(t_plot, f(t_plot, *p), label=m)
             ax_m.legend(); ax_m.set_xlabel(L['time']); ax_m.set_ylabel(L['release']+" (%)"); st.pyplot(fig_m)
 
     elif menu == "🧬 IVIVC Analizi":
         st.subheader("Wagner-Nelson Absorbsiyon Tahmini")
         ke = st.number_input("Eliminasyon Sabiti (ke) [1/h]:", value=0.1500, format="%.4f")
-        dt = np.diff(t_raw, prepend=0); cum_auc = np.cumsum(q_raw * dt); total_auc = cum_auc[-1] + (q_raw[-1] / ke if ke > 0 else 0)
+        dt = np.diff(t_raw, prepend=0)
+        cum_auc = np.cumsum(q_raw * dt)
+        total_auc = cum_auc[-1] + (q_raw[-1] / ke if ke > 0 else 0)
         f_abs = (q_raw + ke * cum_auc) / (ke * total_auc if total_auc > 0 else 1)
-        st.table(pd.DataFrame({L['time']: t_raw, "Release (%)": q_raw, "Fraction Absorbed": f_abs}).style.format("{:.4f}").hide(axis="index"))
-        fig_iv, ax_iv = plt.subplots(); ax_iv.plot(t_raw, f_abs, 'r-o'); ax_iv.set_xlabel(L['time']); ax_iv.set_ylabel("Fa"); st.pyplot(fig_iv)
-
+        ivivc_df = pd.DataFrame({L['time']: t_raw, "Release (%)": q_raw, "Fraction Absorbed": f_abs})
+        st.table(ivivc_df.style.format("{:.4f}").hide(axis="index"))
+        fig_iv, ax_iv = plt.subplots(); ax_iv.plot(t_raw, f_abs, 'r-o')
+        ax_iv.set_xlabel(L['time']); ax_iv.set_ylabel("Absorbe Olan Fraksiyon (Fa)"); st.pyplot(fig_iv)
+        
     elif menu == "📊 f1 & f2 Benzerlik Analizi":
-        st.subheader("f1 & f2 Faktörleri")
-        if ref_data:
+        st.subheader("f1 & f2 Faktörleri (Similarity & Difference Factors)")
+        if ref_data is not None:
             common_len = min(len(test_data["t"]), len(ref_data["t"]))
-            f1, f2 = calculate_f1_f2(ref_data["mean"][:common_len], test_data["mean"][:common_len])
-            c1, c2 = st.columns(2)
-            with c1: st.metric("f1 (Difference)", f"{f1:.2f}")
-            with c2: st.metric("f2 (Similarity)", f"{f2:.2f}")
-            if f2 >= 50: st.success(f"✅ PROFİLLER BENZER (f2={f2:.2f})")
-            else: st.error(f"❌ PROFİLLER FARKLI (f2={f2:.2f})")
-        else: st.info("Referans verisi yükleyiniz.")
+            t_eval = test_data["t"][:common_len]
+            test_mean = test_data["mean"][:common_len]
+            ref_mean = ref_data["mean"][:common_len]
+            f1, f2 = calculate_f1_f2(ref_mean, test_mean)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric(label="f1 (Difference Factor)", value=f"{f1:.2f}")
+                st.caption("Beklenen: 0 - 15")
+            with col2:
+                st.metric(label="f2 (Similarity Factor)", value=f"{f2:.2f}")
+                st.caption("Beklenen: 50 - 100")
 
-# Raporlama
+            if f2 >= 50:
+                st.success(f"✅ PROFİLLER BENZER: f2 değeri {f2:.2f} ile limitlerin üzerindedir.")
+            else:
+                st.error(f"❌ PROFİLLER FARKLI: f2 değeri {f2:.2f} ile limitlerin altındadır.")
+
+            fig_comp, ax_comp = plt.subplots(figsize=(10,4))
+            ax_comp.plot(t_eval, ref_mean, 's--b', label="Referans")
+            ax_comp.plot(t_eval, test_mean, 'o-r', label="Test")
+            ax_comp.set_title(f"Profil Karşılaştırma (n_nokta={common_len})")
+            ax_comp.set_xlabel(L['time']); ax_comp.set_ylabel(L['release'] + " (%)")
+            ax_comp.legend(); ax_comp.grid(True, alpha=0.2)
+            st.pyplot(fig_comp)
+        else:
+            st.info("💡 f1 ve f2 hesaplaması için lütfen sol menüden 'Referans Verisi' yükleyiniz.")
+
+# --- RAPORLAMA BUTONU VE ALT BİLGİ ---
+st.sidebar.divider()
 if test_data:
-    excel_data = generate_excel_report(test_data, results, best_name, (de, mdt), (f1, f2))
-    st.sidebar.download_button("📥 DissolvA Raporunu İndir", excel_data, f"DissolvA_Raporu.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    report_mdt_de = (de, mdt)
+    report_f1f2 = (f1, f2) if (f1 is not None and f2 is not None) else None
+    excel_data = generate_excel_report(test_data, results, best_name, report_mdt_de, report_f1f2)
+    
+    st.sidebar.download_button(
+        label="📥 DissolvA Raporunu İndir",
+        data=excel_data,
+        file_name=f"DissolvA_Analiz_Raporu.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
