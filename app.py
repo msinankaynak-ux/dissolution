@@ -135,8 +135,17 @@ def generate_excel_report(test_data, model_results, best_model, mdt_de, f1f2=Non
     return output.getvalue()
     
 # --- 3. ARAYÜZ VE VERİ İŞLEME ---
-st.set_page_config(page_title="PharmTech Lab v16.0", layout="wide")
-st.sidebar.title("🔬 PharmTech Lab")
+st.set_page_config(page_title="DissolvA v16.0", layout="wide")
+sidebar_header_html = """
+<div style="background-color: #002147; padding: 25px 20px; border-radius: 12px; border-left: 5px solid #FFBF00; margin-bottom: 25px; text-align: center;">
+    <h1 style="color: #FFBF00; margin: 0; font-size: 2.8rem; font-weight: 800;">DissolvA™</h1>
+    <p style="color: #DCDCDC; margin: 5px 0; font-size: 1.0rem; font-style: italic;">Predictive Dissolution Suite</p>
+    <div style="border: 1px solid rgba(255,191,0,0.3); padding: 8px; margin-top: 10px; border-radius: 5px;">
+         <p style="color: white; margin: 0; font-size: 0.7rem; font-weight: bold; letter-spacing: 2px;">POWERED BY AI</p>
+    </div>
+</div>
+"""
+st.sidebar.markdown(sidebar_header_html, unsafe_allow_html=True)
 
 menu = st.sidebar.radio("Ana İşlemler:", ["📈 Salım Profilleri", "🧮 Kinetik Model Fitting", "🧬 IVIVC Analizi", "📊 f1 & f2 Benzerlik Analizi"])
 st.sidebar.divider()
