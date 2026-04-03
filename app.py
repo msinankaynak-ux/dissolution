@@ -36,18 +36,6 @@ section[data-testid="stSidebar"] {
   background-repeat: no-repeat !important;
   border-right: 3px solid #FFBF00 !important;
 }
-section[data-testid="stSidebar"]::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 20, 55, 0.82) !important;
-  pointer-events: none;
-  z-index: 0;
-}
-section[data-testid="stSidebar"] > div {
-  position: relative;
-  z-index: 1;
-}
 section[data-testid="stSidebar"] * { color: #e8e0d0 !important; }
 section[data-testid="stSidebar"] label { color: #FFD966 !important; font-size: 0.88rem !important; }
 section[data-testid="stSidebar"] .stRadio > div { gap: 5px; }
