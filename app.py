@@ -333,14 +333,196 @@ st.markdown('<hr style="border:1px solid #FFBF00;margin:10px 0 18px 0;">', unsaf
 if nav == "Data Input":
     st.header("Data Input")
 
-    method = st.radio("Input Method", ["Manual Entry", "CSV/Excel Upload"], horizontal=True)
+    st.markdown(
+        "<div class='info-banner'>"
+        "<strong>How it works:</strong> Upload a single Excel file with one or more sheets. "
+        "Each sheet = one formulation (e.g. <em>Reference</em>, <em>Test1</em>, <em>Test2</em>). "
+        "Columns: first column = <strong>Time</strong>, remaining columns = one per vessel/tablet (6 or 12 per USP/FDA). "
+        "The system computes Mean, SD, RSD, CV automatically and builds the dissolution profile with error bars."
+        "</div>",
+        unsafe_allow_html=True
+    )
 
-    if method == "Manual Entry":
+    input_mode = st.radio(
+        "Input Mode",
+        ["Excel / CSV Upload (Raw Vessel Data)", "Manual Mean Entry"],
+        horizontal=True
+    )
+
+    # =========================================================================
+    if input_mode == "Excel / CSV Upload (Raw Vessel Data)":
+    # =========================================================================
+
+        col_up, col_fmt = st.columns([2, 1])
+        with col_up:
+            up = st.file_uploader(
+                "Upload Excel (.xlsx) or CSV file",
+                type=["xlsx", "xls", "csv"],
+                key="raw_upload"
+            )
+        with col_fmt:
+            st.markdown(
+                "<div class='info-banner' style='font-size:0.82rem;'>"
+                "<strong>Expected column layout:</strong><br>"
+                "<code>Time | Tablet1 | Tablet2 | ... | Tablet6</code><br>"
+                "Time column: any name containing 'time', 'zaman', 'min', 'hour'<br>"
+                "Vessel columns: 6 or 12 tablets per USP/FDA<br>"
+                "Sheet name = formulation name (e.g. Reference, Test1)"
+                "</div>",
+                unsafe_allow_html=True
+            )
+
+        if up:
+            fname = up.name.lower()
+
+            # -- Helper: fix Excel misreading decimal numbers as dates ---------
+            def fix_date_val(val):
+                import datetime as _dt
+                if val is None or (isinstance(val, float) and np.isnan(val)):
+                    return np.nan
+                if isinstance(val, (int, float)):
+                    return float(val)
+                if isinstance(val, (_dt.datetime, _dt.date)):
+                    # e.g. 12.5 was read as May-12 -> day=12, month=5 -> 12.5
+                    return float(f"{val.day}.{val.month}")
+                if isinstance(val, str):
+                    try:
+                        return float(val)
+                    except Exception:
+                        try:
+                            dt = pd.to_datetime(val)
+                            return float(f"{dt.day}.{dt.month}")
+                        except Exception:
+                            return np.nan
+                return np.nan
+
+            # -- Load all sheets -----------------------------------------------
+            try:
+                if fname.endswith(".csv"):
+                    raw_sheets = {"Sheet1": pd.read_csv(up)}
+                else:
+                    raw_sheets = pd.read_excel(up, sheet_name=None, engine="openpyxl")
+
+                sheet_names = list(raw_sheets.keys())
+                st.success(f"File loaded: **{up.name}** - {len(sheet_names)} sheet(s): {', '.join(sheet_names)}")
+
+                selected_sheets = st.multiselect(
+                    "Select which sheets to import as dissolution profiles:",
+                    sheet_names,
+                    default=sheet_names,
+                    help="Each sheet will become a separate dissolution profile."
+                )
+
+                # -- Preview ---------------------------------------------------
+                if selected_sheets:
+                    prev_sh = st.selectbox("Preview sheet:", selected_sheets, key="prev_sel")
+                    df_prev = raw_sheets[prev_sh].copy()
+                    df_prev.columns = [str(c).strip() for c in df_prev.columns]
+
+                    # Detect time col for preview
+                    TIME_KEYWORDS = ["time","zaman","t","min","minute","minutes",
+                                     "hour","hours","saat","sures","sure"]
+                    tc_prev = next((c for c in df_prev.columns
+                                    if c.lower().strip() in TIME_KEYWORDS), df_prev.columns[0])
+                    vc_prev = [c for c in df_prev.columns if c != tc_prev]
+
+                    # Fix dates in preview
+                    for col in vc_prev:
+                        df_prev[col] = df_prev[col].apply(fix_date_val)
+                    df_prev[tc_prev] = pd.to_numeric(df_prev[tc_prev], errors="coerce")
+
+                    st.markdown(f"**Raw data - {prev_sh}** ({len(vc_prev)} vessels)")
+                    st.dataframe(df_prev.style.format(precision=2), use_container_width=True)
+
+                    # Quick stats preview
+                    df_prev_clean = df_prev.dropna(subset=[tc_prev])
+                    t_p = df_prev_clean[tc_prev].values.astype(float)
+                    vd  = df_prev_clean[vc_prev].apply(pd.to_numeric, errors="coerce")
+                    mean_p = vd.mean(axis=1).values
+                    sd_p   = vd.std(axis=1, ddof=1).values if len(vc_prev) > 1 else np.zeros(len(t_p))
+                    rsd_p  = np.where(mean_p > 0, sd_p / mean_p * 100, 0.0)
+
+                    df_stats_prev = pd.DataFrame({
+                        f"Time ({time_unit})": t_p,
+                        "Mean (%)":  mean_p.round(2),
+                        "SD":        sd_p.round(2),
+                        "RSD (%)":   rsd_p.round(2),
+                        "CV (%)":    rsd_p.round(2),
+                        "n vessels": len(vc_prev),
+                    })
+                    st.markdown("**Computed statistics:**")
+                    st.dataframe(df_stats_prev.style.background_gradient(
+                        subset=["RSD (%)"], cmap="RdYlGn_r"), use_container_width=True)
+
+                # -- Import button ---------------------------------------------
+                if selected_sheets and st.button("Import Selected Sheets as Profiles", type="primary"):
+                    imported = []
+                    warnings_list = []
+                    for sh in selected_sheets:
+                        df_raw = raw_sheets[sh].copy()
+                        df_raw.columns = [str(c).strip() for c in df_raw.columns]
+
+                        TIME_KEYWORDS = ["time","zaman","t","min","minute","minutes",
+                                         "hour","hours","saat"]
+                        time_col = next((c for c in df_raw.columns
+                                         if c.lower().strip() in TIME_KEYWORDS),
+                                        df_raw.columns[0])
+                        vessel_cols = [c for c in df_raw.columns if c != time_col]
+
+                        # Fix date-misread values
+                        for col in vessel_cols:
+                            df_raw[col] = df_raw[col].apply(fix_date_val)
+                        df_raw[time_col] = pd.to_numeric(df_raw[time_col], errors="coerce")
+                        df_raw = df_raw.dropna(subset=[time_col])
+
+                        t_vals = df_raw[time_col].values.astype(float)
+                        vdata  = df_raw[vessel_cols].apply(pd.to_numeric, errors="coerce")
+                        n_v    = vdata.shape[1]
+
+                        mean_r = vdata.mean(axis=1).values
+                        sd_r   = vdata.std(axis=1, ddof=1).values if n_v > 1 else np.zeros(len(t_vals))
+                        rsd_r  = np.where(mean_r > 0, sd_r / mean_r * 100, 0.0)
+
+                        if n_v not in [6, 12]:
+                            warnings_list.append(
+                                f"Sheet '{sh}': {n_v} vessels found (USP/FDA recommends 6 or 12)."
+                            )
+
+                        st.session_state.profiles[sh] = {
+                            "time":    t_vals.tolist(),
+                            "release": mean_r.tolist(),
+                            "sd":      sd_r.tolist(),
+                            "rsd":     rsd_r.tolist(),
+                            "cv":      rsd_r.tolist(),
+                            "n":       n_v,
+                            "vessels": vessel_cols,
+                            "raw":     vdata.values.tolist(),
+                        }
+                        imported.append(sh)
+
+                    st.success(f"Imported {len(imported)} profile(s): {', '.join(imported)}")
+                    for w in warnings_list:
+                        st.warning(w)
+
+            except Exception as e:
+                st.error(f"Error reading file: {e}")
+
+    # =========================================================================
+    else:  # Manual Mean Entry
+    # =========================================================================
+        st.markdown(
+            "<div class='info-banner'>"
+            "Enter the already-computed mean cumulative release (%) at each time point."
+            "</div>",
+            unsafe_allow_html=True
+        )
         c1, c2 = st.columns(2)
         with c1:
-            t_str = st.text_area("Time points (comma-separated)", "0,15,30,45,60,90,120,180,240", height=100)
+            t_str = st.text_area("Time points (comma-separated)",
+                                 "0,15,30,45,60,90,120,180,240", height=100)
         with c2:
-            r_str = st.text_area("Cumulative Release % (comma-separated)", "0,18,35,49,62,74,82,89,94", height=100)
+            r_str = st.text_area("Mean Cumulative Release % (comma-separated)",
+                                 "0,18,35,49,62,74,82,89,94", height=100)
         pname = st.text_input("Profile Name", "Formulation A")
         if st.button("Add Profile"):
             try:
@@ -349,70 +531,101 @@ if nav == "Data Input":
                 if len(ta) != len(ra):
                     st.error("Arrays must have equal length.")
                 else:
-                    st.session_state.profiles[pname] = {"time":ta.tolist(),"release":ra.tolist()}
-                    st.success(f"Profile '{pname}' added successfully.")
+                    st.session_state.profiles[pname] = {
+                        "time": ta.tolist(), "release": ra.tolist(),
+                        "sd": None, "rsd": None, "cv": None, "n": 1, "vessels": []
+                    }
+                    st.success(f"Profile '{pname}' added.")
             except Exception as e:
                 st.error(f"Error: {e}")
 
-    else:
-        st.markdown("""
-        <div class="info-banner">
-        <strong>Supported formats:</strong> CSV (.csv) and Excel (.xlsx / .xls)<br>
-        <strong>Required columns:</strong> The file must have a <code>time</code> column and one or more
-        release columns. Each release column will be imported as a separate profile.<br>
-        <strong>Example structure:</strong><br>
-        <code>time, Formulation A, Formulation B</code><br>
-        <code>0, 0, 0</code><br>
-        <code>15, 18, 22</code><br>
-        <code>30, 35, 40</code>
-        </div>
-        """, unsafe_allow_html=True)
-
-        up = st.file_uploader("Upload CSV or Excel file", type=["csv","xlsx","xls"])
-        if up:
-            try:
-                if up.name.endswith(".csv"):
-                    df_up = pd.read_csv(up)
-                else:
-                    sheet_names = pd.ExcelFile(up).sheet_names
-                    chosen_sheet = st.selectbox("Select sheet", sheet_names)
-                    up.seek(0)
-                    df_up = pd.read_excel(up, sheet_name=chosen_sheet)
-
-                df_up.columns = [str(c).strip() for c in df_up.columns]
-                # Find time column (case-insensitive)
-                time_col = next((c for c in df_up.columns if c.lower() == "time"), None)
-                if time_col is None:
-                    st.error("No column named 'time' found. Please rename your time column to 'time'.")
-                else:
-                    release_cols = [c for c in df_up.columns if c != time_col]
-                    st.success(f"File loaded: {len(release_cols)} profile(s) detected - {', '.join(release_cols)}")
-                    st.dataframe(df_up.head(10), use_container_width=True)
-
-                    if st.button("Import All Profiles"):
-                        for col in release_cols:
-                            valid = df_up[[time_col, col]].dropna()
-                            st.session_state.profiles[col] = {
-                                "time": valid[time_col].tolist(),
-                                "release": valid[col].tolist()
-                            }
-                        st.success(f"Imported {len(release_cols)} profile(s): {', '.join(release_cols)}")
-            except Exception as e:
-                st.error(f"File error: {e}")
-
+    # =========================================================================
+    # LOADED PROFILES OVERVIEW (both modes)
+    # =========================================================================
     if st.session_state.profiles:
         st.markdown("---")
-        st.subheader("Loaded Profiles")
-        fig, ax = plt.subplots(figsize=(9,4.5))
-        style_ax(fig,ax)
-        for i,(nm,d) in enumerate(st.session_state.profiles.items()):
-            ax.plot(d["time"],d["release"],"o-",color=PALETTE[i%len(PALETTE)],lw=2,ms=5,label=nm)
-        ax.axhline(80,color=AMBER,lw=1,ls="--",alpha=0.7,label="80% line")
-        ax.set_xlabel(f"Time ({time_unit})"); ax.set_ylabel("Cumulative Release (%)")
-        ax.set_title("Dissolution Profiles"); ax.set_ylim(0,108); ax.legend(fontsize=8)
-        st.pyplot(fig); plt.close()
+        st.subheader("Loaded Dissolution Profiles")
+
+        # -- Summary cards -----------------------------------------------------
+        n_profiles = len(st.session_state.profiles)
+        card_cols = st.columns(min(n_profiles, 4))
+        for i, (nm, d) in enumerate(st.session_state.profiles.items()):
+            with card_cols[i % 4]:
+                n_v = d.get("n", 1)
+                max_r = max(d["release"])
+                st.markdown(
+                    f"<div style='background:white;border:1px solid #ddd;"
+                    f"border-left:4px solid {PALETTE[i%len(PALETTE)]};border-radius:4px;"
+                    f"padding:10px;margin:4px 0;'>"
+                    f"<strong>{nm}</strong><br>"
+                    f"<span style='font-size:0.82rem;color:#555;'>"
+                    f"n = {n_v} vessels &nbsp;|&nbsp; {len(d['time'])} time points<br>"
+                    f"Max release: {max_r:.1f}%</span></div>",
+                    unsafe_allow_html=True
+                )
+
+        # -- Mean profiles plot with error bars -------------------------------
+        st.markdown("#### Mean Dissolution Profiles")
+        fig, ax = plt.subplots(figsize=(10, 5))
+        style_ax(fig, ax)
+
+        for i, (nm, d) in enumerate(st.session_state.profiles.items()):
+            t  = np.array(d["time"])
+            r  = np.array(d["release"])
+            sd = np.array(d["sd"]) if d.get("sd") is not None else None
+            col = PALETTE[i % len(PALETTE)]
+
+            if sd is not None and not np.all(sd == 0):
+                ax.errorbar(t, r, yerr=sd, fmt="o-", color=col, lw=2,
+                            ms=5, capsize=4, capthick=1.5,
+                            elinewidth=1.2, alpha=0.9, label=f"{nm} (n={d.get('n',1)})")
+                ax.fill_between(t, r - sd, r + sd, color=col, alpha=0.10)
+            else:
+                ax.plot(t, r, "o-", color=col, lw=2, ms=5, label=nm)
+
+        ax.axhline(80, color=AMBER, lw=1.2, ls="--", alpha=0.75, label="80% reference line")
+        ax.set_xlabel(f"Time ({time_unit})")
+        ax.set_ylabel("Cumulative Release (%)")
+        ax.set_title("Mean Dissolution Profiles with Error Bars (Mean +/- SD)")
+        ax.set_ylim(0, 115)
+        ax.legend(fontsize=8.5)
+        st.pyplot(fig)
+        plt.close()
+
+        # -- Per-profile statistics tables -------------------------------------
+        st.markdown("#### Per-Profile Statistics")
+        for nm, d in st.session_state.profiles.items():
+            with st.expander(f"{nm}  |  n={d.get('n',1)} vessels  |  {len(d['time'])} time points"):
+                t_v   = np.array(d["time"])
+                r_v   = np.array(d["release"])
+                sd_v  = np.array(d["sd"])  if d.get("sd")  is not None else np.zeros(len(t_v))
+                rsd_v = np.array(d["rsd"]) if d.get("rsd") is not None else np.zeros(len(t_v))
+
+                df_show = pd.DataFrame({
+                    f"Time ({time_unit})": t_v,
+                    "Mean (%)":  r_v.round(2),
+                    "SD":        sd_v.round(3),
+                    "RSD (%)":   rsd_v.round(2),
+                    "CV (%)":    rsd_v.round(2),
+                    "n":         d.get("n", 1),
+                })
+                st.dataframe(
+                    df_show.style.background_gradient(subset=["RSD (%)"], cmap="RdYlGn_r"),
+                    use_container_width=True
+                )
+
+                # Show raw vessel data if available
+                if d.get("raw") and d.get("vessels"):
+                    raw_df = pd.DataFrame(d["raw"], columns=d["vessels"])
+                    raw_df.insert(0, f"Time ({time_unit})", t_v)
+                    st.markdown("**Raw vessel data:**")
+                    st.dataframe(raw_df.style.format(precision=2), use_container_width=True)
+
         if st.button("Clear All Profiles"):
-            st.session_state.profiles={}; st.session_state.fit_results={}; st.rerun()
+            st.session_state.profiles = {}
+            st.session_state.fit_results = {}
+            st.rerun()
+
 
 # ===========================================================================
 # PAGE: KINETIC MODEL FITTING
