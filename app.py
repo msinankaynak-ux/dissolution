@@ -566,31 +566,68 @@ if nav == "Data Input":
 
         # -- Mean profiles plot with error bars -------------------------------
         st.markdown("#### Mean Dissolution Profiles")
+
+        opt_col1, opt_col2, opt_col3 = st.columns(3)
+        with opt_col1:
+            show_80 = st.radio(
+                "80% Reference Line",
+                ["Show", "Hide"], horizontal=True, key="opt_80line",
+                help="FDA/USP dissolution acceptance criterion: Q=80% at specified time."
+            ) == "Show"
+        with opt_col2:
+            show_band = st.radio(
+                "SD Confidence Band",
+                ["Show", "Hide"], horizontal=True, key="opt_sdband",
+                help="Shaded area around mean = Mean +/- SD (one standard deviation)."
+            ) == "Show"
+        with opt_col3:
+            show_errbar = st.radio(
+                "Error Bars (SD)",
+                ["Show", "Hide"], horizontal=True, key="opt_errbar",
+                help="Vertical error bars at each time point showing SD."
+            ) == "Show"
+
         fig, ax = plt.subplots(figsize=(10, 5))
         style_ax(fig, ax)
 
         for i, (nm, d) in enumerate(st.session_state.profiles.items()):
-            t  = np.array(d["time"])
-            r  = np.array(d["release"])
-            sd = np.array(d["sd"]) if d.get("sd") is not None else None
+            t   = np.array(d["time"])
+            r   = np.array(d["release"])
+            sd  = np.array(d["sd"]) if d.get("sd") is not None else np.zeros(len(t))
             col = PALETTE[i % len(PALETTE)]
+            has_sd = not np.all(sd == 0)
 
-            if sd is not None and not np.all(sd == 0):
+            if has_sd and show_errbar:
                 ax.errorbar(t, r, yerr=sd, fmt="o-", color=col, lw=2,
-                            ms=5, capsize=4, capthick=1.5,
-                            elinewidth=1.2, alpha=0.9, label=f"{nm} (n={d.get('n',1)})")
-                ax.fill_between(t, r - sd, r + sd, color=col, alpha=0.10)
+                            ms=5, capsize=4, capthick=1.5, elinewidth=1.2,
+                            alpha=0.9, label=f"{nm} (n={d.get('n',1)})")
             else:
-                ax.plot(t, r, "o-", color=col, lw=2, ms=5, label=nm)
+                ax.plot(t, r, "o-", color=col, lw=2, ms=5,
+                        label=f"{nm} (n={d.get('n',1)})" if d.get("n",1)>1 else nm)
 
-        ax.axhline(80, color=AMBER, lw=1.2, ls="--", alpha=0.75, label="80% reference line")
+            if has_sd and show_band:
+                ax.fill_between(t, r - sd, r + sd, color=col, alpha=0.10)
+
+        if show_80:
+            ax.axhline(80, color=AMBER, lw=1.3, ls="--", alpha=0.85,
+                       label="80% line (FDA/USP Q criterion)")
+
         ax.set_xlabel(f"Time ({time_unit})")
         ax.set_ylabel("Cumulative Release (%)")
-        ax.set_title("Mean Dissolution Profiles with Error Bars (Mean +/- SD)")
-        ax.set_ylim(0, 115)
+        ax.set_title("Mean Dissolution Profiles  (Mean +/- SD)")
+        t_all = np.concatenate([np.array(d["time"]) for d in st.session_state.profiles.values()])
+        ax.set_xlim(left=0, right=t_all.max() * 1.05)
+        ax.set_ylim(bottom=0, top=108)
         ax.legend(fontsize=8.5)
         st.pyplot(fig)
         plt.close()
+
+        if show_80:
+            st.caption(
+                "80% reference line source: FDA Guidance for Industry - Dissolution Testing of "
+                "Immediate Release Solid Oral Dosage Forms (1997); USP <711> Dissolution, "
+                "Acceptance Table 1 (Q = 80% at specified time point)."
+            )
 
         # -- Per-profile statistics tables -------------------------------------
         st.markdown("#### Per-Profile Statistics")
