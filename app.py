@@ -263,14 +263,7 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    nav = st.radio("", [
-        "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
-        "f1 and f2 Similarity", "IVIVC Analysis", "Excel Report"
-    ], label_visibility="hidden")
-
-    st.markdown('<hr style="border:1px solid rgba(255,191,0,0.3);margin:14px 0;">', unsafe_allow_html=True)
-
-    # Method & Parameter Settings button
+    # Method & Parameter Settings button (above nav)
     if "show_method_panel" not in st.session_state:
         st.session_state.show_method_panel = False
     if "method_cfg" not in st.session_state:
@@ -287,7 +280,7 @@ with st.sidebar:
             "hplc_run_time": 10.0, "notes": "",
         }
 
-    btn_label = "  METHOD & PARAMETER SETTINGS"
+    btn_label = "⚙️  METHOD & PARAMETER SETTINGS"
     if st.button(btn_label, key="method_btn"):
         st.session_state.show_method_panel = not st.session_state.show_method_panel
 
@@ -299,6 +292,13 @@ with st.sidebar:
     dose_mg   = cfg["dose_mg"]
     q_time    = cfg["q_time"]
     q_limit   = cfg["q_limit"]
+
+    st.markdown('<hr style="border:1px solid rgba(255,191,0,0.3);margin:14px 0;">', unsafe_allow_html=True)
+
+    nav = st.radio("", [
+        "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
+        "f1 and f2 Similarity", "IVIVC Analysis", "Excel Report"
+    ], label_visibility="hidden")
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.25);margin:14px 0;">', unsafe_allow_html=True)
     st.markdown(
