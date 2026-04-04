@@ -44,6 +44,7 @@ section[data-testid="stSidebar"] label {
   margin-bottom: 2px !important;
 }
 
+section[data-testid="stSidebar"] .stRadio { margin-top: 0 !important; }
 section[data-testid="stSidebar"] .stRadio > div {
   gap: 0 !important;
   display: flex !important;
@@ -54,39 +55,54 @@ section[data-testid="stSidebar"] .stRadio label {
   background: transparent !important;
   border: none !important;
   border-left: 3px solid transparent !important;
-  border-top: 0.5px solid rgba(255,255,255,0.06) !important;
+  border-top: 0.5px solid rgba(255,255,255,0.07) !important;
   border-radius: 0 !important;
-  padding: 10px 14px !important;
-  font-size: 0.92rem !important;
-  color: #8aafc8 !important;
-  transition: color 0.15s ease, border-left-color 0.15s ease, background 0.15s ease !important;
+  padding: 10px 16px !important;
+  font-size: 0.91rem !important;
+  color: #7a9dbf !important;
+  transition: color 0.15s, border-left-color 0.15s, background 0.15s !important;
   cursor: pointer !important;
   display: flex !important;
   align-items: center !important;
   width: 100% !important;
-  letter-spacing: 0.01em !important;
+  letter-spacing: 0.015em !important;
+}
+
+section[data-testid="stSidebar"] .stRadio label:first-of-type {
+  border-top: none !important;
 }
 
 section[data-testid="stSidebar"] .stRadio label:hover {
-  border-left-color: rgba(255,191,0,0.55) !important;
+  border-left-color: rgba(255,191,0,0.5) !important;
   background: rgba(255,191,0,0.05) !important;
-  color: #d4c078 !important;
+  color: #c8b45a !important;
 }
 
 section[data-testid="stSidebar"] .stRadio [aria-checked="true"] ~ label,
 section[data-testid="stSidebar"] .stRadio input:checked ~ label,
 section[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
   border-left: 3px solid #FFBF00 !important;
-  background: rgba(255,191,0,0.08) !important;
+  background: rgba(255,191,0,0.10) !important;
   color: #FFBF00 !important;
   font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
 }
 
 section[data-testid="stSidebar"] .stRadio label > div:first-child { display: none !important; }
 section[data-testid="stSidebar"] .stRadio label > div[data-testid="stMarkdownContainer"] p {
   color: inherit !important;
-  font-size: 0.92rem !important;
+  font-size: 0.91rem !important;
   margin: 0 !important;
+  font-weight: inherit !important;
+}
+
+section[data-testid="stSidebar"] .stRadio > div > div:empty,
+section[data-testid="stSidebar"] .stRadio ~ div > p:empty,
+section[data-testid="stSidebar"] .stRadio p:empty { display: none !important; }
+
+section[data-testid="stSidebar"] .stElementContainer:has(.stRadio) > label,
+section[data-testid="stSidebar"] .stElementContainer:has(.stRadio) > div > label:not([data-baseweb]) {
+  display: none !important;
 }
 
 section[data-testid="stSidebar"] .stSelectbox > div > div {
@@ -177,10 +193,10 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    nav = st.radio("nav", [
+    nav = st.radio("", [
         "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
         "f1 and f2 Similarity", "IVIVC Analysis", "Excel Report"
-    ], label_visibility="collapsed")
+    ], label_visibility="hidden")
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.3);margin:14px 0;">', unsafe_allow_html=True)
     st.markdown(
