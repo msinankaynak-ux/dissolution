@@ -37,21 +37,67 @@ section[data-testid="stSidebar"] {
   border-right: 3px solid #FFBF00 !important;
 }
 section[data-testid="stSidebar"] * { color: #e8e0d0 !important; }
-section[data-testid="stSidebar"] label { color: #FFD966 !important; font-size: 0.88rem !important; }
-section[data-testid="stSidebar"] .stRadio > div { gap: 5px; }
-section[data-testid="stSidebar"] .stRadio label {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,191,0,0.2);
-  border-radius: 5px;
-  padding: 8px 12px !important;
-  font-size: 0.95rem !important;
-  color: #e8e0d0 !important;
-  transition: all 0.2s;
-  cursor: pointer;
+
+section[data-testid="stSidebar"] label {
+  color: #FFD966 !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.03em !important;
+  background: #001530 !important;
+  border-radius: 3px !important;
+  padding: 1px 6px !important;
+  display: inline-block !important;
+  margin-bottom: 3px !important;
 }
+
+section[data-testid="stSidebar"] .stRadio label {
+  background: #001530 !important;
+  border: 1px solid rgba(255,191,0,0.25) !important;
+  border-radius: 5px !important;
+  padding: 8px 12px !important;
+  font-size: 0.92rem !important;
+  color: #e8e0d0 !important;
+  transition: all 0.18s !important;
+  cursor: pointer !important;
+  display: flex !important;
+  width: 100% !important;
+}
+
 section[data-testid="stSidebar"] .stRadio label:hover {
-  background: rgba(255,191,0,0.12) !important;
+  background: #002560 !important;
   border-color: #FFBF00 !important;
+  color: #ffffff !important;
+}
+
+section[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] p {
+  color: #e8e0d0 !important;
+}
+
+section[data-testid="stSidebar"] .stRadio > div {
+  gap: 5px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+section[data-testid="stSidebar"] .stRadio [aria-checked="true"] ~ label,
+section[data-testid="stSidebar"] .stRadio input:checked ~ label,
+section[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
+  background: #001830 !important;
+  border: 1.5px solid #FFBF00 !important;
+  color: #FFBF00 !important;
+  font-weight: 600 !important;
+}
+
+section[data-testid="stSidebar"] .stSelectbox > div > div,
+section[data-testid="stSidebar"] .stNumberInput > div > div > input {
+  background: #001530 !important;
+  border: 1px solid rgba(255,191,0,0.4) !important;
+  color: #e8e0d0 !important;
+  border-radius: 4px !important;
+}
+
+section[data-testid="stSidebar"] .stSelectbox svg {
+  fill: #FFD966 !important;
 }
 [data-testid="metric-container"] {
   background: white; border: 1px solid #ddd;
