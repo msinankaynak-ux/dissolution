@@ -39,61 +39,57 @@ section[data-testid="stSidebar"] {
 section[data-testid="stSidebar"] * { color: #e8e0d0 !important; }
 
 section[data-testid="stSidebar"] label {
-  color: #FFD966 !important;
-  font-size: 0.82rem !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.03em !important;
-  background: #001530 !important;
-  border-radius: 3px !important;
-  padding: 1px 6px !important;
-  display: inline-block !important;
-  margin-bottom: 3px !important;
-}
-
-section[data-testid="stSidebar"] .stRadio label {
-  background: #001530 !important;
-  border: 1px solid rgba(255,191,0,0.25) !important;
-  border-radius: 5px !important;
-  padding: 8px 12px !important;
-  font-size: 0.92rem !important;
-  color: #e8e0d0 !important;
-  transition: all 0.18s !important;
-  cursor: pointer !important;
-  display: flex !important;
-  width: 100% !important;
-}
-
-section[data-testid="stSidebar"] .stRadio label:hover {
-  background: #002560 !important;
-  border-color: #FFBF00 !important;
-  color: #ffffff !important;
-}
-
-section[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] p {
-  color: #e8e0d0 !important;
+  color: rgba(232,224,208,0.65) !important;
+  font-size: 0.78rem !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.02em !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin-bottom: 2px !important;
 }
 
 section[data-testid="stSidebar"] .stRadio > div {
-  gap: 5px !important;
+  gap: 2px !important;
   display: flex !important;
   flex-direction: column !important;
+}
+
+section[data-testid="stSidebar"] .stRadio label {
+  background: transparent !important;
+  border: none !important;
+  border-left: 3px solid transparent !important;
+  border-radius: 0 5px 5px 0 !important;
+  padding: 8px 12px !important;
+  font-size: 0.93rem !important;
+  color: rgba(232,224,208,0.75) !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+  display: block !important;
+  width: 100% !important;
+  letter-spacing: 0.01em !important;
+}
+
+section[data-testid="stSidebar"] .stRadio label:hover {
+  border-left-color: rgba(255,191,0,0.5) !important;
+  background: rgba(255,191,0,0.06) !important;
+  color: #e8e0d0 !important;
 }
 
 section[data-testid="stSidebar"] .stRadio [aria-checked="true"] ~ label,
 section[data-testid="stSidebar"] .stRadio input:checked ~ label,
 section[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
-  background: #001830 !important;
-  border: 1.5px solid #FFBF00 !important;
+  border-left: 3px solid #FFBF00 !important;
+  background: rgba(255,191,0,0.09) !important;
   color: #FFBF00 !important;
   font-weight: 600 !important;
 }
 
 section[data-testid="stSidebar"] .stSelectbox > div > div,
 section[data-testid="stSidebar"] .stNumberInput > div > div > input {
-  background: #001530 !important;
-  border: 1px solid rgba(255,191,0,0.4) !important;
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,191,0,0.25) !important;
   color: #e8e0d0 !important;
-  border-radius: 4px !important;
+  border-radius: 5px !important;
 }
 
 section[data-testid="stSidebar"] .stSelectbox svg {
@@ -151,11 +147,7 @@ with st.sidebar:
         </div>''',
         unsafe_allow_html=True
     )
-    st.markdown(
-        '<p style="color:#FFD966;font-size:0.78rem;letter-spacing:0.1em;' +
-        'text-transform:uppercase;margin-bottom:8px;">Molecular View</p>',
-        unsafe_allow_html=True
-    )
+
     nav = st.radio("nav", [
         "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
         "f1 and f2 Similarity", "IVIVC Analysis", "Excel Report"
