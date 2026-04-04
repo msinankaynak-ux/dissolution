@@ -175,7 +175,54 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
   border-radius: 6px; padding: 12px 16px; margin: 6px 0;
   font-size: 0.93rem;
 }
+.nav-active {
+  border-left: 3px solid #FFBF00 !important;
+  background: rgba(255,191,0,0.10) !important;
+  color: #FFBF00 !important;
+  font-weight: 600 !important;
+}
 </style>
+
+<script>
+(function() {
+  function markActive() {
+    var labels = document.querySelectorAll(
+      '[data-testid="stSidebar"] .stRadio label'
+    );
+    labels.forEach(function(lbl) {
+      lbl.classList.remove('nav-active');
+    });
+    var inputs = document.querySelectorAll(
+      '[data-testid="stSidebar"] .stRadio input[type="radio"]'
+    );
+    inputs.forEach(function(inp) {
+      if (inp.checked) {
+        var lbl = document.querySelector(
+          '[data-testid="stSidebar"] .stRadio label[for="' + inp.id + '"]' 
+        );
+        if (!lbl) {
+          lbl = inp.closest('label') || inp.parentElement.querySelector('label');
+        }
+        if (lbl) lbl.classList.add('nav-active');
+      }
+    });
+  }
+
+  function init() {
+    var sidebar = document.querySelector('[data-testid="stSidebar"]');
+    if (!sidebar) { setTimeout(init, 400); return; }
+    var obs = new MutationObserver(function() { setTimeout(markActive, 80); });
+    obs.observe(sidebar, { childList: true, subtree: true, attributes: true });
+    markActive();
+    sidebar.addEventListener('click', function() { setTimeout(markActive, 150); });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    setTimeout(init, 200);
+  }
+})();
+</script>
 """, unsafe_allow_html=True)
 
 # --- Session state ---
