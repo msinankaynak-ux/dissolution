@@ -45,64 +45,87 @@ section[data-testid="stSidebar"] label {
 }
 
 section[data-testid="stSidebar"] .stRadio { margin-top: 0 !important; }
+
 section[data-testid="stSidebar"] .stRadio > div {
-  gap: 0 !important;
+  gap: 4px !important;
   display: flex !important;
   flex-direction: column !important;
 }
 
 section[data-testid="stSidebar"] .stRadio label {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
   background: transparent !important;
   border: none !important;
-  border-left: 3px solid transparent !important;
-  border-top: 0.5px solid rgba(255,255,255,0.07) !important;
-  border-radius: 0 !important;
-  padding: 10px 16px !important;
+  border-radius: 5px !important;
+  padding: 8px 12px !important;
   font-size: 0.91rem !important;
   color: #7a9dbf !important;
-  transition: color 0.15s, border-left-color 0.15s, background 0.15s !important;
   cursor: pointer !important;
-  display: flex !important;
-  align-items: center !important;
+  transition: background 0.15s, color 0.15s !important;
   width: 100% !important;
-  letter-spacing: 0.015em !important;
-}
-
-section[data-testid="stSidebar"] .stRadio label:first-of-type {
-  border-top: none !important;
+  letter-spacing: 0.01em !important;
+  white-space: nowrap !important;
 }
 
 section[data-testid="stSidebar"] .stRadio label:hover {
-  border-left-color: rgba(255,191,0,0.5) !important;
-  background: rgba(255,191,0,0.05) !important;
+  background: rgba(255,191,0,0.07) !important;
   color: #c8b45a !important;
 }
 
-section[data-testid="stSidebar"] .stRadio [aria-checked="true"] ~ label,
-section[data-testid="stSidebar"] .stRadio input:checked ~ label,
-section[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
-  border-left: 3px solid #FFBF00 !important;
-  background: rgba(255,191,0,0.10) !important;
-  color: #FFBF00 !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.02em !important;
+section[data-testid="stSidebar"] .stRadio label > div:first-child {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid rgba(255,255,255,0.30) !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
-section[data-testid="stSidebar"] .stRadio label > div:first-child { display: none !important; }
+section[data-testid="stSidebar"] .stRadio label > div:first-child > div {
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+}
+
+section[data-testid="stSidebar"] .stRadio label > div[data-testid="stMarkdownContainer"] {
+  display: flex !important;
+  align-items: center !important;
+  flex: 1 !important;
+}
+
 section[data-testid="stSidebar"] .stRadio label > div[data-testid="stMarkdownContainer"] p {
   color: inherit !important;
   font-size: 0.91rem !important;
   margin: 0 !important;
+  line-height: 1.2 !important;
   font-weight: inherit !important;
+  white-space: nowrap !important;
 }
 
-section[data-testid="stSidebar"] .stRadio > div > div:empty,
-section[data-testid="stSidebar"] .stRadio ~ div > p:empty,
-section[data-testid="stSidebar"] .stRadio p:empty { display: none !important; }
+section[data-testid="stSidebar"] .stRadio input[type="radio"]:checked + label,
+section[data-testid="stSidebar"] .stRadio label:has(input:checked) {
+  background: rgba(255,191,0,0.10) !important;
+  color: #FFBF00 !important;
+  font-weight: 600 !important;
+}
 
-section[data-testid="stSidebar"] .stElementContainer:has(.stRadio) > label,
-section[data-testid="stSidebar"] .stElementContainer:has(.stRadio) > div > label:not([data-baseweb]) {
-  display: none !important;
+section[data-testid="stSidebar"] .stRadio input[type="radio"]:checked + label > div:first-child,
+section[data-testid="stSidebar"] .stRadio label:has(input:checked) > div:first-child {
+  border-color: #FFBF00 !important;
+  background: #FFBF00 !important;
+}
+
+section[data-testid="stSidebar"] .stRadio input[type="radio"]:checked + label > div:first-child > div,
+section[data-testid="stSidebar"] .stRadio label:has(input:checked) > div:first-child > div {
+  background: #001a3d !important;
 }
 
 section[data-testid="stSidebar"] .stSelectbox > div > div {
