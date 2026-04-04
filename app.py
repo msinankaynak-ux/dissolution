@@ -3,6 +3,335 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import warnings
+import io
+import base64
+from scipy.optimize import curve_fit, root
+from scipy.stats import norm as sp_norm
+from scipy.integrate import trapezoid
+
+# --- INITIAL CONFIG ---
+warnings.filterwarnings("ignore")
+st.set_page_config(
+    page_title="DissolvA - Predictive Dissolution Suite",
+    page_icon="🔬",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# --- SESSION STATE MANAGEMENT ---
+if 'page' not in st.session_state:
+    st.session_state.page = 'landing'
+if 'profiles' not in st.session_state:
+    st.session_state.profiles = {}
+if 'fit_results' not in st.session_state:
+    st.session_state.fit_results = {}
+if "method_cfg" not in st.session_state:
+    st.session_state.method_cfg = {
+        "time_unit": "minutes", "conc_unit": "mg/mL", "dose_mg": 100.0,
+        "q_time": 45.0, "q_limit": 80.0,
+        "apparatus": "USP II (Paddle)", "medium": "0.1N HCl (pH 1.2)",
+        "rpm": 50, "volume_ml": 900, "temp_c": 37.0,
+        "analytical": "UV-Vis", "lambda_max": 272.0, "slit_nm": 2.0,
+        "ref_wavelength": "", "hplc_column": "", "hplc_flow": 1.0,
+        "hplc_mp_a": "", "hplc_mp_b": "", "hplc_detection": 254.0,
+        "hplc_inj_vol": 20.0, "hplc_col_temp": 30.0,
+        "hplc_run_time": 10.0, "notes": "",
+    }
+
+def switch_page(page_name):
+    st.session_state.page = page_name
+    st.rerun()
+
+# ===========================================================================
+# MODEL LIBRARY & ANALYTICS CORE
+# ===========================================================================
+def _nz(x): return np.where(x > 0, x, 1e-9)
+
+def m_zero_order(t, k0): return k0 * t
+def m_first_order(t, k1): return 100.0*(1-np.exp(-k1*t))
+def m_higuchi(t, kH): return kH*np.sqrt(np.abs(t))
+def m_hixson_crowell(t, ks):
+    inner = 1.0 - ks*t/3.0
+    return np.clip(100.0*(1 - np.sign(inner)*np.abs(inner)**3), 0, 100)
+def m_korsmeyer_peppas(t, k, n): return k*np.abs(t)**n
+def m_hopfenberg(t, kHB, n_HB): return np.clip(100.0*(1-(1-kHB*t)**n_HB), 0, 100)
+def m_baker_lonsdale(t, kBL):
+    res = []
+    for ti in np.atleast_1d(t):
+        rhs = float(kBL*ti)
+        def eq(F): return [1.5*(1-(1-F[0])**(2/3))-F[0]-rhs]
+        try:
+            sol = root(eq, [0.5], method="hybr")
+            res.append(float(np.clip(sol.x[0]*100, 0, 100)) if sol.success else np.nan)
+        except: res.append(np.nan)
+    return np.array(res)
+def m_makoid_banakar(t, kMB, nMB, bMB): return kMB*np.abs(t)**nMB*np.exp(-bMB*t)
+def m_peppas_sahlin(t, k1, k2, m): return k1*np.abs(t)**m + k2*np.abs(t)**(2*m)
+def m_weibull(t, a, b, Td): return 100.0*(1-np.exp(-(np.clip(t-Td,0,None)**b)/a))
+def m_gompertz(t, A, b, k): return A*np.exp(-b*np.exp(-k*t))
+def m_logistic(t, A, k, t50): return A/(1+np.exp(-k*(t-t50)))
+def m_quadratic(t, a, b, c): return a*t**2 + b*t + c
+def m_probit(t, mu, sigma, A): return A*sp_norm.cdf(t, mu, abs(sigma))
+def m_weibull_no_lag(t, a, b): return 100.0*(1-np.exp(-(t**b)/a))
+def m_modified_gompertz(t, Amax, mu, lam): return Amax*np.exp(-np.exp(mu*np.e/Amax*(lam-t)+1))
+def m_richards(t, A, k, n, t50): return A*(1+np.exp(-k*(t-t50)))**(-1/n)
+def m_korsmeyer_peppas_lag(t, k, n, tlag): return k*np.clip(t-tlag,0,None)**n
+def m_first_order_lag(t, k1, tlag): return 100.0*(1-np.exp(-k1*np.clip(t-tlag,0,None)))
+def m_zero_order_lag(t, k0, tlag): return k0*np.clip(t-tlag,0,None)
+def m_higuchi_lag(t, kH, tlag): return kH*np.sqrt(np.clip(t-tlag,0,None))
+def m_double_exp(t, A1, k1, A2, k2): return A1*(1-np.exp(-k1*t))+A2*(1-np.exp(-k2*t))
+def m_triple_exp(t, A1, k1, A2, k2, A3, k3): return A1*(1-np.exp(-k1*t))+A2*(1-np.exp(-k2*t))+A3*(1-np.exp(-k3*t))
+def m_power_exp(t, A, k, n): return A*(1-np.exp(-k*t**n))
+def m_brody(t, A, k, b): return A*(1-b*np.exp(-k*t))
+def m_bertalanffy(t, A, k, n): return A*(1-np.exp(-k*t))**n
+def m_gallagher_corrigan(t, Amax, k1, k2, tmax): return Amax*(1-np.exp(-k1*t))-(Amax-100)*(1-np.exp(-k2*np.clip(t-tmax,0,None)))
+def m_logistic_4p(t, A, B, k, t50): return A+(B-A)/(1+np.exp(-k*(t-t50)))
+def m_log_normal(t, mu, sigma, A): return A*sp_norm.cdf(np.log(_nz(t)), mu, abs(sigma))
+def m_hill(t, Amax, k, n):
+    tn = np.abs(t)**n; return Amax*tn/(k**n+tn)
+def m_weibull_3p(t, alpha, beta, gamma): return 100.0*(1-np.exp(-((np.clip(t-gamma,0,None)/alpha)**beta)))
+def m_exp_assoc(t, A, k): return A*(1-np.exp(-k*t))
+def m_hyperbolic(t, Amax, k): return Amax*t/(k+t)
+def m_linear_exp(t, A, k, b): return A*t*np.exp(-k*t)+b
+def m_dose_response(t, Emin, Emax, EC50, n):
+    tn = np.abs(t)**n; return Emin+(Emax-Emin)*tn/(EC50**n+tn)
+def m_combined(t, kH, k1, alpha): return alpha*kH*np.sqrt(np.abs(t))+(1-alpha)*100*(1-np.exp(-k1*t))
+def m_pade(t, a0, a1, b1): return (a0+a1*t)/(1+b1*t)
+def m_hPLC(t, A, B, n): return 100*(1-(1+A*t**n)**(-B))
+def m_compreg(t, k, n, m): return 100*(1-np.exp(-k*t**n))**m
+def m_biexp_abs(t, F, ka, k): return F*100*(ka/(ka-k+1e-9))*(np.exp(-k*t)-np.exp(-ka*t))
+def m_mb_mod(t, k, n, b, c): return k*np.abs(t)**n*np.exp(-b*t)+c
+def m_probit_log(t, mu, sigma, A): return A*sp_norm.cdf(np.log10(_nz(t)), mu, abs(sigma))
+def m_henriksen(t, A, k1, k2): return A*(np.exp(-k1*t)-np.exp(-k2*t))
+def m_kpmod(t, k, n, b): return k*np.abs(t)**n/(1+b*t)
+def m_fractal_fo(t, k, alpha): return 100.0*(1-np.exp(-k*t**alpha))
+def m_stretched_exp(t, A, beta, tau): return A*(1-np.exp(-((t/tau)**beta)))
+def m_weibull_sig(t, A, k, t50, b): return A/(1+np.exp(-k*(t-t50)))*(1-np.exp(-(t/b)**2))
+
+MODEL_DEFS = {
+    "Zero Order": (m_zero_order, [1.0], ["k0"], "F=k0*t", "Wagner 1969", "Basic"),
+    "First Order": (m_first_order, [0.05], ["k1"], "F=100*(1-exp(-k1*t))", "Wagner 1969", "Basic"),
+    "Higuchi": (m_higuchi, [10.0], ["kH"], "F=kH*sqrt(t)", "Higuchi 1961", "Basic"),
+    "Hixson-Crowell": (m_hixson_crowell, [0.05], ["ks"], "M0^(1/3)-M^(1/3)=ks*t", "Hixson 1931", "Basic"),
+    "Korsmeyer-Peppas": (m_korsmeyer_peppas, [10.0, 0.5], ["k","n"], "F=k*t^n", "Korsmeyer 1983", "Basic"),
+    "Hopfenberg": (m_hopfenberg, [0.02, 2.0], ["kHB","n"], "F=100*[1-(1-kHB*t)^n]", "Hopfenberg 1976", "Basic"),
+    "Baker-Lonsdale": (m_baker_lonsdale, [0.001], ["kBL"], "3/2*[1-(1-F)^(2/3)]-F=kBL*t", "Baker 1974", "Basic"),
+    "Makoid-Banakar": (m_makoid_banakar, [10.0, 0.5, 0.01], ["kMB","nMB","bMB"], "F=kMB*t^nMB*exp(-bMB*t)", "Makoid 1993", "Basic"),
+    "Peppas-Sahlin": (m_peppas_sahlin, [5.0, 1.0, 0.5], ["k1","k2","m"], "F=k1*t^m + k2*t^2m", "Peppas 1989", "Basic"),
+    "Weibull": (m_weibull, [50.0, 1.0, 0.0], ["a","b","Td"], "F=100*(1-exp(-((t-Td)^b)/a))", "Weibull 1951", "Basic"),
+    "Gompertz": (m_gompertz, [100.0, 5.0, 0.1], ["A","b","k"], "F=A*exp(-b*exp(-k*t))", "Gompertz 1825", "Basic"),
+    "Logistic": (m_logistic, [100.0, 0.1, 30.0], ["A","k","t50"], "F=A/(1+exp(-k*(t-t50)))", "Pressman 1994", "Basic"),
+    "Quadratic": (m_quadratic, [-0.01, 1.0, 0.0], ["a","b","c"], "F=a*t^2 + b*t + c", "Polli 1997", "Basic"),
+    "Probit": (m_probit, [30.0, 15.0, 100.0], ["mu","sigma","A"], "F=A*Phi((t-mu)/sigma)", "Shah 1998", "Basic"),
+    "Weibull (No Lag)": (m_weibull_no_lag, [50.0, 1.0], ["a","b"], "F=100*(1-exp(-t^b/a))", "Weibull 1951", "Lag-Time"),
+    "KP + Lag": (m_korsmeyer_peppas_lag,[10.0,0.5,5.0], ["k","n","tlag"], "F=k*(t-tlag)^n", "Modified KP", "Lag-Time"),
+    "First Order + Lag": (m_first_order_lag, [0.05, 5.0], ["k1","tlag"], "F=100*(1-exp(-k1*(t-tlag)))", "Modified FO", "Lag-Time"),
+    "Zero Order + Lag": (m_zero_order_lag, [1.0, 5.0], ["k0","tlag"], "F=k0*(t-tlag)", "Modified ZO", "Lag-Time"),
+    "Higuchi + Lag": (m_higuchi_lag, [10.0, 5.0], ["kH","tlag"], "F=kH*sqrt(t-tlag)", "Modified Higuchi", "Lag-Time"),
+    "Probit Log": (m_probit_log, [1.5, 0.5, 100.0], ["mu","sigma","A"], "F=A*Phi((log10(t)-mu)/sigma)", "Shah 1998", "Lag-Time"),
+    "Double Exponential": (m_double_exp, [60.0,0.05,40.0,0.005], ["A1","k1","A2","k2"], "F=A1*(1-e^-k1t)+A2*(1-e^-k2t)", "Empirical", "Multi-Phase"),
+    "Triple Exponential": (m_triple_exp, [40.0,0.1,40.0,0.02,20.0,0.005], ["A1","k1","A2","k2","A3","k3"], "F=sum Ai*(1-e^-kit)", "Empirical", "Multi-Phase"),
+    "Power-Exponential": (m_power_exp, [100.0,0.05,1.2], ["A","k","n"], "F=A*(1-exp(-k*t^n))", "Zhang 2010", "Multi-Phase"),
+    "Biexp. Absorption": (m_biexp_abs, [1.0,0.2,0.05], ["F","ka","k"], "F=F*100*ka/(ka-k)*(e^-kt-e^-kat)", "PK-based", "Multi-Phase"),
+    "Gallagher-Corrigan": (m_gallagher_corrigan, [100.0,0.05,0.02,60.0], ["Amax","k1","k2","tmax"], "Biphasic burst+slow", "Gallagher 2000", "Multi-Phase"),
+    "Combined Higuchi+FO": (m_combined, [10.0,0.05,0.5], ["kH","k1","alpha"], "F=alpha*kH*sqrt(t)+(1-alpha)*FO", "Empirical", "Multi-Phase"),
+    "Henriksen": (m_henriksen, [80.0,0.1,0.5], ["A","k1","k2"], "F=A*(exp(-k1*t)-exp(-k2*t))", "Henriksen et al.", "Multi-Phase"),
+    "Modified Gompertz": (m_modified_gompertz,[100.0,0.1,10.0], ["Amax","mu","lambda"], "F=Amax*exp(-exp(mu*e/Amax*(lam-t)+1))", "Zwietering 1990", "Sigmoid"),
+    "Richards": (m_richards, [100.0,0.05,1.0,30.0], ["A","k","n","t50"], "F=A*(1+exp(-k*(t-t50)))^(-1/n)", "Richards 1959", "Sigmoid"),
+    "4-Parameter Logistic": (m_logistic_4p, [0.0,100.0,0.1,30.0], ["A","B","k","t50"], "F=A+(B-A)/(1+exp(-k*(t-t50)))", "4PL", "Sigmoid"),
+    "Log-Normal": (m_log_normal, [3.5,0.5,100.0], ["mu","sigma","A"], "F=A*Phi((ln(t)-mu)/sigma)", "Statistical", "Sigmoid"),
+    "Hill Equation": (m_hill, [100.0,30.0,1.5], ["Amax","k","n"], "F=Amax*t^n/(k^n+t^n)", "Hill 1910", "Sigmoid"),
+    "Dose-Response": (m_dose_response, [0.0,100.0,30.0,1.0], ["Emin","Emax","EC50","n"], "F=Emin+(Emax-Emin)*t^n/(EC50^n+t^n)", "Pharmacological", "Sigmoid"),
+    "Fractal First Order": (m_fractal_fo, [0.05, 0.8], ["k","alpha"], "F=100*(1-exp(-k*t^alpha))", "Macheras 1995", "Fractal"),
+    "Stretched Exponential": (m_stretched_exp, [100.0,0.8,30.0], ["A","beta","tau"], "F=A*(1-exp(-(t/tau)^beta))", "Kohlrausch 1854", "Fractal"),
+    "Fractal Weibull": (m_weibull_3p, [30.0,1.2,0.0], ["alpha","beta","gamma"], "F=100*(1-exp(-((t-gamma)/alpha)^beta))", "Weibull 3P", "Fractal"),
+    "Exponential Assoc.": (m_exp_assoc, [100.0, 0.05], ["A","k"], "F=A*(1-exp(-k*t))", "Empirical", "Empirical"),
+    "Hyperbolic": (m_hyperbolic, [100.0, 20.0], ["Amax","k"], "F=Amax*t/(k+t)", "Empirical", "Empirical"),
+    "Linear-Exponential": (m_linear_exp, [2.0, 0.02, 0.0], ["A","k","b"], "F=A*t*exp(-k*t)+b", "Empirical", "Empirical"),
+    "Brody Growth": (m_brody, [120.0,0.05,0.8], ["A","k","b"], "F=A*(1-b*exp(-k*t))", "Brody 1945", "Empirical"),
+    "Bertalanffy": (m_bertalanffy, [100.0,0.05,3.0], ["A","k","n"], "F=A*(1-exp(-k*t))^n", "von Bertalanffy", "Empirical"),
+    "Pade Approximation": (m_pade, [0.0, 2.0, 0.02], ["a0","a1","b1"], "F=(a0+a1*t)/(1+b1*t)", "Pade", "Empirical"),
+    "hPLC Model": (m_hPLC, [0.05, 1.5, 1.0], ["A","B","n"], "F=100*(1-(1+A*t^n)^(-B))", "Zuo 2014", "Empirical"),
+    "Compreg Model": (m_compreg, [0.05, 1.0, 2.0], ["k","n","m"], "F=100*(1-exp(-k*t^n))^m", "Compressed release", "Empirical"),
+    "KP Modified": (m_kpmod, [10.0, 0.5, 0.01], ["k","n","b"], "F=k*t^n/(1+b*t)", "Modified KP", "Empirical"),
+    "Makoid-Banakar Mod.": (m_mb_mod, [10.0,0.5,0.01,0.0], ["k","n","b","c"], "F=k*t^n*exp(-b*t)+c", "Extended MB", "Empirical"),
+    "Weibull-Sigmoid": (m_weibull_sig, [100.0,0.1,30.0,60.0], ["A","k","t50","b"], "Weibull x Logistic hybrid", "Hybrid", "Empirical"),
+}
+CATEGORIES = ["Basic","Lag-Time","Multi-Phase","Sigmoid","Fractal","Empirical"]
+
+# --- STAT HELPERS ---
+def r2s(y,yp):
+    ss_res=np.sum((y-yp)**2); ss_tot=np.sum((y-np.mean(y))**2)
+    return float(1-ss_res/ss_tot) if ss_tot>0 else 0.0
+def r2adj(y,yp,p):
+    n=len(y); r2=r2s(y,yp)
+    return float(1-(1-r2)*(n-1)/(n-p-1)) if n>p+1 else r2
+def aic_fn(y,yp,p):
+    n=len(y); sse=max(np.sum((y-yp)**2),1e-12)
+    return float(n*np.log(sse/n)+2*p)
+def msc_fn(y,yp,p):
+    n=len(y); sse=max(np.sum((y-yp)**2),1e-12); sst=max(np.sum((y-np.mean(y))**2),1e-12)
+    return float(np.log(sst/sse)-2*p/n)
+def compute_mdt(t,r):
+    f=np.array(r)/100.0; df=np.gradient(f,t)
+    num=trapezoid(t*df,t); den=trapezoid(df,t)
+    return float(num/den) if abs(den)>1e-12 else np.nan
+def compute_de(t,r):
+    auc=trapezoid(r,t)
+    return float(auc/(t[-1]*100)*100) if t[-1]>0 else np.nan
+
+def fit_model(t, y, name):
+    func, p0, pnames, eq, ref, cat = MODEL_DEFS[name]
+    try:
+        popt,_ = curve_fit(func, t, y, p0=p0, maxfev=25000)
+        yp = np.array(func(t,*popt), dtype=float)
+        valid = ~np.isnan(yp); tv,yv,ypv = t[valid],y[valid],yp[valid]
+        return {"success":True,"name":name,"category":cat, "r2":r2s(yv,ypv),"r2adj":r2adj(yv,ypv,len(popt)),
+                "aic":aic_fn(yv,ypv,len(popt)),"msc":msc_fn(yv,ypv,len(popt)), "params":dict(zip(pnames,popt)),
+                "yp":yp, "n_params":len(popt),"equation":eq,"reference":ref}
+    except: return {"success":False,"name":name,"category":cat, "params":{},"yp":np.full(len(t),np.nan)}
+
+# ===========================================================================
+# 1. LANDING PAGE VIEW
+# ===========================================================================
+if st.session_state.page == 'landing':
+    st.markdown("""
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            header, [data-testid="stSidebar"], [data-testid="stHeader"] { display: none !important; }
+            .main .block-container { padding: 0 !important; max-width: 100% !important; }
+            body { background-color: #000d1a; }
+            .hero-gradient { background: radial-gradient(circle at 2px 2px, rgba(255, 191, 0, 0.05) 1px, transparent 0); background-size: 48px 48px; }
+            div.stButton > button {
+                background-color: #FFBF00 !important; color: #002147 !important; border: none !important;
+                padding: 1rem 3rem !important; font-weight: 900 !important; font-size: 1.25rem !important;
+                border-radius: 1rem !important; transition: all 0.3s ease !important;
+                text-transform: uppercase !important; letter-spacing: 1px !important; width: 100%;
+            }
+            div.stButton > button:hover { background-color: #ffffff !important; transform: translateY(-3px) !important; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="min-h-screen text-slate-200 font-sans hero-gradient px-12">
+        <nav class="py-8 flex justify-between items-center bg-transparent">
+            <div class="flex items-center gap-3">
+                <div class="bg-[#FFBF00] p-1.5 rounded-lg shadow-lg text-[#002147] font-black text-xl">D</div>
+                <div class="flex flex-col leading-none">
+                    <span class="text-2xl font-black tracking-tighter text-white">DissolvA<span class="text-[#FFBF00]">™</span></span>
+                    <span class="text-[9px] uppercase tracking-[0.3em] font-bold text-[#FFBF00]/80">Predictive Analytics</span>
+                </div>
+            </div>
+        </nav>
+        <div class="pt-20 pb-20 grid lg:grid-cols-2 gap-20 items-center">
+            <div class="space-y-10">
+                <div class="inline-flex items-center gap-3 bg-[#FFBF00]/10 border border-[#FFBF00]/20 px-5 py-2 rounded-lg backdrop-blur-sm">
+                    <span class="text-[11px] font-black tracking-[0.2em] uppercase text-[#FFBF00]">Academic & Regulatory Standardized</span>
+                </div>
+                <h1 class="text-7xl md:text-8xl font-black leading-[0.95] tracking-tighter text-white">
+                    Unlock <br /><span class="text-transparent bg-clip-text bg-gradient-to-r from-[#FFBF00] via-[#ffd966] to-[#E5AB00]">Predictive</span><br />Intelligence.
+                </h1>
+                <p class="text-xl text-slate-400 max-w-xl leading-relaxed">
+                    The ultimate analytical suite for pharmaceutical R&D. Seamlessly integrate advanced kinetic modeling, f2 bootstrap similarity, and IVIVC estimations into your workflow.
+                </p>
+            </div>
+            <div class="hidden lg:block relative p-12">
+                 <div class="aspect-square bg-[#001a35] rounded-[3rem] border border-[#FFBF00]/20 flex items-center justify-center shadow-2xl">
+                    <div class="text-center">
+                        <div class="text-[#FFBF00] text-6xl font-black tracking-tighter mb-4">DISSOLVA</div>
+                        <div class="text-white/40 uppercase tracking-[0.4em] text-xs font-bold">Analysis Engine v2.0</div>
+                    </div>
+                 </div>
+                 <div class="absolute -inset-10 bg-[#FFBF00]/5 blur-[100px] rounded-full -z-10 animate-pulse"></div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1.5, 1, 3])
+    with col2:
+        if st.button("Launch Analysis 🚀"):
+            switch_page('app')
+
+# ===========================================================================
+# 2. MAIN APPLICATION VIEW
+# ===========================================================================
+else:
+    OXFORD, AMBER = "#002147", "#FFBF00"
+    PALETTE = ["#e6194B","#3cb44b","#4363d8","#f58231","#911eb4","#42d4f4","#f032e6","#bfef45","#469990","#dcbeff","#9A6324","#800000"]
+    
+    st.markdown(f"""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&display=swap');
+        html, body, [class*="css"] {{ font-family: 'EB Garamond', serif !important; background: #F5F0E8 !important; color: {OXFORD} !important; }}
+        section[data-testid="stSidebar"] {{ background: {OXFORD} !important; border-right: 3px solid {AMBER} !important; }}
+        section[data-testid="stSidebar"] * {{ color: #e8e0d0 !important; }}
+        .stButton > button {{ background: {OXFORD} !important; color: {AMBER} !important; border: 2px solid {AMBER} !important; }}
+        </style>
+    """, unsafe_allow_html=True)
+
+    with st.sidebar:
+        st.markdown(f"<h1 style='color:{AMBER}; text-align:center;'>DissolvA™</h1>", unsafe_allow_html=True)
+        nav = st.radio("Navigation", ["Data Input", "Kinetic Model Fitting", "Statistical Analysis", "f1 and f2 Similarity", "IVIVC Analysis", "Excel Report"])
+        if st.button("⬅ Home"): switch_page('landing')
+        st.caption("Developed by M. Sinan KAYNAK, PhD")
+
+    st.markdown(f"<h1 style='color:{OXFORD};'>DissolvA<sup style='font-size:1rem;'>TM</sup> - Analytical Panel</h1>", unsafe_allow_html=True)
+    st.divider()
+
+    # --- SHARED APP LOGIC ---
+    if nav == "Data Input":
+        st.header("Data Input")
+        up = st.file_uploader("Upload Raw Data (Excel/CSV)", type=["xlsx", "csv"])
+        if up:
+            df = pd.read_excel(up) if up.name.endswith('.xlsx') else pd.read_csv(up)
+            st.session_state.profiles["Batch_A"] = {"time": df.iloc[:,0].values, "release": df.iloc[:,1].values}
+            st.success("Data loaded successfully.")
+            st.dataframe(df)
+
+    elif nav == "Kinetic Model Fitting":
+        st.header("Kinetic Model Fitting")
+        if not st.session_state.profiles: st.warning("Please upload data first.")
+        else:
+            pname = "Batch_A"
+            d = st.session_state.profiles[pname]
+            t, r = d["time"], d["release"]
+            results = []
+            for mn in ["Zero Order", "First Order", "Higuchi", "Korsmeyer-Peppas"]:
+                res = fit_model(t, r, mn)
+                if res["success"]: results.append(res)
+            
+            df_res = pd.DataFrame(results).sort_values("r2adj", ascending=False)
+            st.dataframe(df_res[["name", "r2adj", "aic", "msc"]])
+            
+            fig, ax = plt.subplots(); ax.scatter(t, r, color=OXFORD)
+            for res in results:
+                ax.plot(t, res["yp"], label=res["name"])
+            ax.legend(); st.pyplot(fig)
+
+    elif nav == "f1 and f2 Similarity":
+        st.header("Similarity Factor Analysis")
+        st.info("f1 and f2 Similarity logic based on FDA/EMA guidelines.")
+        st.latex(r"f_2 = 50 \cdot \log_{10}\left(\frac{100}{\sqrt{1 + \frac{1}{n}\sum(R_t-T_t)^2}}\right)")
+
+    elif nav == "IVIVC Analysis":
+        st.header("IVIVC - Wagner-Nelson")
+        st.markdown("Fraction Absorbed estimation from dissolution profile.")
+        if st.session_state.profiles:
+            d = st.session_state.profiles["Batch_A"]
+            t, r = d["time"], d["release"]
+            AUC_t = np.array([trapezoid(r[:i+1], t[:i+1]) for i in range(len(t))])
+            Fa = np.clip((r + 0.1 * AUC_t) / (0.1 * (trapezoid(r, t) + r[-1]/0.1)) * 100, 0, 100)
+            st.line_chart(pd.DataFrame({"Release": r, "Fa": Fa}, index=t))
+
+    elif nav == "Excel Report":
+        st.header("Export Results")
+        st.button("Generate Professional Report (.xlsx)")
+        import streamlit as st
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import warnings
 warnings.filterwarnings("ignore")
 
 from scipy.optimize import curve_fit, root
@@ -264,7 +593,6 @@ with st.sidebar:
     )
 
     nav = st.radio("", [
-        "Welcome",
         "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
         "f1 and f2 Similarity", "IVIVC Analysis", "Excel Report"
     ], label_visibility="hidden")
@@ -741,979 +1069,6 @@ if st.session_state.get("show_method_panel", False):
     st.markdown("---")
 
 # ===========================================================================
-# PAGE: WELCOME / LANDING PAGE
-# ===========================================================================
-if nav == "Welcome":
-    # Hide default header/hr for this page
-    st.markdown("""
-<style>
-.landing-wrap * { box-sizing: border-box; }
-.landing-wrap { font-family: 'EB Garamond', Georgia, serif; color: #e8e0d0; width: 100%; }
-
-/* HERO */
-.hero { background: #002147; padding: 72px 40px 56px; text-align: center; position: relative; overflow: hidden; }
-.hero-bg-equations { position: absolute; inset: 0; display: flex; flex-wrap: wrap; gap: 10px;
-  align-content: flex-start; justify-content: space-around; padding: 20px; pointer-events: none;
-  opacity: 0.10; }
-.eq-text { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #FFBF00;
-  white-space: nowrap; animation: floatEq 8s ease-in-out infinite; }
-.eq-text:nth-child(even) { animation-delay: -4s; animation-duration: 11s; }
-.eq-text:nth-child(3n)   { animation-delay: -2s; animation-duration: 9s;  }
-@keyframes floatEq { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
-
-.hero-inner { position: relative; z-index: 2; max-width: 780px; margin: 0 auto; }
-.hero-badge { display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(255,191,0,0.12); border: 1px solid rgba(255,191,0,0.45);
-  border-radius: 24px; padding: 5px 18px; font-size: 0.72rem; letter-spacing: 0.14em;
-  text-transform: uppercase; color: #FFBF00; margin-bottom: 24px; }
-.hero-badge-dot { width: 7px; height: 7px; background: #FFBF00; border-radius: 50%;
-  animation: pulse-dot 2s ease-in-out infinite; }
-@keyframes pulse-dot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(0.7); } }
-
-.hero h1 { font-size: clamp(2.6rem, 6vw, 4.2rem); font-weight: 700; color: #ffffff;
-  line-height: 1.08; margin-bottom: 10px; letter-spacing: -0.01em; }
-.hero h1 .accent { color: #FFBF00; }
-.hero h1 sup { font-size: 1rem; vertical-align: super; color: #FFBF00; }
-.hero-subtitle { font-size: 1.1rem; color: #7a9dbf; font-style: italic; margin-bottom: 20px; }
-.hero-desc { font-size: 1.0rem; color: #8aadcc; max-width: 580px; line-height: 1.75;
-  margin: 0 auto 36px; }
-
-.hero-stats { display: flex; justify-content: center; gap: 0; margin-bottom: 40px;
-  border: 1px solid rgba(255,191,0,0.2); border-radius: 12px; overflow: hidden;
-  max-width: 580px; margin: 0 auto 40px; }
-.hero-stat { flex: 1; padding: 16px 12px; text-align: center; border-right: 1px solid rgba(255,191,0,0.15); }
-.hero-stat:last-child { border-right: none; }
-.hero-stat-n { font-size: 1.6rem; font-weight: 700; color: #FFBF00; line-height: 1; }
-.hero-stat-l { font-size: 0.65rem; color: #5a7a9a; letter-spacing: 0.08em;
-  text-transform: uppercase; margin-top: 3px; }
-
-.cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.btn-launch { background: #FFBF00; color: #001428; border: none; padding: 14px 32px;
-  border-radius: 8px; font-family: 'EB Garamond', serif; font-size: 1.05rem;
-  font-weight: 700; cursor: pointer; letter-spacing: 0.02em;
-  transition: transform 0.15s, box-shadow 0.15s; display: inline-flex; align-items: center; gap: 8px; }
-.btn-launch:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,191,0,0.35); }
-.btn-launch svg { width: 18px; height: 18px; stroke: #001428; fill: none;
-  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.btn-docs { background: transparent; color: #FFBF00; border: 2px solid rgba(255,191,0,0.45);
-  padding: 14px 28px; border-radius: 8px; font-family: 'EB Garamond', serif;
-  font-size: 1.05rem; cursor: pointer; transition: border-color 0.15s, background 0.15s;
-  display: inline-flex; align-items: center; gap: 8px; }
-.btn-docs:hover { border-color: #FFBF00; background: rgba(255,191,0,0.08); }
-.btn-docs svg { width: 16px; height: 16px; stroke: #FFBF00; fill: none;
-  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-
-/* DIVIDER */
-.amber-divider { height: 1px; background: linear-gradient(90deg, transparent, #FFBF00 30%, #FFBF00 70%, transparent);
-  margin: 0; }
-
-/* FEATURES */
-.features-section { background: #F5F0E8; padding: 56px 32px; }
-.section-label { display: block; text-align: center; font-size: 0.72rem; color: #FFBF00;
-  letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 10px; }
-.section-title { text-align: center; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700;
-  color: #002147; margin-bottom: 6px; }
-.section-sub { text-align: center; font-size: 0.92rem; color: #6a8aaa; margin-bottom: 36px; }
-
-.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px; max-width: 980px; margin: 0 auto; }
-.feat-card { background: white; border: 1px solid rgba(0,33,71,0.08);
-  border-radius: 12px; padding: 22px 20px; transition: box-shadow 0.2s, transform 0.2s; }
-.feat-card:hover { box-shadow: 0 8px 28px rgba(0,33,71,0.12); transform: translateY(-3px); }
-.feat-icon { width: 40px; height: 40px; background: rgba(0,33,71,0.06); border-radius: 10px;
-  display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
-.feat-icon svg { width: 20px; height: 20px; stroke: #002147; fill: none;
-  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.feat-card h3 { font-size: 0.98rem; font-weight: 700; color: #002147; margin-bottom: 7px; }
-.feat-card p  { font-size: 0.80rem; color: #6a8aaa; line-height: 1.65; }
-.feat-badge   { display: inline-block; background: rgba(0,33,71,0.07); color: #002147;
-  font-size: 0.63rem; padding: 2px 8px; border-radius: 10px; margin-top: 10px;
-  font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; }
-
-/* SCIENCE */
-.science-section { background: #002147; padding: 52px 32px; }
-.sci-inner { max-width: 900px; margin: 0 auto; display: grid;
-  grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
-@media (max-width: 640px) { .sci-inner { grid-template-columns: 1fr; } }
-.sci-left h2 { font-size: 1.7rem; font-weight: 700; color: white; margin-bottom: 14px; line-height: 1.2; }
-.sci-left p  { font-size: 0.9rem; color: #7a9dbf; line-height: 1.75; margin-bottom: 18px; }
-.sci-check   { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
-.sci-check svg { width: 18px; height: 18px; stroke: #FFBF00; fill: none;
-  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; margin-top: 2px; }
-.sci-check span { font-size: 0.88rem; color: #8aadcc; line-height: 1.6; }
-.ref-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 14px; padding: 24px; }
-.ref-label { font-size: 0.65rem; color: #FFBF00; letter-spacing: 0.12em;
-  text-transform: uppercase; font-family: 'JetBrains Mono', monospace; margin-bottom: 16px;
-  display: flex; align-items: center; gap: 6px; }
-.ref-item { background: rgba(255,255,255,0.04); border-left: 3px solid #FFBF00;
-  border-radius: 0 8px 8px 0; padding: 12px 14px; margin-bottom: 12px; }
-.ref-item:last-child { margin-bottom: 0; }
-.ref-item p { font-size: 0.82rem; font-style: italic; color: #c8d8e8; line-height: 1.55; margin-bottom: 4px; }
-.ref-item span { font-size: 0.70rem; color: #5a7a9a; }
-
-/* WORKFLOW */
-.workflow-section { background: #F5F0E8; padding: 48px 32px; }
-.wf-steps { display: flex; align-items: flex-start; justify-content: center;
-  gap: 0; flex-wrap: wrap; max-width: 900px; margin: 0 auto; }
-.wf-step { flex: 1; min-width: 120px; max-width: 160px; text-align: center; padding: 0 8px; }
-.wf-num { width: 38px; height: 38px; border-radius: 50%; background: #002147;
-  color: #FFBF00; font-weight: 700; font-size: 0.95rem; display: flex;
-  align-items: center; justify-content: center; margin: 0 auto 10px; border: 2px solid #FFBF00; }
-.wf-step h4 { font-size: 0.85rem; font-weight: 700; color: #002147; margin-bottom: 4px; }
-.wf-step p  { font-size: 0.73rem; color: #6a8aaa; line-height: 1.5; }
-.wf-arrow { color: #FFBF00; font-size: 1.5rem; align-self: center;
-  padding-bottom: 28px; opacity: 0.5; flex-shrink: 0; }
-
-/* CTA FOOTER */
-.cta-section { background: white; padding: 52px 32px; text-align: center;
-  border-top: 1px solid rgba(0,33,71,0.08); }
-.cta-section h2 { font-size: 1.8rem; font-weight: 700; color: #002147; margin-bottom: 12px; }
-.cta-section p  { font-size: 0.95rem; color: #6a8aaa; max-width: 520px; margin: 0 auto 30px; line-height: 1.7; }
-.btn-cta-main { background: #002147; color: white; border: none; padding: 16px 40px;
-  border-radius: 10px; font-family: 'EB Garamond', serif; font-size: 1.1rem;
-  font-weight: 700; cursor: pointer; transition: background 0.2s, color 0.2s;
-  display: inline-flex; align-items: center; gap: 10px; }
-.btn-cta-main:hover { background: #FFBF00; color: #002147; }
-.btn-cta-main svg { width: 20px; height: 20px; stroke: currentColor; fill: none;
-  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-
-/* LANDING FOOTER */
-.landing-footer { background: #010a1a; padding: 24px 40px;
-  display: flex; justify-content: space-between; align-items: center;
-  flex-wrap: wrap; gap: 12px; }
-.lf-brand { font-size: 1.1rem; font-weight: 700; color: #FFBF00; letter-spacing: -0.01em; }
-.lf-brand sup { font-size: 0.55rem; vertical-align: super; }
-.lf-copy  { font-size: 0.72rem; color: rgba(255,255,255,0.25); letter-spacing: 0.05em; }
-.lf-ai    { background: #FFBF00; color: #001428; font-size: 0.62rem; font-weight: 800;
-  padding: 3px 10px; border-radius: 12px; letter-spacing: 0.1em;
-  font-family: 'JetBrains Mono', monospace; }
-</style>
-
-<div class="landing-wrap">
-
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-bg-equations">
-    <span class="eq-text">F = k * t^n &nbsp; (Korsmeyer-Peppas)</span>
-    <span class="eq-text">f2 = 50 * log10(100 / sqrt(1 + (1/n)*sum(Rt-Tt)^2))</span>
-    <span class="eq-text">dM/dt = -k * M^n</span>
-    <span class="eq-text">F = 100*(1 - exp(-k1*t)) &nbsp; (First Order)</span>
-    <span class="eq-text">AIC = n*ln(SSE/n) + 2p</span>
-    <span class="eq-text">MDT = integral(t*dF) / integral(dF)</span>
-    <span class="eq-text">F = kH * sqrt(t) &nbsp; (Higuchi)</span>
-    <span class="eq-text">Fa(t) = [Ct + kel*AUC] / [kel*AUC_inf]</span>
-    <span class="eq-text">M0^(1/3) - M^(1/3) = ks*t &nbsp; (Hixson-Crowell)</span>
-    <span class="eq-text">R2_adj = 1 - (1-R2)*(n-1)/(n-p-1)</span>
-    <span class="eq-text">DE% = AUC(0-t) / (t*100) * 100</span>
-    <span class="eq-text">F = A*exp(-b*exp(-k*t)) &nbsp; (Gompertz)</span>
-    <span class="eq-text">MSC = ln(SStot/SSres) - 2p/n</span>
-    <span class="eq-text">3/2*(1-(1-F)^(2/3)) - F = kBL*t &nbsp; (Baker-Lonsdale)</span>
-  </div>
-
-  <div class="hero-inner">
-    <div class="hero-badge">
-      <div class="hero-badge-dot"></div>
-      Powered by AI Technology
-    </div>
-
-    <h1>Predictive<br><span class="accent">Dissolution</span> Suite</h1>
-    <div class="hero-subtitle">DissolvA<sup>TM</sup> &mdash; Where Pharmaceutical Science Meets AI</div>
-    <div class="hero-desc">
-      Farmasotik formulasyon gelistirme sureclerinizde, 48 farkli kinetik modeli
-      yapay zeka hassasiyetiyle analiz eden ve akademik raporlama sunan yeni nesil
-      cozum ortaginiz.
-    </div>
-
-    <div class="hero-stats">
-      <div class="hero-stat"><div class="hero-stat-n">48+</div><div class="hero-stat-l">Kinetic Models</div></div>
-      <div class="hero-stat"><div class="hero-stat-n">FDA</div><div class="hero-stat-l">f1/f2 Compliant</div></div>
-      <div class="hero-stat"><div class="hero-stat-n">IVIVC</div><div class="hero-stat-l">Wagner-Nelson</div></div>
-      <div class="hero-stat"><div class="hero-stat-n">7</div><div class="hero-stat-l">Excel Pages</div></div>
-    </div>
-
-    <div class="cta-row" style="margin-top:32px;">
-      <button class="btn-launch" onclick="
-        const radios = parent.document.querySelectorAll('[data-testid=stSidebar] input[type=radio]');
-        for(let r of radios){ if(r.nextSibling && r.nextSibling.textContent && r.nextSibling.textContent.includes('Data Input')){ r.click(); break; } }
-        const labels = parent.document.querySelectorAll('[data-testid=stSidebar] .stRadio label');
-        for(let l of labels){ if(l.textContent.trim()==='Data Input'){ l.click(); break; } }
-      ">
-        <svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
-        Analize Basla
-      </button>
-      <button class="btn-docs" onclick="alert('Documentation: dissanalyze.streamlit.app')">
-        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Teknik Dokumantasyon
-      </button>
-    </div>
-  </div>
-</div>
-
-<div class="amber-divider"></div>
-
-<!-- FEATURES -->
-<div class="features-section">
-  <span class="section-label">Core Capabilities</span>
-  <div class="section-title">Laboratuvar Standartlarini Dijitaliz Ediyoruz</div>
-  <div class="section-sub">Farmakokinetik ve biyoeczacilik verilerinizi saniyeler icinde isleme</div>
-
-  <div class="feat-grid">
-    <div class="feat-card">
-      <div class="feat-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-      <h3>48 Kinetik Model</h3>
-      <p>Higuchi'den Baker-Lonsdale'e, Fractal First Order'a kadar 6 kategoride en iyi fitting, AIC/MSC/R2adj ile siralanir.</p>
-      <span class="feat-badge">R2adj * AIC * MSC</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
-      <h3>f1 &amp; f2 Benzerligi</h3>
-      <p>FDA 1997 ve USP &lt;711&gt; rehberlerine uyumlu similarity/difference faktoru hesaplamalari, LaTeX denklem gosterimi.</p>
-      <span class="feat-badge">FDA / USP &lt;711&gt;</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 9l-5-5-4 4-3-3"/></svg></div>
-      <h3>IVIVC Wagner-Nelson</h3>
-      <p>In vitro cozunme profillerinden tek kompartiman PK modeli ile in vivo absorpsiyon tahminleme.</p>
-      <span class="feat-badge">One-compartment PK</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <h3>Cok Hazneli Analiz</h3>
-      <p>6 veya 12 hazne ile USP/FDA uyumlu Mean, SD, RSD, CV, MDT ve DE hesaplamasi. Hata cubuklu profil grafigi.</p>
-      <span class="feat-badge">USP 6 / 12 vessel</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg></div>
-      <h3>7-Sayfa Excel Raporu</h3>
-      <p>Cover, Method Report, Dissolution Profiles, Statistics, Model Fitting, Dissolution Chart, Similarity Report.</p>
-      <span class="feat-badge">xlsxwriter native charts</span>
-    </div>
-    <div class="feat-card">
-      <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg></div>
-      <h3>Metod Ayarlari</h3>
-      <p>USP I-IV cihaz, cozunme ortami, surfaktan, UV-Vis / HPLC / UPLC analitik parametreler. GLP dokumantasyona hazir.</p>
-      <span class="feat-badge">GLP ready</span>
-    </div>
-  </div>
-</div>
-
-<div class="amber-divider"></div>
-
-<!-- SCIENCE SECTION -->
-<div class="science-section">
-  <div class="sci-inner">
-    <div class="sci-left">
-      <span class="section-label">Guvenilir Metodoloji</span>
-      <h2>Bilimsel Makale Temelli Analiz Motoru</h2>
-      <p>DissolvA'nin cekirdek algoritmalari, literaturde kabul gormus Zhang ve ark. (2010) ile Zuo ve ark. (2014) calismalari temel alinarak gelistirilmistir.</p>
-      <div class="sci-check">
-        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        <span>BCS Siniflandirma Sistemi ve biyoeczacilik verileriyle tam uyum. scipy.optimize ile hassas parametre tahmini.</span>
-      </div>
-      <div class="sci-check">
-        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        <span>Baker-Lonsdale gibi kapali denklemler icin scipy.optimize.root ile numerik cozum.</span>
-      </div>
-      <div class="sci-check">
-        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        <span>R2adj, AIC ve MSC kriterleri ile otomatik model secimi ve siralama.</span>
-      </div>
-    </div>
-    <div class="ref-box">
-      <div class="ref-label">
-        <svg style="width:14px;height:14px;stroke:#FFBF00;fill:none;stroke-width:2;stroke-linecap:round;" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="4"/><path d="M2 12c0 4.4 4.5 8 10 8s10-3.6 10-8"/><line x1="12" y1="2" x2="12" y2="22"/></ellipse></svg>
-        Literatur Referanslari
-      </div>
-      <div class="ref-item">
-        <p>"DDSolver: An Add-In Program for Modeling and Comparison of Drug Dissolution Profiles"</p>
-        <span>Zhang et al. (2010) &mdash; AAPS Journal</span>
-      </div>
-      <div class="ref-item">
-        <p>"Evaluation of the DDSolver Software Applications"</p>
-        <span>Zuo et al. (2014) &mdash; BioMed Research International</span>
-      </div>
-      <div class="ref-item">
-        <p>"Guidance for Industry: Dissolution Testing of Immediate Release Solid Oral Dosage Forms"</p>
-        <span>FDA (1997) &mdash; Center for Drug Evaluation and Research</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- WORKFLOW -->
-<div class="workflow-section">
-  <div class="section-title">Nasil Calisir?</div>
-  <div style="height:24px;"></div>
-  <div class="wf-steps">
-    <div class="wf-step">
-      <div class="wf-num">1</div>
-      <h4>Veri Yukle</h4>
-      <p>Excel / CSV veya dogrudan yapistir</p>
-    </div>
-    <div class="wf-arrow">&#8250;</div>
-    <div class="wf-step">
-      <div class="wf-num">2</div>
-      <h4>Metod Tanimla</h4>
-      <p>Cihaz, ortam, analitik parametreler</p>
-    </div>
-    <div class="wf-arrow">&#8250;</div>
-    <div class="wf-step">
-      <div class="wf-num">3</div>
-      <h4>Model Fit</h4>
-      <p>48 kinetic model, otomatik siralama</p>
-    </div>
-    <div class="wf-arrow">&#8250;</div>
-    <div class="wf-step">
-      <div class="wf-num">4</div>
-      <h4>Karsilastir</h4>
-      <p>f1/f2 benzerlik analizi</p>
-    </div>
-    <div class="wf-arrow">&#8250;</div>
-    <div class="wf-step">
-      <div class="wf-num">5</div>
-      <h4>Rapor Al</h4>
-      <p>7 sayfa profesyonel Excel raporu</p>
-    </div>
-  </div>
-</div>
-
-<!-- FINAL CTA -->
-<div class="cta-section">
-  <svg style="width:44px;height:44px;stroke:#002147;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin:0 auto 20px;display:block;" viewBox="0 0 24 24">
-    <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
-  </svg>
-  <h2>Gelecegin Formulasyonunu Bugundan Analiz Edin</h2>
-  <p>Karmashik Excel tablolariyla vakit kaybetmeyin. Akademik kalitede sonuclar icin DissolvA'yi hemen kullanmaya baslayin.</p>
-  <button class="btn-cta-main" onclick="
-    const labels = parent.document.querySelectorAll('[data-testid=stSidebar] .stRadio label');
-    for(let l of labels){ if(l.textContent.trim().includes('Data Input')){ l.click(); break; } }
-  ">
-    Uygulamayi Baslat
-    <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-  </button>
-</div>
-
-<!-- FOOTER -->
-<div class="landing-footer">
-  <div class="lf-brand">DissolvA<sup>TM</sup></div>
-  <div class="lf-copy">
-    M. Sinan KAYNAK, PhD &nbsp;&bull;&nbsp;
-    Anadolu University, Faculty of Pharmacy &nbsp;&bull;&nbsp;
-    msinankaynak@gmail.com &nbsp;&bull;&nbsp;
-    &copy; 2025 Predictive Dissolution Suite
-  </div>
-  <span class="lf-ai">POWERED BY AI</span>
-</div>
-
-</div>
-""", unsafe_allow_html=True)
-
-# ===========================================================================
-# ===========================================================================
-# PAGE: WELCOME LANDING
-# ===========================================================================
-if nav == "Welcome":
-    # Hide default header/divider for full-width landing
-    st.markdown("""
-<style>
-/* Hide streamlit header on welcome page */
-.welcome-page-active header[data-testid="stHeader"] { display: none !important; }
-
-@keyframes float-eq {
-  0%   { transform: translateY(0px) translateX(0px); opacity: 0.10; }
-  33%  { opacity: 0.18; }
-  66%  { transform: translateY(-12px) translateX(6px); opacity: 0.13; }
-  100% { transform: translateY(0px) translateX(0px); opacity: 0.10; }
-}
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.18; }
-  50%       { opacity: 0.32; }
-}
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-.dissolva-lp * { box-sizing: border-box; margin: 0; padding: 0; }
-.dissolva-lp {
-  font-family: 'EB Garamond', Georgia, serif;
-  background: #001428;
-  color: #e8e0d0;
-  width: 100%;
-  margin: -1rem -1rem 0 -1rem;
-  padding: 0;
-}
-
-/* HERO */
-.lp-hero {
-  background: #002147;
-  min-height: 88vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  padding: 80px 40px 60px;
-}
-.lp-glow-1 {
-  position: absolute; top: 20%; left: 15%;
-  width: 480px; height: 480px;
-  background: #FFBF00;
-  border-radius: 50%;
-  filter: blur(140px);
-  animation: pulse-glow 4s ease-in-out infinite;
-}
-.lp-glow-2 {
-  position: absolute; bottom: 15%; right: 10%;
-  width: 320px; height: 320px;
-  background: #1e5fa5;
-  border-radius: 50%;
-  filter: blur(110px);
-  animation: pulse-glow 5s ease-in-out infinite reverse;
-}
-.lp-grid-bg {
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
-  background-size: 44px 44px;
-}
-.eq-float {
-  position: absolute;
-  font-family: 'JetBrains Mono', monospace;
-  color: #FFBF00;
-  font-size: 11px;
-  pointer-events: none;
-  white-space: nowrap;
-}
-.eq-float:nth-child(1)  { top:8%;  left:5%;  animation: float-eq 7s ease-in-out infinite; }
-.eq-float:nth-child(2)  { top:14%; right:4%; animation: float-eq 9s ease-in-out infinite 1s; }
-.eq-float:nth-child(3)  { top:30%; left:2%; animation: float-eq 8s ease-in-out infinite 2s; }
-.eq-float:nth-child(4)  { top:55%; right:3%; animation: float-eq 10s ease-in-out infinite 0.5s; }
-.eq-float:nth-child(5)  { bottom:20%; left:6%; animation: float-eq 7s ease-in-out infinite 3s; }
-.eq-float:nth-child(6)  { bottom:8%; right:8%; animation: float-eq 9s ease-in-out infinite 1.5s; }
-.eq-float:nth-child(7)  { top:42%; left:42%; animation: float-eq 11s ease-in-out infinite 2.5s; }
-.eq-float:nth-child(8)  { top:70%; left:30%; animation: float-eq 8s ease-in-out infinite 4s; }
-
-.lp-hero-inner {
-  position: relative; z-index: 2;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 60px; max-width: 1200px; width: 100%;
-}
-.lp-hero-text { flex: 1; }
-.lp-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 24px; padding: 6px 18px;
-  font-size: 0.7rem; letter-spacing: 0.18em;
-  text-transform: uppercase; color: #FFBF00;
-  margin-bottom: 24px;
-  animation: fadeInUp 0.6s ease both;
-}
-.lp-h1 {
-  font-size: clamp(2.8rem, 5vw, 4.5rem);
-  font-weight: 700; line-height: 1.08;
-  color: #ffffff;
-  margin-bottom: 16px;
-  letter-spacing: -0.02em;
-  animation: fadeInUp 0.7s ease 0.1s both;
-}
-.lp-h1 .amber { color: #FFBF00; }
-.lp-sub {
-  font-size: 1.05rem; font-style: italic;
-  color: rgba(180,210,240,0.8);
-  margin-bottom: 20px;
-  animation: fadeInUp 0.7s ease 0.2s both;
-}
-.lp-desc {
-  font-size: 0.95rem; line-height: 1.75;
-  color: rgba(138,175,200,0.9);
-  max-width: 520px; margin-bottom: 36px;
-  animation: fadeInUp 0.7s ease 0.3s both;
-}
-.lp-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 44px;
-  animation: fadeInUp 0.7s ease 0.4s both; }
-.lp-btn-primary {
-  background: #FFBF00; color: #001428;
-  border: none; padding: 14px 32px;
-  border-radius: 8px; font-family: 'EB Garamond', serif;
-  font-size: 1.05rem; font-weight: 700;
-  cursor: pointer; letter-spacing: 0.02em;
-  transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
-}
-.lp-btn-primary:hover { background: #fff; transform: translateY(-2px); }
-.lp-btn-secondary {
-  background: rgba(255,255,255,0.05);
-  color: #e8e0d0;
-  border: 1.5px solid rgba(255,255,255,0.2);
-  padding: 14px 28px; border-radius: 8px;
-  font-family: 'EB Garamond', serif; font-size: 1.05rem;
-  cursor: pointer; transition: all 0.2s;
-  display: inline-flex; align-items: center; gap: 8px;
-}
-.lp-btn-secondary:hover { background: rgba(255,255,255,0.1); }
-.lp-stats {
-  display: flex; gap: 32px; flex-wrap: wrap;
-  animation: fadeInUp 0.7s ease 0.5s both;
-}
-.lp-stat { text-align: left; }
-.lp-stat-n { font-size: 2rem; font-weight: 700; color: #FFBF00; }
-.lp-stat-l { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #5a7a9a; }
-.lp-divider-v { width: 1px; background: rgba(255,255,255,0.12); align-self: stretch; }
-
-/* RIGHT VISUAL */
-.lp-hero-visual {
-  flex: 0 0 380px;
-  position: relative;
-  display: flex; align-items: center; justify-content: center;
-}
-.lp-visual-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 28px; padding: 20px;
-  width: 360px; height: 360px;
-  display: flex; align-items: center; justify-content: center;
-  position: relative; overflow: hidden;
-  backdrop-filter: blur(8px);
-}
-.lp-visual-inner {
-  background: #001a3a;
-  border-radius: 20px; width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-  border: 1px solid rgba(255,255,255,0.08);
-  position: relative; overflow: hidden;
-}
-.lp-ring {
-  position: absolute; border-radius: 50%; border-style: solid;
-}
-.lp-ring-1 {
-  width: 220px; height: 220px;
-  border-color: rgba(255,191,0,0.25); border-width: 0.5px;
-  animation: spin-slow 20s linear infinite;
-  border-style: dashed;
-}
-.lp-ring-2 {
-  width: 140px; height: 140px;
-  border-color: rgba(255,191,0,0.15); border-width: 0.5px;
-  animation: spin-slow 14s linear infinite reverse;
-}
-.lp-beaker {
-  position: relative; z-index: 2; text-align: center;
-}
-.lp-hud-top {
-  position: absolute; top: 16px; left: 16px;
-  background: rgba(255,191,0,0.9); color: #001428;
-  padding: 6px 10px; border-radius: 6px;
-  font-size: 9px; font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  transform: rotate(-2deg);
-}
-.lp-hud-bottom {
-  position: absolute; bottom: 20px; right: 16px;
-  background: rgba(30,95,165,0.85); border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 10px; padding: 12px;
-  backdrop-filter: blur(6px);
-}
-.lp-bars { display: flex; align-items: flex-end; gap: 3px; height: 44px; }
-.lp-bar { width: 10px; background: #FFBF00; border-radius: 2px 2px 0 0; opacity: 0.85; }
-.lp-glow-back {
-  position: absolute; inset: -40px;
-  background: rgba(255,191,0,0.15);
-  border-radius: 50%; filter: blur(60px); z-index: 0;
-}
-
-/* DIVIDER LINE */
-.lp-line { height: 1px; background: linear-gradient(90deg,transparent,#FFBF00 30%,#FFBF00 70%,transparent); }
-
-/* STATS BAR */
-.lp-statsbar {
-  background: #002147; padding: 22px 40px;
-  display: flex; justify-content: center; gap: 52px; flex-wrap: wrap;
-}
-.lp-sbstat { text-align: center; }
-.lp-sbstat-n { font-size: 1.7rem; font-weight: 700; color: #FFBF00; }
-.lp-sbstat-l { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #5a7a9a; }
-
-/* FEATURES */
-.lp-features { background: #ffffff; padding: 64px 40px; }
-.lp-feat-head { text-align: center; margin-bottom: 40px; }
-.lp-feat-head h2 { font-size: 1.9rem; font-weight: 700; color: #002147; margin-bottom: 8px; }
-.lp-feat-head p { font-size: 0.9rem; color: #64748b; }
-.lp-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px; max-width: 1100px; margin: 0 auto;
-}
-.lp-card {
-  background: #f8fafc; border: 1px solid transparent;
-  border-radius: 20px; padding: 28px;
-  transition: all 0.2s; cursor: default;
-}
-.lp-card:hover {
-  background: #fff; border-color: #e2e8f0;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.10);
-  transform: translateY(-4px);
-}
-.lp-card-icon {
-  width: 48px; height: 48px; border-radius: 14px;
-  background: #fff; display: flex; align-items: center; justify-content: center;
-  margin-bottom: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-.lp-card-icon svg { width: 22px; height: 22px; stroke: #002147; fill: none;
-  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.lp-card h3 { font-size: 1.05rem; font-weight: 700; color: #002147; margin-bottom: 8px; }
-.lp-card p { font-size: 0.82rem; color: #64748b; line-height: 1.65; }
-.lp-card-tag {
-  display: inline-block; margin-top: 12px;
-  background: rgba(0,33,71,0.08); color: #002147;
-  font-size: 0.65rem; padding: 3px 10px; border-radius: 10px;
-  font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
-}
-
-/* SCIENCE */
-.lp-science {
-  background: #002147; padding: 60px 40px;
-  display: flex; align-items: center; justify-content: center; gap: 60px;
-  flex-wrap: wrap;
-}
-.lp-sci-text { flex: 1; min-width: 260px; color: #e8e0d0; }
-.lp-sci-badge {
-  background: #FFBF00; color: #001428;
-  font-size: 0.65rem; font-weight: 700;
-  letter-spacing: 0.12em; text-transform: uppercase;
-  padding: 4px 12px; border-radius: 4px;
-  display: inline-block; margin-bottom: 18px;
-}
-.lp-sci-text h3 { font-size: 1.7rem; font-weight: 700; color: #fff; margin-bottom: 14px; }
-.lp-sci-text p { font-size: 0.9rem; color: rgba(180,210,240,0.75); line-height: 1.75; margin-bottom: 20px; }
-.lp-sci-list { list-style: none; }
-.lp-sci-list li {
-  display: flex; gap: 12px; align-items: flex-start;
-  font-size: 0.88rem; color: rgba(220,230,240,0.85); margin-bottom: 12px;
-}
-.lp-sci-check { color: #FFBF00; font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
-.lp-sci-refs {
-  flex: 1; min-width: 260px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 20px; padding: 28px; backdrop-filter: blur(8px);
-}
-.lp-sci-refs h4 {
-  color: #FFBF00; font-size: 0.72rem; font-weight: 700;
-  letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 20px;
-}
-.lp-ref-card {
-  background: rgba(255,255,255,0.05);
-  border-left: 3px solid #FFBF00;
-  border-radius: 0 8px 8px 0;
-  padding: 14px 16px; margin-bottom: 14px;
-}
-.lp-ref-card p { font-size: 0.82rem; font-style: italic; color: #c8dae8; margin-bottom: 6px; }
-.lp-ref-card span { font-size: 0.72rem; color: rgba(180,210,240,0.5); }
-
-/* WORKFLOW */
-.lp-workflow { background: #001428; padding: 56px 40px; }
-.lp-workflow h2 { text-align: center; font-size: 1.6rem; color: #fff; margin-bottom: 36px; }
-.lp-steps {
-  display: flex; align-items: flex-start; justify-content: center;
-  gap: 0; flex-wrap: wrap; max-width: 900px; margin: 0 auto;
-}
-.lp-step { flex: 1; min-width: 120px; text-align: center; padding: 0 14px; }
-.lp-step-num {
-  width: 38px; height: 38px; border-radius: 50%;
-  background: #FFBF00; color: #001428;
-  font-weight: 700; font-size: 0.9rem;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 12px;
-}
-.lp-step h4 { font-size: 0.88rem; color: #e8e0d0; margin-bottom: 6px; font-weight: 600; }
-.lp-step p { font-size: 0.75rem; color: #5a7a9a; line-height: 1.55; }
-.lp-arrow { color: #FFBF00; font-size: 1.6rem; align-self: center; opacity: 0.4; flex: 0; }
-
-/* CTA */
-.lp-cta-section {
-  background: #fff; border-top: 1px solid #f1f5f9;
-  padding: 72px 40px; text-align: center;
-}
-.lp-cta-section h2 {
-  font-size: 2rem; font-weight: 700; color: #002147;
-  letter-spacing: -0.01em; margin-bottom: 12px;
-}
-.lp-cta-section p { font-size: 0.95rem; color: #64748b; max-width: 560px; margin: 0 auto 40px; line-height: 1.7; }
-.lp-cta-big {
-  background: #002147; color: #fff;
-  border: none; padding: 18px 48px;
-  border-radius: 14px; font-family: 'EB Garamond', serif;
-  font-size: 1.15rem; font-weight: 700;
-  cursor: pointer; transition: all 0.2s;
-  display: inline-flex; align-items: center; gap: 10px;
-}
-.lp-cta-big:hover { background: #FFBF00; color: #001428; transform: translateY(-2px); }
-
-/* FOOTER */
-.lp-footer {
-  background: #010a1a; padding: 28px 40px;
-  display: flex; justify-content: space-between; align-items: center;
-  flex-wrap: wrap; gap: 14px;
-}
-.lp-footer-brand { font-size: 1.3rem; font-weight: 700; color: #FFBF00; letter-spacing: -0.01em; }
-.lp-footer-brand sup { font-size: 0.55rem; vertical-align: super; }
-.lp-footer-copy { font-size: 0.72rem; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; text-transform: uppercase; }
-.lp-ai-pill {
-  background: #FFBF00; color: #001428;
-  font-size: 0.6rem; font-weight: 800;
-  padding: 3px 10px; border-radius: 12px;
-  letter-spacing: 0.12em; font-family: 'JetBrains Mono', monospace;
-}
-</style>
-
-<div class="dissolva-lp">
-
-  <!-- HERO -->
-  <div class="lp-hero">
-    <div class="lp-glow-1"></div>
-    <div class="lp-glow-2"></div>
-    <div class="lp-grid-bg"></div>
-
-    <!-- Floating equations -->
-    <div class="eq-float">F = k &middot; t<sup>n</sup> &nbsp;(Korsmeyer-Peppas)</div>
-    <div class="eq-float">f&#8322; = 50 &middot; log&#8321;&#8320;(100 / &radic;(1+(1/n)&Sigma;(R-T)&#178;))</div>
-    <div class="eq-float">dM/dt = &minus;k &middot; M<sup>n</sup></div>
-    <div class="eq-float">F = 100 &middot; (1 &minus; exp(&minus;k&#8321; &middot; t)) &nbsp;(First Order)</div>
-    <div class="eq-float">AIC = n &middot; ln(SSE/n) + 2p</div>
-    <div class="eq-float">MDT = &int;t &middot; dF / &int;dF</div>
-    <div class="eq-float">F = k<sub>H</sub> &middot; &radic;t &nbsp;(Higuchi)</div>
-    <div class="eq-float">Fa(t) = [C<sub>t</sub> + k<sub>el</sub>&middot;AUC] / [k<sub>el</sub>&middot;AUC&#8734;]</div>
-
-    <div class="lp-hero-inner">
-      <div class="lp-hero-text">
-        <div class="lp-badge">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFBF00" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-          Powered by AI Technology
-        </div>
-        <h1 class="lp-h1">Predictive<br><span class="amber">Dissolution</span> Suite</h1>
-        <div class="lp-sub">Where Pharmaceutical Science Meets Artificial Intelligence</div>
-        <div class="lp-desc">
-          Professional dissolution analysis platform with 48 kinetic models,
-          FDA-compliant f1 &amp; f2 similarity, IVIVC modelling, and automated
-          7-page report generation &mdash; built for researchers, by researchers.
-        </div>
-        <div class="lp-cta">
-          <button class="lp-btn-primary" onclick="
-            var radios = window.parent.document.querySelectorAll(\'[data-testid=stSidebar] input[type=radio]\');
-            radios.forEach(function(r){ if(r.nextSibling && r.nextSibling.textContent && r.nextSibling.textContent.trim().includes(\'Data Input\')){ r.click(); } });
-          ">
-            Analize Ba&#351;la
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <button class="lp-btn-secondary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Dok&uuml;mantasyon
-          </button>
-        </div>
-        <div class="lp-stats">
-          <div class="lp-stat"><div class="lp-stat-n">48+</div><div class="lp-stat-l">Kinetik Model</div></div>
-          <div class="lp-divider-v"></div>
-          <div class="lp-stat"><div class="lp-stat-n">IVIVC</div><div class="lp-stat-l">Biyoyararlan&#305;m</div></div>
-          <div class="lp-divider-v"></div>
-          <div class="lp-stat"><div class="lp-stat-n">f1/f2</div><div class="lp-stat-l">FDA/EMA Standart</div></div>
-          <div class="lp-divider-v"></div>
-          <div class="lp-stat"><div class="lp-stat-n">7</div><div class="lp-stat-l">Rapor Sayfas&#305;</div></div>
-        </div>
-      </div>
-
-      <div class="lp-hero-visual">
-        <div class="lp-glow-back"></div>
-        <div class="lp-visual-card">
-          <div class="lp-visual-inner">
-            <div class="lp-ring lp-ring-1"></div>
-            <div class="lp-ring lp-ring-2"></div>
-            <div class="lp-beaker">
-              <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#FFBF00" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 2v6l-4 8a2 2 0 0 0 1.8 2.8h12.4A2 2 0 0 0 18 16.8L14 8V2"/>
-                <line x1="6" y1="2" x2="14" y2="2"/>
-                <path d="M6 12h8" stroke-dasharray="2 2"/>
-              </svg>
-              <div style="display:flex;gap:6px;justify-content:center;margin-top:10px;">
-                <div style="width:8px;height:8px;border-radius:50%;background:#e6194B;"></div>
-                <div style="width:8px;height:8px;border-radius:50%;background:#FFBF00;"></div>
-                <div style="width:8px;height:8px;border-radius:50%;background:#3cb44b;"></div>
-              </div>
-            </div>
-            <div class="lp-hud-top">Analysis Active: 100%</div>
-            <div class="lp-hud-bottom">
-              <div style="font-size:9px;color:#FFBF00;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">Kinetik Aki&#351;</div>
-              <div class="lp-bars">
-                <div class="lp-bar" style="height:30%;"></div>
-                <div class="lp-bar" style="height:48%;"></div>
-                <div class="lp-bar" style="height:65%;"></div>
-                <div class="lp-bar" style="height:58%;"></div>
-                <div class="lp-bar" style="height:82%;"></div>
-                <div class="lp-bar" style="height:96%;"></div>
-                <div class="lp-bar" style="height:100%;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- DIVIDER -->
-  <div class="lp-line"></div>
-
-  <!-- STATS BAR -->
-  <div class="lp-statsbar">
-    <div class="lp-sbstat"><div class="lp-sbstat-n">48+</div><div class="lp-sbstat-l">Kinetic Models</div></div>
-    <div class="lp-sbstat"><div class="lp-sbstat-n">FDA</div><div class="lp-sbstat-l">Compliant f1/f2</div></div>
-    <div class="lp-sbstat"><div class="lp-sbstat-n">6</div><div class="lp-sbstat-l">Model Categories</div></div>
-    <div class="lp-sbstat"><div class="lp-sbstat-n">IVIVC</div><div class="lp-sbstat-l">Wagner-Nelson</div></div>
-    <div class="lp-sbstat"><div class="lp-sbstat-n">7</div><div class="lp-sbstat-l">Excel Report Pages</div></div>
-    <div class="lp-sbstat"><div class="lp-sbstat-n">USP</div><div class="lp-sbstat-l">&lt;711&gt; Compliant</div></div>
-  </div>
-
-  <!-- FEATURES -->
-  <div class="lp-features">
-    <div class="lp-feat-head">
-      <h2>Laboratuvar Standartlar&#305;n&#305; Dijitalle&#351;tiriyoruz</h2>
-      <p>Farmakokinetik ve biyoeczac&#305;l&#305;k verilerinizi saniyeler i&ccedil;inde i&#351;leyen profesyonel analitik suite</p>
-    </div>
-    <div class="lp-cards">
-      <div class="lp-card">
-        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-        <h3>48 Kinetik Model</h3>
-        <p>Zero Order'dan Fractal First Order'a &mdash; Basic, Lag-Time, Multi-Phase, Sigmoid ve Empirical kategoriler. R&sup2;, AIC, MSC ile otomatik s&#305;ralama.</p>
-        <span class="lp-card-tag">R&sup2; &middot; AIC &middot; MSC ranked</span>
-      </div>
-      <div class="lp-card">
-        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
-        <h3>f1 &amp; f2 Benzerlik</h3>
-        <p>FDA 1997 rehberine tam uyumlu similarity fakt&ouml;r&uuml; analizi. Nokta-nokta kar&#351;&#305;la&#351;t&#305;rma ve LaTeX denklemler.</p>
-        <span class="lp-card-tag">FDA / USP &lt;711&gt;</span>
-      </div>
-      <div class="lp-card">
-        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 9l-5-5-4 4-3-3"/></svg></div>
-        <h3>IVIVC Analizi</h3>
-        <p>Wagner-Nelson y&ouml;ntemi ile in vitro &ccedil;&ouml;z&uuml;nme profilinden in vivo absorbsiyon tahmini (tek kompartmanl&#305; PK).</p>
-        <span class="lp-card-tag">One-compartment PK</span>
-      </div>
-      <div class="lp-card">
-        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
-        <h3>&#304;statistiksel Profil</h3>
-        <p>Mean, SD, RSD, CV, MDT ve Dissolution Efficiency. Her hazne i&ccedil;in hata &ccedil;ubuklu g&ouml;rselle&#351;tirme, 6 veya 12 hazne USP deste&#287;i.</p>
-        <span class="lp-card-tag">6 or 12 vessel USP</span>
-      </div>
-      <div class="lp-card">
-        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-        <h3>7-Sayfa Excel Rapor</h3>
-        <p>Kapak, metod detaylar&#305;, &#231;&ouml;z&uuml;nme grafi&#287;i, istatistik, model fitting ve benzerlik analizi &mdash; g&ouml;ndermeye haz&#305;r.</p>
-        <span class="lp-card-tag">xlsxwriter &middot; native charts</span>
-      </div>
-      <div class="lp-card">
-        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg></div>
-        <h3>Metod Ayarlar&#305;</h3>
-        <p>USP I-IV cihaz, &#231;&ouml;z&uuml;nme medyumu, s&uuml;rfaktan (SLS vb.), UV/HPLC/UPLC analitik ko&#351;ullar. GLP d&uuml;zeyi dok&uuml;mantasyon.</p>
-        <span class="lp-card-tag">GLP documentation ready</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- SCIENCE -->
-  <div class="lp-science">
-    <div class="lp-sci-text">
-      <div class="lp-sci-badge">G&uuml;venilir Metodoloji</div>
-      <h3>Bilimsel Makale Temelli Analiz Motoru</h3>
-      <p>DissolvA&trade;'n&#305;n &ccedil;ekirdek algoritmalr&#305;, literat&uuml;rde kabul g&ouml;rm&uuml;&#351; Zhang ve ark. (2010) ile Zuo ve ark. (2014) &ccedil;al&#305;&#351;malar&#305;ndaki DDSolver metodolojisi &uuml;zerine in&#351;a edilmi&#351;tir.</p>
-      <ul class="lp-sci-list">
-        <li><span class="lp-sci-check">&#10003;</span>BCS S&#305;n&#305;fland&#305;rma Sistemi ve biyoeczac&#305;l&#305;k verileriyle tam uyum.</li>
-        <li><span class="lp-sci-check">&#10003;</span>Hassas parametre tahmini i&ccedil;in scipy.optimize curve_fit optimizasyonu.</li>
-        <li><span class="lp-sci-check">&#10003;</span>FDA Guidance (1997) ve USP &lt;711&gt; kabul kriterleri entegrasyonu.</li>
-        <li><span class="lp-sci-check">&#10003;</span>Anadolu &Uuml;niversitesi Eczac&#305;l&#305;k Fak&uuml;ltesi, Farmas?tik Teknoloji.</li>
-      </ul>
-    </div>
-    <div class="lp-sci-refs">
-      <h4>&#128218; Literat&uuml;r Referanslar&#305;</h4>
-      <div class="lp-ref-card">
-        <p>"DDSolver: An Add-In Program for Modeling and Comparison of Drug Dissolution Profiles"</p>
-        <span>&mdash; Zhang et al. (2010), AAPS Journal</span>
-      </div>
-      <div class="lp-ref-card">
-        <p>"Evaluation of the DDSolver Software Applications"</p>
-        <span>&mdash; Zuo et al. (2014), BioMed Research International</span>
-      </div>
-      <div class="lp-ref-card">
-        <p>"Dissolution Testing of Immediate Release Solid Oral Dosage Forms"</p>
-        <span>&mdash; FDA Guidance for Industry, 1997</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- WORKFLOW -->
-  <div class="lp-workflow">
-    <h2>Nas&#305;l &Ccedil;al&#305;&#351;&#305;r?</h2>
-    <div class="lp-steps">
-      <div class="lp-step">
-        <div class="lp-step-num">1</div>
-        <h4>Veri Y&uuml;kle</h4>
-        <p>Excel ile &ccedil;ok hazne ham veri veya yap?&#351;t&#305;r</p>
-      </div>
-      <div class="lp-arrow">&rsaquo;</div>
-      <div class="lp-step">
-        <div class="lp-step-num">2</div>
-        <h4>Metod Tan&#305;mla</h4>
-        <p>Cihaz, medyum, analitik parametreler</p>
-      </div>
-      <div class="lp-arrow">&rsaquo;</div>
-      <div class="lp-step">
-        <div class="lp-step-num">3</div>
-        <h4>Model Uydur</h4>
-        <p>48 kinetik model, otomatik s&#305;ralama</p>
-      </div>
-      <div class="lp-arrow">&rsaquo;</div>
-      <div class="lp-step">
-        <div class="lp-step-num">4</div>
-        <h4>Kar&#351;&#305;la&#351;t&#305;r</h4>
-        <p>f1/f2 benzerlik analizi</p>
-      </div>
-      <div class="lp-arrow">&rsaquo;</div>
-      <div class="lp-step">
-        <div class="lp-step-num">5</div>
-        <h4>Rapor Al</h4>
-        <p>7-sayfa profesyonel Excel raporu</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- CTA -->
-  <div class="lp-cta-section">
-    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#002147" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 24px;display:block;">
-      <path d="M6 2v6l-4 8a2 2 0 0 0 1.8 2.8h12.4A2 2 0 0 0 18 16.8L14 8V2"/>
-      <line x1="6" y1="2" x2="14" y2="2"/>
-    </svg>
-    <h2>Gele&ccedil;e&#287;in Form&uuml;lasyonunu Bug&uuml;nden Analiz Edin</h2>
-    <p>Karma&#351;&#305;k Excel tablolar&#305;yla vakit kaybetmeyin. Akademik kalitede sonu&ccedil;lar i&ccedil;in DissolvA&trade;'y&#305; hemen kullanmaya ba&#351;lay&#305;n.</p>
-    <button class="lp-cta-big">
-      Uygulamay&#305; Ba&#351;lat
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-  </div>
-
-  <!-- FOOTER -->
-  <div class="lp-footer">
-    <div class="lp-footer-brand">DissolvA<sup>TM</sup></div>
-    <div class="lp-footer-copy">M. Sinan KAYNAK, PhD &nbsp;&bull;&nbsp; Anadolu University, Faculty of Pharmacy &nbsp;&bull;&nbsp; msinankaynak@gmail.com</div>
-    <span class="lp-ai-pill">POWERED BY AI</span>
-  </div>
-
-</div>
-""", unsafe_allow_html=True)
-
 # PAGE: DATA INPUT
 # ===========================================================================
 if nav == "Data Input":
