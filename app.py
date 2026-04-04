@@ -264,6 +264,7 @@ with st.sidebar:
     )
 
     nav = st.radio("", [
+        "Welcome",
         "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
         "f1 and f2 Similarity", "IVIVC Analysis", "Excel Report"
     ], label_visibility="hidden")
@@ -740,6 +741,979 @@ if st.session_state.get("show_method_panel", False):
     st.markdown("---")
 
 # ===========================================================================
+# PAGE: WELCOME / LANDING PAGE
+# ===========================================================================
+if nav == "Welcome":
+    # Hide default header/hr for this page
+    st.markdown("""
+<style>
+.landing-wrap * { box-sizing: border-box; }
+.landing-wrap { font-family: 'EB Garamond', Georgia, serif; color: #e8e0d0; width: 100%; }
+
+/* HERO */
+.hero { background: #002147; padding: 72px 40px 56px; text-align: center; position: relative; overflow: hidden; }
+.hero-bg-equations { position: absolute; inset: 0; display: flex; flex-wrap: wrap; gap: 10px;
+  align-content: flex-start; justify-content: space-around; padding: 20px; pointer-events: none;
+  opacity: 0.10; }
+.eq-text { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #FFBF00;
+  white-space: nowrap; animation: floatEq 8s ease-in-out infinite; }
+.eq-text:nth-child(even) { animation-delay: -4s; animation-duration: 11s; }
+.eq-text:nth-child(3n)   { animation-delay: -2s; animation-duration: 9s;  }
+@keyframes floatEq { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
+
+.hero-inner { position: relative; z-index: 2; max-width: 780px; margin: 0 auto; }
+.hero-badge { display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,191,0,0.12); border: 1px solid rgba(255,191,0,0.45);
+  border-radius: 24px; padding: 5px 18px; font-size: 0.72rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #FFBF00; margin-bottom: 24px; }
+.hero-badge-dot { width: 7px; height: 7px; background: #FFBF00; border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(0.7); } }
+
+.hero h1 { font-size: clamp(2.6rem, 6vw, 4.2rem); font-weight: 700; color: #ffffff;
+  line-height: 1.08; margin-bottom: 10px; letter-spacing: -0.01em; }
+.hero h1 .accent { color: #FFBF00; }
+.hero h1 sup { font-size: 1rem; vertical-align: super; color: #FFBF00; }
+.hero-subtitle { font-size: 1.1rem; color: #7a9dbf; font-style: italic; margin-bottom: 20px; }
+.hero-desc { font-size: 1.0rem; color: #8aadcc; max-width: 580px; line-height: 1.75;
+  margin: 0 auto 36px; }
+
+.hero-stats { display: flex; justify-content: center; gap: 0; margin-bottom: 40px;
+  border: 1px solid rgba(255,191,0,0.2); border-radius: 12px; overflow: hidden;
+  max-width: 580px; margin: 0 auto 40px; }
+.hero-stat { flex: 1; padding: 16px 12px; text-align: center; border-right: 1px solid rgba(255,191,0,0.15); }
+.hero-stat:last-child { border-right: none; }
+.hero-stat-n { font-size: 1.6rem; font-weight: 700; color: #FFBF00; line-height: 1; }
+.hero-stat-l { font-size: 0.65rem; color: #5a7a9a; letter-spacing: 0.08em;
+  text-transform: uppercase; margin-top: 3px; }
+
+.cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.btn-launch { background: #FFBF00; color: #001428; border: none; padding: 14px 32px;
+  border-radius: 8px; font-family: 'EB Garamond', serif; font-size: 1.05rem;
+  font-weight: 700; cursor: pointer; letter-spacing: 0.02em;
+  transition: transform 0.15s, box-shadow 0.15s; display: inline-flex; align-items: center; gap: 8px; }
+.btn-launch:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,191,0,0.35); }
+.btn-launch svg { width: 18px; height: 18px; stroke: #001428; fill: none;
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.btn-docs { background: transparent; color: #FFBF00; border: 2px solid rgba(255,191,0,0.45);
+  padding: 14px 28px; border-radius: 8px; font-family: 'EB Garamond', serif;
+  font-size: 1.05rem; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  display: inline-flex; align-items: center; gap: 8px; }
+.btn-docs:hover { border-color: #FFBF00; background: rgba(255,191,0,0.08); }
+.btn-docs svg { width: 16px; height: 16px; stroke: #FFBF00; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* DIVIDER */
+.amber-divider { height: 1px; background: linear-gradient(90deg, transparent, #FFBF00 30%, #FFBF00 70%, transparent);
+  margin: 0; }
+
+/* FEATURES */
+.features-section { background: #F5F0E8; padding: 56px 32px; }
+.section-label { display: block; text-align: center; font-size: 0.72rem; color: #FFBF00;
+  letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 10px; }
+.section-title { text-align: center; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700;
+  color: #002147; margin-bottom: 6px; }
+.section-sub { text-align: center; font-size: 0.92rem; color: #6a8aaa; margin-bottom: 36px; }
+
+.feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px; max-width: 980px; margin: 0 auto; }
+.feat-card { background: white; border: 1px solid rgba(0,33,71,0.08);
+  border-radius: 12px; padding: 22px 20px; transition: box-shadow 0.2s, transform 0.2s; }
+.feat-card:hover { box-shadow: 0 8px 28px rgba(0,33,71,0.12); transform: translateY(-3px); }
+.feat-icon { width: 40px; height: 40px; background: rgba(0,33,71,0.06); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.feat-icon svg { width: 20px; height: 20px; stroke: #002147; fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.feat-card h3 { font-size: 0.98rem; font-weight: 700; color: #002147; margin-bottom: 7px; }
+.feat-card p  { font-size: 0.80rem; color: #6a8aaa; line-height: 1.65; }
+.feat-badge   { display: inline-block; background: rgba(0,33,71,0.07); color: #002147;
+  font-size: 0.63rem; padding: 2px 8px; border-radius: 10px; margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; }
+
+/* SCIENCE */
+.science-section { background: #002147; padding: 52px 32px; }
+.sci-inner { max-width: 900px; margin: 0 auto; display: grid;
+  grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+@media (max-width: 640px) { .sci-inner { grid-template-columns: 1fr; } }
+.sci-left h2 { font-size: 1.7rem; font-weight: 700; color: white; margin-bottom: 14px; line-height: 1.2; }
+.sci-left p  { font-size: 0.9rem; color: #7a9dbf; line-height: 1.75; margin-bottom: 18px; }
+.sci-check   { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.sci-check svg { width: 18px; height: 18px; stroke: #FFBF00; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; margin-top: 2px; }
+.sci-check span { font-size: 0.88rem; color: #8aadcc; line-height: 1.6; }
+.ref-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 24px; }
+.ref-label { font-size: 0.65rem; color: #FFBF00; letter-spacing: 0.12em;
+  text-transform: uppercase; font-family: 'JetBrains Mono', monospace; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 6px; }
+.ref-item { background: rgba(255,255,255,0.04); border-left: 3px solid #FFBF00;
+  border-radius: 0 8px 8px 0; padding: 12px 14px; margin-bottom: 12px; }
+.ref-item:last-child { margin-bottom: 0; }
+.ref-item p { font-size: 0.82rem; font-style: italic; color: #c8d8e8; line-height: 1.55; margin-bottom: 4px; }
+.ref-item span { font-size: 0.70rem; color: #5a7a9a; }
+
+/* WORKFLOW */
+.workflow-section { background: #F5F0E8; padding: 48px 32px; }
+.wf-steps { display: flex; align-items: flex-start; justify-content: center;
+  gap: 0; flex-wrap: wrap; max-width: 900px; margin: 0 auto; }
+.wf-step { flex: 1; min-width: 120px; max-width: 160px; text-align: center; padding: 0 8px; }
+.wf-num { width: 38px; height: 38px; border-radius: 50%; background: #002147;
+  color: #FFBF00; font-weight: 700; font-size: 0.95rem; display: flex;
+  align-items: center; justify-content: center; margin: 0 auto 10px; border: 2px solid #FFBF00; }
+.wf-step h4 { font-size: 0.85rem; font-weight: 700; color: #002147; margin-bottom: 4px; }
+.wf-step p  { font-size: 0.73rem; color: #6a8aaa; line-height: 1.5; }
+.wf-arrow { color: #FFBF00; font-size: 1.5rem; align-self: center;
+  padding-bottom: 28px; opacity: 0.5; flex-shrink: 0; }
+
+/* CTA FOOTER */
+.cta-section { background: white; padding: 52px 32px; text-align: center;
+  border-top: 1px solid rgba(0,33,71,0.08); }
+.cta-section h2 { font-size: 1.8rem; font-weight: 700; color: #002147; margin-bottom: 12px; }
+.cta-section p  { font-size: 0.95rem; color: #6a8aaa; max-width: 520px; margin: 0 auto 30px; line-height: 1.7; }
+.btn-cta-main { background: #002147; color: white; border: none; padding: 16px 40px;
+  border-radius: 10px; font-family: 'EB Garamond', serif; font-size: 1.1rem;
+  font-weight: 700; cursor: pointer; transition: background 0.2s, color 0.2s;
+  display: inline-flex; align-items: center; gap: 10px; }
+.btn-cta-main:hover { background: #FFBF00; color: #002147; }
+.btn-cta-main svg { width: 20px; height: 20px; stroke: currentColor; fill: none;
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* LANDING FOOTER */
+.landing-footer { background: #010a1a; padding: 24px 40px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 12px; }
+.lf-brand { font-size: 1.1rem; font-weight: 700; color: #FFBF00; letter-spacing: -0.01em; }
+.lf-brand sup { font-size: 0.55rem; vertical-align: super; }
+.lf-copy  { font-size: 0.72rem; color: rgba(255,255,255,0.25); letter-spacing: 0.05em; }
+.lf-ai    { background: #FFBF00; color: #001428; font-size: 0.62rem; font-weight: 800;
+  padding: 3px 10px; border-radius: 12px; letter-spacing: 0.1em;
+  font-family: 'JetBrains Mono', monospace; }
+</style>
+
+<div class="landing-wrap">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg-equations">
+    <span class="eq-text">F = k * t^n &nbsp; (Korsmeyer-Peppas)</span>
+    <span class="eq-text">f2 = 50 * log10(100 / sqrt(1 + (1/n)*sum(Rt-Tt)^2))</span>
+    <span class="eq-text">dM/dt = -k * M^n</span>
+    <span class="eq-text">F = 100*(1 - exp(-k1*t)) &nbsp; (First Order)</span>
+    <span class="eq-text">AIC = n*ln(SSE/n) + 2p</span>
+    <span class="eq-text">MDT = integral(t*dF) / integral(dF)</span>
+    <span class="eq-text">F = kH * sqrt(t) &nbsp; (Higuchi)</span>
+    <span class="eq-text">Fa(t) = [Ct + kel*AUC] / [kel*AUC_inf]</span>
+    <span class="eq-text">M0^(1/3) - M^(1/3) = ks*t &nbsp; (Hixson-Crowell)</span>
+    <span class="eq-text">R2_adj = 1 - (1-R2)*(n-1)/(n-p-1)</span>
+    <span class="eq-text">DE% = AUC(0-t) / (t*100) * 100</span>
+    <span class="eq-text">F = A*exp(-b*exp(-k*t)) &nbsp; (Gompertz)</span>
+    <span class="eq-text">MSC = ln(SStot/SSres) - 2p/n</span>
+    <span class="eq-text">3/2*(1-(1-F)^(2/3)) - F = kBL*t &nbsp; (Baker-Lonsdale)</span>
+  </div>
+
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <div class="hero-badge-dot"></div>
+      Powered by AI Technology
+    </div>
+
+    <h1>Predictive<br><span class="accent">Dissolution</span> Suite</h1>
+    <div class="hero-subtitle">DissolvA<sup>TM</sup> &mdash; Where Pharmaceutical Science Meets AI</div>
+    <div class="hero-desc">
+      Farmasotik formulasyon gelistirme sureclerinizde, 48 farkli kinetik modeli
+      yapay zeka hassasiyetiyle analiz eden ve akademik raporlama sunan yeni nesil
+      cozum ortaginiz.
+    </div>
+
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-n">48+</div><div class="hero-stat-l">Kinetic Models</div></div>
+      <div class="hero-stat"><div class="hero-stat-n">FDA</div><div class="hero-stat-l">f1/f2 Compliant</div></div>
+      <div class="hero-stat"><div class="hero-stat-n">IVIVC</div><div class="hero-stat-l">Wagner-Nelson</div></div>
+      <div class="hero-stat"><div class="hero-stat-n">7</div><div class="hero-stat-l">Excel Pages</div></div>
+    </div>
+
+    <div class="cta-row" style="margin-top:32px;">
+      <button class="btn-launch" onclick="
+        const radios = parent.document.querySelectorAll('[data-testid=stSidebar] input[type=radio]');
+        for(let r of radios){ if(r.nextSibling && r.nextSibling.textContent && r.nextSibling.textContent.includes('Data Input')){ r.click(); break; } }
+        const labels = parent.document.querySelectorAll('[data-testid=stSidebar] .stRadio label');
+        for(let l of labels){ if(l.textContent.trim()==='Data Input'){ l.click(); break; } }
+      ">
+        <svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+        Analize Basla
+      </button>
+      <button class="btn-docs" onclick="alert('Documentation: dissanalyze.streamlit.app')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Teknik Dokumantasyon
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="amber-divider"></div>
+
+<!-- FEATURES -->
+<div class="features-section">
+  <span class="section-label">Core Capabilities</span>
+  <div class="section-title">Laboratuvar Standartlarini Dijitaliz Ediyoruz</div>
+  <div class="section-sub">Farmakokinetik ve biyoeczacilik verilerinizi saniyeler icinde isleme</div>
+
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <h3>48 Kinetik Model</h3>
+      <p>Higuchi'den Baker-Lonsdale'e, Fractal First Order'a kadar 6 kategoride en iyi fitting, AIC/MSC/R2adj ile siralanir.</p>
+      <span class="feat-badge">R2adj * AIC * MSC</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      <h3>f1 &amp; f2 Benzerligi</h3>
+      <p>FDA 1997 ve USP &lt;711&gt; rehberlerine uyumlu similarity/difference faktoru hesaplamalari, LaTeX denklem gosterimi.</p>
+      <span class="feat-badge">FDA / USP &lt;711&gt;</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 9l-5-5-4 4-3-3"/></svg></div>
+      <h3>IVIVC Wagner-Nelson</h3>
+      <p>In vitro cozunme profillerinden tek kompartiman PK modeli ile in vivo absorpsiyon tahminleme.</p>
+      <span class="feat-badge">One-compartment PK</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <h3>Cok Hazneli Analiz</h3>
+      <p>6 veya 12 hazne ile USP/FDA uyumlu Mean, SD, RSD, CV, MDT ve DE hesaplamasi. Hata cubuklu profil grafigi.</p>
+      <span class="feat-badge">USP 6 / 12 vessel</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg></div>
+      <h3>7-Sayfa Excel Raporu</h3>
+      <p>Cover, Method Report, Dissolution Profiles, Statistics, Model Fitting, Dissolution Chart, Similarity Report.</p>
+      <span class="feat-badge">xlsxwriter native charts</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg></div>
+      <h3>Metod Ayarlari</h3>
+      <p>USP I-IV cihaz, cozunme ortami, surfaktan, UV-Vis / HPLC / UPLC analitik parametreler. GLP dokumantasyona hazir.</p>
+      <span class="feat-badge">GLP ready</span>
+    </div>
+  </div>
+</div>
+
+<div class="amber-divider"></div>
+
+<!-- SCIENCE SECTION -->
+<div class="science-section">
+  <div class="sci-inner">
+    <div class="sci-left">
+      <span class="section-label">Guvenilir Metodoloji</span>
+      <h2>Bilimsel Makale Temelli Analiz Motoru</h2>
+      <p>DissolvA'nin cekirdek algoritmalari, literaturde kabul gormus Zhang ve ark. (2010) ile Zuo ve ark. (2014) calismalari temel alinarak gelistirilmistir.</p>
+      <div class="sci-check">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>BCS Siniflandirma Sistemi ve biyoeczacilik verileriyle tam uyum. scipy.optimize ile hassas parametre tahmini.</span>
+      </div>
+      <div class="sci-check">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>Baker-Lonsdale gibi kapali denklemler icin scipy.optimize.root ile numerik cozum.</span>
+      </div>
+      <div class="sci-check">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>R2adj, AIC ve MSC kriterleri ile otomatik model secimi ve siralama.</span>
+      </div>
+    </div>
+    <div class="ref-box">
+      <div class="ref-label">
+        <svg style="width:14px;height:14px;stroke:#FFBF00;fill:none;stroke-width:2;stroke-linecap:round;" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="4"/><path d="M2 12c0 4.4 4.5 8 10 8s10-3.6 10-8"/><line x1="12" y1="2" x2="12" y2="22"/></ellipse></svg>
+        Literatur Referanslari
+      </div>
+      <div class="ref-item">
+        <p>"DDSolver: An Add-In Program for Modeling and Comparison of Drug Dissolution Profiles"</p>
+        <span>Zhang et al. (2010) &mdash; AAPS Journal</span>
+      </div>
+      <div class="ref-item">
+        <p>"Evaluation of the DDSolver Software Applications"</p>
+        <span>Zuo et al. (2014) &mdash; BioMed Research International</span>
+      </div>
+      <div class="ref-item">
+        <p>"Guidance for Industry: Dissolution Testing of Immediate Release Solid Oral Dosage Forms"</p>
+        <span>FDA (1997) &mdash; Center for Drug Evaluation and Research</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WORKFLOW -->
+<div class="workflow-section">
+  <div class="section-title">Nasil Calisir?</div>
+  <div style="height:24px;"></div>
+  <div class="wf-steps">
+    <div class="wf-step">
+      <div class="wf-num">1</div>
+      <h4>Veri Yukle</h4>
+      <p>Excel / CSV veya dogrudan yapistir</p>
+    </div>
+    <div class="wf-arrow">&#8250;</div>
+    <div class="wf-step">
+      <div class="wf-num">2</div>
+      <h4>Metod Tanimla</h4>
+      <p>Cihaz, ortam, analitik parametreler</p>
+    </div>
+    <div class="wf-arrow">&#8250;</div>
+    <div class="wf-step">
+      <div class="wf-num">3</div>
+      <h4>Model Fit</h4>
+      <p>48 kinetic model, otomatik siralama</p>
+    </div>
+    <div class="wf-arrow">&#8250;</div>
+    <div class="wf-step">
+      <div class="wf-num">4</div>
+      <h4>Karsilastir</h4>
+      <p>f1/f2 benzerlik analizi</p>
+    </div>
+    <div class="wf-arrow">&#8250;</div>
+    <div class="wf-step">
+      <div class="wf-num">5</div>
+      <h4>Rapor Al</h4>
+      <p>7 sayfa profesyonel Excel raporu</p>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL CTA -->
+<div class="cta-section">
+  <svg style="width:44px;height:44px;stroke:#002147;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin:0 auto 20px;display:block;" viewBox="0 0 24 24">
+    <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
+  </svg>
+  <h2>Gelecegin Formulasyonunu Bugundan Analiz Edin</h2>
+  <p>Karmashik Excel tablolariyla vakit kaybetmeyin. Akademik kalitede sonuclar icin DissolvA'yi hemen kullanmaya baslayin.</p>
+  <button class="btn-cta-main" onclick="
+    const labels = parent.document.querySelectorAll('[data-testid=stSidebar] .stRadio label');
+    for(let l of labels){ if(l.textContent.trim().includes('Data Input')){ l.click(); break; } }
+  ">
+    Uygulamayi Baslat
+    <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+  </button>
+</div>
+
+<!-- FOOTER -->
+<div class="landing-footer">
+  <div class="lf-brand">DissolvA<sup>TM</sup></div>
+  <div class="lf-copy">
+    M. Sinan KAYNAK, PhD &nbsp;&bull;&nbsp;
+    Anadolu University, Faculty of Pharmacy &nbsp;&bull;&nbsp;
+    msinankaynak@gmail.com &nbsp;&bull;&nbsp;
+    &copy; 2025 Predictive Dissolution Suite
+  </div>
+  <span class="lf-ai">POWERED BY AI</span>
+</div>
+
+</div>
+""", unsafe_allow_html=True)
+
+# ===========================================================================
+# ===========================================================================
+# PAGE: WELCOME LANDING
+# ===========================================================================
+if nav == "Welcome":
+    # Hide default header/divider for full-width landing
+    st.markdown("""
+<style>
+/* Hide streamlit header on welcome page */
+.welcome-page-active header[data-testid="stHeader"] { display: none !important; }
+
+@keyframes float-eq {
+  0%   { transform: translateY(0px) translateX(0px); opacity: 0.10; }
+  33%  { opacity: 0.18; }
+  66%  { transform: translateY(-12px) translateX(6px); opacity: 0.13; }
+  100% { transform: translateY(0px) translateX(0px); opacity: 0.10; }
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.18; }
+  50%       { opacity: 0.32; }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.dissolva-lp * { box-sizing: border-box; margin: 0; padding: 0; }
+.dissolva-lp {
+  font-family: 'EB Garamond', Georgia, serif;
+  background: #001428;
+  color: #e8e0d0;
+  width: 100%;
+  margin: -1rem -1rem 0 -1rem;
+  padding: 0;
+}
+
+/* HERO */
+.lp-hero {
+  background: #002147;
+  min-height: 88vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 80px 40px 60px;
+}
+.lp-glow-1 {
+  position: absolute; top: 20%; left: 15%;
+  width: 480px; height: 480px;
+  background: #FFBF00;
+  border-radius: 50%;
+  filter: blur(140px);
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+.lp-glow-2 {
+  position: absolute; bottom: 15%; right: 10%;
+  width: 320px; height: 320px;
+  background: #1e5fa5;
+  border-radius: 50%;
+  filter: blur(110px);
+  animation: pulse-glow 5s ease-in-out infinite reverse;
+}
+.lp-grid-bg {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+.eq-float {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  color: #FFBF00;
+  font-size: 11px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.eq-float:nth-child(1)  { top:8%;  left:5%;  animation: float-eq 7s ease-in-out infinite; }
+.eq-float:nth-child(2)  { top:14%; right:4%; animation: float-eq 9s ease-in-out infinite 1s; }
+.eq-float:nth-child(3)  { top:30%; left:2%; animation: float-eq 8s ease-in-out infinite 2s; }
+.eq-float:nth-child(4)  { top:55%; right:3%; animation: float-eq 10s ease-in-out infinite 0.5s; }
+.eq-float:nth-child(5)  { bottom:20%; left:6%; animation: float-eq 7s ease-in-out infinite 3s; }
+.eq-float:nth-child(6)  { bottom:8%; right:8%; animation: float-eq 9s ease-in-out infinite 1.5s; }
+.eq-float:nth-child(7)  { top:42%; left:42%; animation: float-eq 11s ease-in-out infinite 2.5s; }
+.eq-float:nth-child(8)  { top:70%; left:30%; animation: float-eq 8s ease-in-out infinite 4s; }
+
+.lp-hero-inner {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 60px; max-width: 1200px; width: 100%;
+}
+.lp-hero-text { flex: 1; }
+.lp-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 24px; padding: 6px 18px;
+  font-size: 0.7rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: #FFBF00;
+  margin-bottom: 24px;
+  animation: fadeInUp 0.6s ease both;
+}
+.lp-h1 {
+  font-size: clamp(2.8rem, 5vw, 4.5rem);
+  font-weight: 700; line-height: 1.08;
+  color: #ffffff;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+  animation: fadeInUp 0.7s ease 0.1s both;
+}
+.lp-h1 .amber { color: #FFBF00; }
+.lp-sub {
+  font-size: 1.05rem; font-style: italic;
+  color: rgba(180,210,240,0.8);
+  margin-bottom: 20px;
+  animation: fadeInUp 0.7s ease 0.2s both;
+}
+.lp-desc {
+  font-size: 0.95rem; line-height: 1.75;
+  color: rgba(138,175,200,0.9);
+  max-width: 520px; margin-bottom: 36px;
+  animation: fadeInUp 0.7s ease 0.3s both;
+}
+.lp-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 44px;
+  animation: fadeInUp 0.7s ease 0.4s both; }
+.lp-btn-primary {
+  background: #FFBF00; color: #001428;
+  border: none; padding: 14px 32px;
+  border-radius: 8px; font-family: 'EB Garamond', serif;
+  font-size: 1.05rem; font-weight: 700;
+  cursor: pointer; letter-spacing: 0.02em;
+  transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+}
+.lp-btn-primary:hover { background: #fff; transform: translateY(-2px); }
+.lp-btn-secondary {
+  background: rgba(255,255,255,0.05);
+  color: #e8e0d0;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  padding: 14px 28px; border-radius: 8px;
+  font-family: 'EB Garamond', serif; font-size: 1.05rem;
+  cursor: pointer; transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.lp-btn-secondary:hover { background: rgba(255,255,255,0.1); }
+.lp-stats {
+  display: flex; gap: 32px; flex-wrap: wrap;
+  animation: fadeInUp 0.7s ease 0.5s both;
+}
+.lp-stat { text-align: left; }
+.lp-stat-n { font-size: 2rem; font-weight: 700; color: #FFBF00; }
+.lp-stat-l { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #5a7a9a; }
+.lp-divider-v { width: 1px; background: rgba(255,255,255,0.12); align-self: stretch; }
+
+/* RIGHT VISUAL */
+.lp-hero-visual {
+  flex: 0 0 380px;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.lp-visual-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 28px; padding: 20px;
+  width: 360px; height: 360px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.lp-visual-inner {
+  background: #001a3a;
+  border-radius: 20px; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,0.08);
+  position: relative; overflow: hidden;
+}
+.lp-ring {
+  position: absolute; border-radius: 50%; border-style: solid;
+}
+.lp-ring-1 {
+  width: 220px; height: 220px;
+  border-color: rgba(255,191,0,0.25); border-width: 0.5px;
+  animation: spin-slow 20s linear infinite;
+  border-style: dashed;
+}
+.lp-ring-2 {
+  width: 140px; height: 140px;
+  border-color: rgba(255,191,0,0.15); border-width: 0.5px;
+  animation: spin-slow 14s linear infinite reverse;
+}
+.lp-beaker {
+  position: relative; z-index: 2; text-align: center;
+}
+.lp-hud-top {
+  position: absolute; top: 16px; left: 16px;
+  background: rgba(255,191,0,0.9); color: #001428;
+  padding: 6px 10px; border-radius: 6px;
+  font-size: 9px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  transform: rotate(-2deg);
+}
+.lp-hud-bottom {
+  position: absolute; bottom: 20px; right: 16px;
+  background: rgba(30,95,165,0.85); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px; padding: 12px;
+  backdrop-filter: blur(6px);
+}
+.lp-bars { display: flex; align-items: flex-end; gap: 3px; height: 44px; }
+.lp-bar { width: 10px; background: #FFBF00; border-radius: 2px 2px 0 0; opacity: 0.85; }
+.lp-glow-back {
+  position: absolute; inset: -40px;
+  background: rgba(255,191,0,0.15);
+  border-radius: 50%; filter: blur(60px); z-index: 0;
+}
+
+/* DIVIDER LINE */
+.lp-line { height: 1px; background: linear-gradient(90deg,transparent,#FFBF00 30%,#FFBF00 70%,transparent); }
+
+/* STATS BAR */
+.lp-statsbar {
+  background: #002147; padding: 22px 40px;
+  display: flex; justify-content: center; gap: 52px; flex-wrap: wrap;
+}
+.lp-sbstat { text-align: center; }
+.lp-sbstat-n { font-size: 1.7rem; font-weight: 700; color: #FFBF00; }
+.lp-sbstat-l { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #5a7a9a; }
+
+/* FEATURES */
+.lp-features { background: #ffffff; padding: 64px 40px; }
+.lp-feat-head { text-align: center; margin-bottom: 40px; }
+.lp-feat-head h2 { font-size: 1.9rem; font-weight: 700; color: #002147; margin-bottom: 8px; }
+.lp-feat-head p { font-size: 0.9rem; color: #64748b; }
+.lp-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px; max-width: 1100px; margin: 0 auto;
+}
+.lp-card {
+  background: #f8fafc; border: 1px solid transparent;
+  border-radius: 20px; padding: 28px;
+  transition: all 0.2s; cursor: default;
+}
+.lp-card:hover {
+  background: #fff; border-color: #e2e8f0;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+  transform: translateY(-4px);
+}
+.lp-card-icon {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: #fff; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.lp-card-icon svg { width: 22px; height: 22px; stroke: #002147; fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.lp-card h3 { font-size: 1.05rem; font-weight: 700; color: #002147; margin-bottom: 8px; }
+.lp-card p { font-size: 0.82rem; color: #64748b; line-height: 1.65; }
+.lp-card-tag {
+  display: inline-block; margin-top: 12px;
+  background: rgba(0,33,71,0.08); color: #002147;
+  font-size: 0.65rem; padding: 3px 10px; border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
+}
+
+/* SCIENCE */
+.lp-science {
+  background: #002147; padding: 60px 40px;
+  display: flex; align-items: center; justify-content: center; gap: 60px;
+  flex-wrap: wrap;
+}
+.lp-sci-text { flex: 1; min-width: 260px; color: #e8e0d0; }
+.lp-sci-badge {
+  background: #FFBF00; color: #001428;
+  font-size: 0.65rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 4px;
+  display: inline-block; margin-bottom: 18px;
+}
+.lp-sci-text h3 { font-size: 1.7rem; font-weight: 700; color: #fff; margin-bottom: 14px; }
+.lp-sci-text p { font-size: 0.9rem; color: rgba(180,210,240,0.75); line-height: 1.75; margin-bottom: 20px; }
+.lp-sci-list { list-style: none; }
+.lp-sci-list li {
+  display: flex; gap: 12px; align-items: flex-start;
+  font-size: 0.88rem; color: rgba(220,230,240,0.85); margin-bottom: 12px;
+}
+.lp-sci-check { color: #FFBF00; font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+.lp-sci-refs {
+  flex: 1; min-width: 260px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 20px; padding: 28px; backdrop-filter: blur(8px);
+}
+.lp-sci-refs h4 {
+  color: #FFBF00; font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 20px;
+}
+.lp-ref-card {
+  background: rgba(255,255,255,0.05);
+  border-left: 3px solid #FFBF00;
+  border-radius: 0 8px 8px 0;
+  padding: 14px 16px; margin-bottom: 14px;
+}
+.lp-ref-card p { font-size: 0.82rem; font-style: italic; color: #c8dae8; margin-bottom: 6px; }
+.lp-ref-card span { font-size: 0.72rem; color: rgba(180,210,240,0.5); }
+
+/* WORKFLOW */
+.lp-workflow { background: #001428; padding: 56px 40px; }
+.lp-workflow h2 { text-align: center; font-size: 1.6rem; color: #fff; margin-bottom: 36px; }
+.lp-steps {
+  display: flex; align-items: flex-start; justify-content: center;
+  gap: 0; flex-wrap: wrap; max-width: 900px; margin: 0 auto;
+}
+.lp-step { flex: 1; min-width: 120px; text-align: center; padding: 0 14px; }
+.lp-step-num {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: #FFBF00; color: #001428;
+  font-weight: 700; font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px;
+}
+.lp-step h4 { font-size: 0.88rem; color: #e8e0d0; margin-bottom: 6px; font-weight: 600; }
+.lp-step p { font-size: 0.75rem; color: #5a7a9a; line-height: 1.55; }
+.lp-arrow { color: #FFBF00; font-size: 1.6rem; align-self: center; opacity: 0.4; flex: 0; }
+
+/* CTA */
+.lp-cta-section {
+  background: #fff; border-top: 1px solid #f1f5f9;
+  padding: 72px 40px; text-align: center;
+}
+.lp-cta-section h2 {
+  font-size: 2rem; font-weight: 700; color: #002147;
+  letter-spacing: -0.01em; margin-bottom: 12px;
+}
+.lp-cta-section p { font-size: 0.95rem; color: #64748b; max-width: 560px; margin: 0 auto 40px; line-height: 1.7; }
+.lp-cta-big {
+  background: #002147; color: #fff;
+  border: none; padding: 18px 48px;
+  border-radius: 14px; font-family: 'EB Garamond', serif;
+  font-size: 1.15rem; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 10px;
+}
+.lp-cta-big:hover { background: #FFBF00; color: #001428; transform: translateY(-2px); }
+
+/* FOOTER */
+.lp-footer {
+  background: #010a1a; padding: 28px 40px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 14px;
+}
+.lp-footer-brand { font-size: 1.3rem; font-weight: 700; color: #FFBF00; letter-spacing: -0.01em; }
+.lp-footer-brand sup { font-size: 0.55rem; vertical-align: super; }
+.lp-footer-copy { font-size: 0.72rem; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; text-transform: uppercase; }
+.lp-ai-pill {
+  background: #FFBF00; color: #001428;
+  font-size: 0.6rem; font-weight: 800;
+  padding: 3px 10px; border-radius: 12px;
+  letter-spacing: 0.12em; font-family: 'JetBrains Mono', monospace;
+}
+</style>
+
+<div class="dissolva-lp">
+
+  <!-- HERO -->
+  <div class="lp-hero">
+    <div class="lp-glow-1"></div>
+    <div class="lp-glow-2"></div>
+    <div class="lp-grid-bg"></div>
+
+    <!-- Floating equations -->
+    <div class="eq-float">F = k &middot; t<sup>n</sup> &nbsp;(Korsmeyer-Peppas)</div>
+    <div class="eq-float">f&#8322; = 50 &middot; log&#8321;&#8320;(100 / &radic;(1+(1/n)&Sigma;(R-T)&#178;))</div>
+    <div class="eq-float">dM/dt = &minus;k &middot; M<sup>n</sup></div>
+    <div class="eq-float">F = 100 &middot; (1 &minus; exp(&minus;k&#8321; &middot; t)) &nbsp;(First Order)</div>
+    <div class="eq-float">AIC = n &middot; ln(SSE/n) + 2p</div>
+    <div class="eq-float">MDT = &int;t &middot; dF / &int;dF</div>
+    <div class="eq-float">F = k<sub>H</sub> &middot; &radic;t &nbsp;(Higuchi)</div>
+    <div class="eq-float">Fa(t) = [C<sub>t</sub> + k<sub>el</sub>&middot;AUC] / [k<sub>el</sub>&middot;AUC&#8734;]</div>
+
+    <div class="lp-hero-inner">
+      <div class="lp-hero-text">
+        <div class="lp-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFBF00" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+          Powered by AI Technology
+        </div>
+        <h1 class="lp-h1">Predictive<br><span class="amber">Dissolution</span> Suite</h1>
+        <div class="lp-sub">Where Pharmaceutical Science Meets Artificial Intelligence</div>
+        <div class="lp-desc">
+          Professional dissolution analysis platform with 48 kinetic models,
+          FDA-compliant f1 &amp; f2 similarity, IVIVC modelling, and automated
+          7-page report generation &mdash; built for researchers, by researchers.
+        </div>
+        <div class="lp-cta">
+          <button class="lp-btn-primary" onclick="
+            var radios = window.parent.document.querySelectorAll(\'[data-testid=stSidebar] input[type=radio]\');
+            radios.forEach(function(r){ if(r.nextSibling && r.nextSibling.textContent && r.nextSibling.textContent.trim().includes(\'Data Input\')){ r.click(); } });
+          ">
+            Analize Ba&#351;la
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button class="lp-btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Dok&uuml;mantasyon
+          </button>
+        </div>
+        <div class="lp-stats">
+          <div class="lp-stat"><div class="lp-stat-n">48+</div><div class="lp-stat-l">Kinetik Model</div></div>
+          <div class="lp-divider-v"></div>
+          <div class="lp-stat"><div class="lp-stat-n">IVIVC</div><div class="lp-stat-l">Biyoyararlan&#305;m</div></div>
+          <div class="lp-divider-v"></div>
+          <div class="lp-stat"><div class="lp-stat-n">f1/f2</div><div class="lp-stat-l">FDA/EMA Standart</div></div>
+          <div class="lp-divider-v"></div>
+          <div class="lp-stat"><div class="lp-stat-n">7</div><div class="lp-stat-l">Rapor Sayfas&#305;</div></div>
+        </div>
+      </div>
+
+      <div class="lp-hero-visual">
+        <div class="lp-glow-back"></div>
+        <div class="lp-visual-card">
+          <div class="lp-visual-inner">
+            <div class="lp-ring lp-ring-1"></div>
+            <div class="lp-ring lp-ring-2"></div>
+            <div class="lp-beaker">
+              <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="#FFBF00" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 2v6l-4 8a2 2 0 0 0 1.8 2.8h12.4A2 2 0 0 0 18 16.8L14 8V2"/>
+                <line x1="6" y1="2" x2="14" y2="2"/>
+                <path d="M6 12h8" stroke-dasharray="2 2"/>
+              </svg>
+              <div style="display:flex;gap:6px;justify-content:center;margin-top:10px;">
+                <div style="width:8px;height:8px;border-radius:50%;background:#e6194B;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:#FFBF00;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:#3cb44b;"></div>
+              </div>
+            </div>
+            <div class="lp-hud-top">Analysis Active: 100%</div>
+            <div class="lp-hud-bottom">
+              <div style="font-size:9px;color:#FFBF00;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">Kinetik Aki&#351;</div>
+              <div class="lp-bars">
+                <div class="lp-bar" style="height:30%;"></div>
+                <div class="lp-bar" style="height:48%;"></div>
+                <div class="lp-bar" style="height:65%;"></div>
+                <div class="lp-bar" style="height:58%;"></div>
+                <div class="lp-bar" style="height:82%;"></div>
+                <div class="lp-bar" style="height:96%;"></div>
+                <div class="lp-bar" style="height:100%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIVIDER -->
+  <div class="lp-line"></div>
+
+  <!-- STATS BAR -->
+  <div class="lp-statsbar">
+    <div class="lp-sbstat"><div class="lp-sbstat-n">48+</div><div class="lp-sbstat-l">Kinetic Models</div></div>
+    <div class="lp-sbstat"><div class="lp-sbstat-n">FDA</div><div class="lp-sbstat-l">Compliant f1/f2</div></div>
+    <div class="lp-sbstat"><div class="lp-sbstat-n">6</div><div class="lp-sbstat-l">Model Categories</div></div>
+    <div class="lp-sbstat"><div class="lp-sbstat-n">IVIVC</div><div class="lp-sbstat-l">Wagner-Nelson</div></div>
+    <div class="lp-sbstat"><div class="lp-sbstat-n">7</div><div class="lp-sbstat-l">Excel Report Pages</div></div>
+    <div class="lp-sbstat"><div class="lp-sbstat-n">USP</div><div class="lp-sbstat-l">&lt;711&gt; Compliant</div></div>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="lp-features">
+    <div class="lp-feat-head">
+      <h2>Laboratuvar Standartlar&#305;n&#305; Dijitalle&#351;tiriyoruz</h2>
+      <p>Farmakokinetik ve biyoeczac&#305;l&#305;k verilerinizi saniyeler i&ccedil;inde i&#351;leyen profesyonel analitik suite</p>
+    </div>
+    <div class="lp-cards">
+      <div class="lp-card">
+        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <h3>48 Kinetik Model</h3>
+        <p>Zero Order'dan Fractal First Order'a &mdash; Basic, Lag-Time, Multi-Phase, Sigmoid ve Empirical kategoriler. R&sup2;, AIC, MSC ile otomatik s&#305;ralama.</p>
+        <span class="lp-card-tag">R&sup2; &middot; AIC &middot; MSC ranked</span>
+      </div>
+      <div class="lp-card">
+        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+        <h3>f1 &amp; f2 Benzerlik</h3>
+        <p>FDA 1997 rehberine tam uyumlu similarity fakt&ouml;r&uuml; analizi. Nokta-nokta kar&#351;&#305;la&#351;t&#305;rma ve LaTeX denklemler.</p>
+        <span class="lp-card-tag">FDA / USP &lt;711&gt;</span>
+      </div>
+      <div class="lp-card">
+        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 9l-5-5-4 4-3-3"/></svg></div>
+        <h3>IVIVC Analizi</h3>
+        <p>Wagner-Nelson y&ouml;ntemi ile in vitro &ccedil;&ouml;z&uuml;nme profilinden in vivo absorbsiyon tahmini (tek kompartmanl&#305; PK).</p>
+        <span class="lp-card-tag">One-compartment PK</span>
+      </div>
+      <div class="lp-card">
+        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
+        <h3>&#304;statistiksel Profil</h3>
+        <p>Mean, SD, RSD, CV, MDT ve Dissolution Efficiency. Her hazne i&ccedil;in hata &ccedil;ubuklu g&ouml;rselle&#351;tirme, 6 veya 12 hazne USP deste&#287;i.</p>
+        <span class="lp-card-tag">6 or 12 vessel USP</span>
+      </div>
+      <div class="lp-card">
+        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+        <h3>7-Sayfa Excel Rapor</h3>
+        <p>Kapak, metod detaylar&#305;, &#231;&ouml;z&uuml;nme grafi&#287;i, istatistik, model fitting ve benzerlik analizi &mdash; g&ouml;ndermeye haz&#305;r.</p>
+        <span class="lp-card-tag">xlsxwriter &middot; native charts</span>
+      </div>
+      <div class="lp-card">
+        <div class="lp-card-icon"><svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg></div>
+        <h3>Metod Ayarlar&#305;</h3>
+        <p>USP I-IV cihaz, &#231;&ouml;z&uuml;nme medyumu, s&uuml;rfaktan (SLS vb.), UV/HPLC/UPLC analitik ko&#351;ullar. GLP d&uuml;zeyi dok&uuml;mantasyon.</p>
+        <span class="lp-card-tag">GLP documentation ready</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCIENCE -->
+  <div class="lp-science">
+    <div class="lp-sci-text">
+      <div class="lp-sci-badge">G&uuml;venilir Metodoloji</div>
+      <h3>Bilimsel Makale Temelli Analiz Motoru</h3>
+      <p>DissolvA&trade;'n&#305;n &ccedil;ekirdek algoritmalr&#305;, literat&uuml;rde kabul g&ouml;rm&uuml;&#351; Zhang ve ark. (2010) ile Zuo ve ark. (2014) &ccedil;al&#305;&#351;malar&#305;ndaki DDSolver metodolojisi &uuml;zerine in&#351;a edilmi&#351;tir.</p>
+      <ul class="lp-sci-list">
+        <li><span class="lp-sci-check">&#10003;</span>BCS S&#305;n&#305;fland&#305;rma Sistemi ve biyoeczac&#305;l&#305;k verileriyle tam uyum.</li>
+        <li><span class="lp-sci-check">&#10003;</span>Hassas parametre tahmini i&ccedil;in scipy.optimize curve_fit optimizasyonu.</li>
+        <li><span class="lp-sci-check">&#10003;</span>FDA Guidance (1997) ve USP &lt;711&gt; kabul kriterleri entegrasyonu.</li>
+        <li><span class="lp-sci-check">&#10003;</span>Anadolu &Uuml;niversitesi Eczac&#305;l&#305;k Fak&uuml;ltesi, Farmas?tik Teknoloji.</li>
+      </ul>
+    </div>
+    <div class="lp-sci-refs">
+      <h4>&#128218; Literat&uuml;r Referanslar&#305;</h4>
+      <div class="lp-ref-card">
+        <p>"DDSolver: An Add-In Program for Modeling and Comparison of Drug Dissolution Profiles"</p>
+        <span>&mdash; Zhang et al. (2010), AAPS Journal</span>
+      </div>
+      <div class="lp-ref-card">
+        <p>"Evaluation of the DDSolver Software Applications"</p>
+        <span>&mdash; Zuo et al. (2014), BioMed Research International</span>
+      </div>
+      <div class="lp-ref-card">
+        <p>"Dissolution Testing of Immediate Release Solid Oral Dosage Forms"</p>
+        <span>&mdash; FDA Guidance for Industry, 1997</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKFLOW -->
+  <div class="lp-workflow">
+    <h2>Nas&#305;l &Ccedil;al&#305;&#351;&#305;r?</h2>
+    <div class="lp-steps">
+      <div class="lp-step">
+        <div class="lp-step-num">1</div>
+        <h4>Veri Y&uuml;kle</h4>
+        <p>Excel ile &ccedil;ok hazne ham veri veya yap?&#351;t&#305;r</p>
+      </div>
+      <div class="lp-arrow">&rsaquo;</div>
+      <div class="lp-step">
+        <div class="lp-step-num">2</div>
+        <h4>Metod Tan&#305;mla</h4>
+        <p>Cihaz, medyum, analitik parametreler</p>
+      </div>
+      <div class="lp-arrow">&rsaquo;</div>
+      <div class="lp-step">
+        <div class="lp-step-num">3</div>
+        <h4>Model Uydur</h4>
+        <p>48 kinetik model, otomatik s&#305;ralama</p>
+      </div>
+      <div class="lp-arrow">&rsaquo;</div>
+      <div class="lp-step">
+        <div class="lp-step-num">4</div>
+        <h4>Kar&#351;&#305;la&#351;t&#305;r</h4>
+        <p>f1/f2 benzerlik analizi</p>
+      </div>
+      <div class="lp-arrow">&rsaquo;</div>
+      <div class="lp-step">
+        <div class="lp-step-num">5</div>
+        <h4>Rapor Al</h4>
+        <p>7-sayfa profesyonel Excel raporu</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="lp-cta-section">
+    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#002147" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 24px;display:block;">
+      <path d="M6 2v6l-4 8a2 2 0 0 0 1.8 2.8h12.4A2 2 0 0 0 18 16.8L14 8V2"/>
+      <line x1="6" y1="2" x2="14" y2="2"/>
+    </svg>
+    <h2>Gele&ccedil;e&#287;in Form&uuml;lasyonunu Bug&uuml;nden Analiz Edin</h2>
+    <p>Karma&#351;&#305;k Excel tablolar&#305;yla vakit kaybetmeyin. Akademik kalitede sonu&ccedil;lar i&ccedil;in DissolvA&trade;'y&#305; hemen kullanmaya ba&#351;lay&#305;n.</p>
+    <button class="lp-cta-big">
+      Uygulamay&#305; Ba&#351;lat
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="lp-footer">
+    <div class="lp-footer-brand">DissolvA<sup>TM</sup></div>
+    <div class="lp-footer-copy">M. Sinan KAYNAK, PhD &nbsp;&bull;&nbsp; Anadolu University, Faculty of Pharmacy &nbsp;&bull;&nbsp; msinankaynak@gmail.com</div>
+    <span class="lp-ai-pill">POWERED BY AI</span>
+  </div>
+
+</div>
+""", unsafe_allow_html=True)
+
 # PAGE: DATA INPUT
 # ===========================================================================
 if nav == "Data Input":
