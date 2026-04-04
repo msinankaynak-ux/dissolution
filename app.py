@@ -288,8 +288,8 @@ with st.sidebar:
 
     nav = st.radio("", [
         "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
-        "f1 and f2 Similarity", "IVIVC Analysis", "Excel Report",
-        "Method Settings", "Analytical Settings",
+        "f1 and f2 Similarity", "Bootstrap f2 Analysis", "IVIVC Analysis",
+        "Excel Report", "Method Settings", "Analytical Settings",
     ], label_visibility="hidden")
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.25);margin:14px 0;">', unsafe_allow_html=True)
@@ -1486,6 +1486,324 @@ elif nav == "f1 and f2 Similarity":
         "Tt = test cumulative release at time t | "
         "n = number of time points used (reference <= 85%)"
     )
+
+# ===========================================================================
+# PAGE: BOOTSTRAP f2 ANALYSIS
+# ===========================================================================
+elif nav == "Bootstrap f2 Analysis":
+    import plotly.graph_objects as go
+
+    st.markdown(
+        "<h2 style='color:#002147;margin:0 0 4px;'>Bootstrap f2 Analysis</h2>"
+        "<p style='color:#888;font-size:0.88rem;margin:0 0 12px;'>"
+        "FDA-compliant bootstrap simulation for f2 similarity factor. "
+        "Reports the 5th percentile (lower bound of 90% CI) as required by FDA. "
+        "Requires raw vessel data (Excel upload mode).</p>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        "<div class='step-box'>"
+        "<strong>FDA Bootstrap Criterion (Shah et al. 1998):</strong><br>"
+        "1. Resample with replacement from each formulation's individual vessel data.<br>"
+        "2. Calculate f2 for each bootstrap iteration.<br>"
+        "3. Report the <strong>5th percentile</strong> of the f2 distribution (lower bound of 90% CI).<br>"
+        "4. If this value is <strong>≥ 50</strong>, profiles are considered similar."
+        "</div>",
+        unsafe_allow_html=True
+    )
+
+    if len(st.session_state.profiles) < 2:
+        st.warning("At least 2 profiles with raw vessel data are required. "
+                   "Upload data via 'Excel / CSV Upload (Raw Vessel Data)' mode in Data Input.")
+        st.stop()
+
+    # Check which profiles have raw data
+    profiles_with_raw = {
+        nm: d for nm, d in st.session_state.profiles.items()
+        if d.get("raw") and d.get("vessels") and len(d.get("vessels", [])) >= 2
+    }
+
+    if len(profiles_with_raw) < 2:
+        st.warning(
+            "Bootstrap analysis requires **raw vessel-level data** for at least 2 profiles. "
+            "Currently loaded profiles with raw data: "
+            f"**{list(profiles_with_raw.keys()) or 'None'}**. "
+            "Please upload data using 'Excel / CSV Upload (Raw Vessel Data)' mode."
+        )
+        st.stop()
+
+    names_raw = list(profiles_with_raw.keys())
+    all_names  = list(st.session_state.profiles.keys())
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Reference Profile** *(innovator / originator)*")
+        ref_bs = st.selectbox("Reference", names_raw, index=0,
+                              label_visibility="collapsed", key="bs_ref")
+        n_ref = st.session_state.profiles[ref_bs].get("n", 0)
+        st.caption(f"{ref_bs} — {n_ref} vessels")
+    with col2:
+        st.markdown("**Test Profile** *(your formulation)*")
+        test_options = [nm for nm in names_raw if nm != ref_bs]
+        if not test_options:
+            st.error("Need at least 2 profiles with raw data.")
+            st.stop()
+        test_bs = st.selectbox("Test", test_options, index=0,
+                               label_visibility="collapsed", key="bs_test")
+        n_test = st.session_state.profiles[test_bs].get("n", 0)
+        st.caption(f"{test_bs} — {n_test} vessels")
+
+    st.markdown("---")
+
+    col3, col4, col5 = st.columns(3)
+    with col3:
+        n_iter = st.number_input(
+            "Bootstrap Iterations",
+            min_value=1000, max_value=50000, value=5000, step=500,
+            help="FDA recommends ≥ 2000; 5000 is standard practice."
+        )
+    with col4:
+        ci_level = st.selectbox(
+            "Confidence Interval",
+            ["90% CI (5th percentile) — FDA Standard",
+             "95% CI (2.5th percentile)",
+             "99% CI (0.5th percentile)"],
+            index=0
+        )
+        pctile_map = {
+            "90% CI (5th percentile) — FDA Standard": 5.0,
+            "95% CI (2.5th percentile)": 2.5,
+            "99% CI (0.5th percentile)": 0.5,
+        }
+        lower_pctile = pctile_map[ci_level]
+        upper_pctile = 100.0 - lower_pctile
+    with col5:
+        seed_val = st.number_input(
+            "Random Seed (reproducibility)",
+            min_value=0, max_value=99999, value=42,
+            help="Set to 0 for a different result each run."
+        )
+
+    # ---- Helper: single f2 from two arrays of vessel data at common times ----
+    def _compute_f2_bootstrap(ref_matrix, test_matrix, t_common, t_ref, t_test):
+        """
+        ref_matrix : 2D np.array (n_timepoints_ref x n_vessels_ref)
+        test_matrix: 2D np.array (n_timepoints_test x n_vessels_test)
+        t_common   : array of common time points
+        t_ref / t_test: full time arrays for each profile
+        Returns f2 scalar or np.nan
+        """
+        rr = np.array([ref_matrix[np.where(t_ref == ti)[0][0], :].mean()
+                       for ti in t_common])
+        rt = np.array([test_matrix[np.where(t_test == ti)[0][0], :].mean()
+                       for ti in t_common])
+        mask = rr <= 85
+        rr_f, rt_f = rr[mask], rt[mask]
+        if len(rr_f) == 0:
+            return np.nan
+        return float(50 * np.log10(100 / np.sqrt(1 + np.mean((rr_f - rt_f) ** 2))))
+
+    if st.button("Run Bootstrap Simulation", type="primary"):
+
+        # ---- Pull data -------------------------------------------------------
+        d_ref  = st.session_state.profiles[ref_bs]
+        d_test = st.session_state.profiles[test_bs]
+
+        t_ref_arr  = np.array(d_ref["time"],  dtype=float)
+        t_test_arr = np.array(d_test["time"], dtype=float)
+
+        # Raw matrices: rows = timepoints, cols = vessels
+        raw_ref  = np.array(d_ref["raw"],  dtype=float)   # shape (n_tp_ref,  n_v_ref)
+        raw_test = np.array(d_test["raw"], dtype=float)   # shape (n_tp_test, n_v_test)
+
+        n_v_ref  = raw_ref.shape[1]
+        n_v_test = raw_test.shape[1]
+
+        t_common = np.intersect1d(t_ref_arr, t_test_arr)
+        if len(t_common) == 0:
+            st.error("No common time points between the two profiles."); st.stop()
+
+        # Observed f2 (mean profiles)
+        rr_obs = np.array([raw_ref[np.where(t_ref_arr == ti)[0][0], :].mean()
+                           for ti in t_common])
+        rt_obs = np.array([raw_test[np.where(t_test_arr == ti)[0][0], :].mean()
+                           for ti in t_common])
+        mask_obs = rr_obs <= 85
+        rr_obs_f, rt_obs_f = rr_obs[mask_obs], rt_obs[mask_obs]
+        if len(rr_obs_f) == 0:
+            st.error("No valid time points where reference ≤ 85%."); st.stop()
+        f2_obs = float(50 * np.log10(100 / np.sqrt(1 + np.mean((rr_obs_f - rt_obs_f) ** 2))))
+
+        # ---- Bootstrap loop --------------------------------------------------
+        rng = np.random.default_rng(seed_val if seed_val > 0 else None)
+        f2_boot = np.empty(int(n_iter))
+        prog = st.progress(0, text="Running bootstrap simulation…")
+
+        chunk = max(1, int(n_iter) // 100)
+        for i in range(int(n_iter)):
+            # Resample vessel columns with replacement
+            idx_ref  = rng.integers(0, n_v_ref,  size=n_v_ref)
+            idx_test = rng.integers(0, n_v_test, size=n_v_test)
+            boot_ref  = raw_ref[:, idx_ref]
+            boot_test = raw_test[:, idx_test]
+            f2_boot[i] = _compute_f2_bootstrap(
+                boot_ref, boot_test, t_common, t_ref_arr, t_test_arr
+            )
+            if (i + 1) % chunk == 0:
+                prog.progress((i + 1) / int(n_iter),
+                              text=f"Running bootstrap simulation… {i+1}/{int(n_iter)}")
+
+        prog.empty()
+
+        # Remove NaN (edge cases)
+        f2_boot = f2_boot[~np.isnan(f2_boot)]
+
+        # ---- Results ---------------------------------------------------------
+        f2_lower = float(np.percentile(f2_boot, lower_pctile))
+        f2_upper = float(np.percentile(f2_boot, upper_pctile))
+        f2_mean  = float(np.mean(f2_boot))
+        f2_med   = float(np.median(f2_boot))
+        f2_sd    = float(np.std(f2_boot, ddof=1))
+
+        # ---- Metric cards ----------------------------------------------------
+        pass_fail_color = "#c6efce" if f2_lower >= 50 else "#ffc7ce"
+        pass_fail_text  = "✅ SIMILAR" if f2_lower >= 50 else "❌ NOT SIMILAR"
+
+        mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+        mc1.metric("Observed f2",               f"{f2_obs:.2f}")
+        mc2.metric("Bootstrap Mean f2",          f"{f2_mean:.2f}")
+        mc3.metric(f"{100-lower_pctile:.0f}th Pctl (Upper)", f"{f2_upper:.2f}")
+        mc4.metric(f"{lower_pctile:.0f}th Pctl (Lower CI)",  f"{f2_lower:.2f}",
+                   help="FDA decision criterion — must be ≥ 50 for similarity")
+        mc5.metric("Bootstrap SD",               f"{f2_sd:.2f}")
+
+        st.markdown(
+            f"<div style='background:{pass_fail_color};border-radius:6px;"
+            f"padding:12px 18px;font-size:1.05rem;font-weight:700;margin:10px 0;'>"
+            f"{pass_fail_text} &nbsp;|&nbsp; "
+            f"FDA Decision: Lower {lower_pctile:.0f}th percentile f2 = "
+            f"<strong>{f2_lower:.2f}</strong> "
+            f"({'≥' if f2_lower>=50 else '<'} 50 threshold)</div>",
+            unsafe_allow_html=True
+        )
+
+        # ---- Summary table ---------------------------------------------------
+        st.markdown("#### Bootstrap Summary Statistics")
+        df_summary = pd.DataFrame({
+            "Statistic": [
+                "Observed f2 (mean profiles)",
+                "Bootstrap Mean f2",
+                "Bootstrap Median f2",
+                "Bootstrap SD",
+                f"Lower {lower_pctile:.0f}th Percentile (FDA Decision Point)",
+                f"Upper {upper_pctile:.0f}th Percentile",
+                "n Iterations used",
+                "FDA Similarity Criterion (Lower CI ≥ 50)",
+            ],
+            "Value": [
+                f"{f2_obs:.4f}",
+                f"{f2_mean:.4f}",
+                f"{f2_med:.4f}",
+                f"{f2_sd:.4f}",
+                f"{f2_lower:.4f}",
+                f"{f2_upper:.4f}",
+                f"{len(f2_boot)}",
+                pass_fail_text,
+            ]
+        })
+        st.dataframe(df_summary, use_container_width=True, hide_index=True)
+
+        # ---- Interactive Plotly histogram ------------------------------------
+        st.markdown("#### f2 Bootstrap Distribution")
+
+        hist_data = go.Histogram(
+            x=f2_boot,
+            nbinsx=60,
+            marker_color=OXFORD,
+            opacity=0.82,
+            name="Bootstrap f2",
+        )
+
+        fig_bs = go.Figure(data=[hist_data])
+
+        # Vertical lines
+        fig_bs.add_vline(
+            x=50, line_width=2.5, line_dash="dash", line_color=AMBER,
+            annotation_text="f2 = 50 (FDA Threshold)",
+            annotation_position="top right",
+            annotation_font_color=AMBER,
+        )
+        fig_bs.add_vline(
+            x=f2_lower, line_width=2, line_dash="dot", line_color="#e74c3c",
+            annotation_text=f"{lower_pctile:.0f}th Pctl = {f2_lower:.2f}",
+            annotation_position="top left",
+            annotation_font_color="#e74c3c",
+        )
+        fig_bs.add_vline(
+            x=f2_obs, line_width=2, line_dash="solid", line_color="#27ae60",
+            annotation_text=f"Observed f2 = {f2_obs:.2f}",
+            annotation_position="top right",
+            annotation_font_color="#27ae60",
+            annotation_yshift=30,
+        )
+
+        # Shade region below threshold
+        x_min_hist = float(np.min(f2_boot))
+        x_max_hist = float(np.max(f2_boot))
+        fig_bs.add_vrect(
+            x0=x_min_hist, x1=min(50.0, x_max_hist),
+            fillcolor="#e74c3c", opacity=0.07,
+            layer="below", line_width=0,
+            annotation_text="f2 < 50 zone",
+            annotation_position="bottom right",
+            annotation_font_color="#e74c3c",
+        )
+
+        fig_bs.update_layout(
+            title=dict(
+                text=(f"Bootstrap f2 Distribution — {ref_bs} vs {test_bs}<br>"
+                      f"<sup>{int(n_iter):,} iterations | Lower {lower_pctile:.0f}th Pctl = "
+                      f"{f2_lower:.2f} | {'SIMILAR ✓' if f2_lower>=50 else 'NOT SIMILAR ✗'}</sup>"),
+                font=dict(color=OXFORD, size=15),
+            ),
+            xaxis_title="f2 Value",
+            yaxis_title="Frequency",
+            plot_bgcolor="#F8F4EC",
+            paper_bgcolor="#FDFAF5",
+            font=dict(family="EB Garamond, Georgia, serif", color=OXFORD),
+            bargap=0.05,
+            legend=dict(bgcolor="rgba(255,255,255,0.8)"),
+            xaxis=dict(gridcolor="#e0dbd0"),
+            yaxis=dict(gridcolor="#e0dbd0"),
+            height=450,
+        )
+
+        st.plotly_chart(fig_bs, use_container_width=True)
+
+        # ---- Point-by-point table for this comparison -----------------------
+        st.markdown("#### Point-by-Point Comparison (Mean Values)")
+        df_pts = pd.DataFrame({
+            f"Time ({time_unit})": t_common,
+            f"Reference Mean % ({ref_bs})": rr_obs.round(2),
+            f"Test Mean % ({test_bs})": rt_obs.round(2),
+            "|Diff| (%)": np.abs(rr_obs - rt_obs).round(2),
+            "Used in f2 (ref ≤ 85%)": ["Yes" if r <= 85 else "No" for r in rr_obs],
+        })
+        st.dataframe(df_pts, use_container_width=True, hide_index=True)
+
+        # ---- Reference -------------------------------------------------------
+        st.markdown(
+            "<div class='info-banner' style='font-size:0.83rem;'>"
+            "<strong>Reference:</strong> Shah VP, Tsong Y, Sathe P, Liu JP. "
+            "<em>In vitro dissolution profile comparison — statistics and analysis of the "
+            "similarity factor, f2.</em> Pharm Res. 1998;15(6):889-896. &nbsp;|&nbsp; "
+            "FDA Guidance for Industry: Dissolution Testing of Immediate Release Solid "
+            "Oral Dosage Forms (1997)."
+            "</div>",
+            unsafe_allow_html=True
+        )
+
 
 # ===========================================================================
 # PAGE: IVIVC
