@@ -269,38 +269,36 @@ with st.sidebar:
     ], label_visibility="hidden")
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.3);margin:14px 0;">', unsafe_allow_html=True)
-    st.markdown(
-        '<p style="color:#FFD966;font-size:0.78rem;letter-spacing:0.1em;' +
-        'text-transform:uppercase;margin-bottom:8px;">Parameter Settings</p>',
-        unsafe_allow_html=True
-    )
-    time_unit = st.selectbox("Time Unit", ["minutes", "hours"])
-    conc_unit = st.selectbox("Concentration Unit", ["mg/mL", "ug/mL", "mg/L"])
-    dose_mg   = st.number_input("Dose (mg)", value=100.0, min_value=0.1)
 
-    st.markdown(
-        "<p style=\"color:#FFD966;font-size:0.78rem;letter-spacing:0.1em;"
-        "text-transform:uppercase;margin:12px 0 6px 0;\">"
-        "FDA/USP Acceptance Criterion</p>",
-        unsafe_allow_html=True
-    )
-    q_time = st.number_input(
-        "Q Time Point",
-        value=45.0, min_value=0.0,
-        help="Time point at which the Q criterion is evaluated (e.g. 45 min for IR products)."
-    )
-    q_limit = st.number_input(
-        "Q Value (%)",
-        value=80.0, min_value=0.0, max_value=100.0,
-        help="Minimum % dissolved at Q-time (default 80% per USP <711> Stage 1)."
-    )
-    st.markdown(
-        f"<div style=\"background:rgba(255,191,0,0.10);border:1px solid rgba(255,191,0,0.35);"
-        f"border-radius:4px;padding:6px 10px;font-size:0.78rem;color:#FFD966;margin-top:4px;\">"
-        f"NLT {q_limit:.0f}% dissolved at {q_time:.0f} {time_unit}<br>"
-        f"<span style=\"opacity:0.7;\">USP &lt;711&gt; / FDA 1997</span></div>",
-        unsafe_allow_html=True
-    )
+    # Method & Parameter Settings button
+    if "show_method_panel" not in st.session_state:
+        st.session_state.show_method_panel = False
+    if "method_cfg" not in st.session_state:
+        st.session_state.method_cfg = {
+            "time_unit": "minutes", "conc_unit": "mg/mL", "dose_mg": 100.0,
+            "q_time": 45.0, "q_limit": 80.0,
+            "apparatus": "USP II (Paddle)", "medium": "0.1N HCl (pH 1.2)",
+            "rpm": 50, "volume_ml": 900, "temp_c": 37.0,
+            "analytical": "UV-Vis",
+            "lambda_max": 272.0, "slit_nm": 2.0, "ref_wavelength": "",
+            "hplc_column": "", "hplc_flow": 1.0, "hplc_mp_a": "",
+            "hplc_mp_b": "", "hplc_detection": 254.0,
+            "hplc_inj_vol": 20.0, "hplc_col_temp": 30.0,
+            "hplc_run_time": 10.0, "notes": "",
+        }
+
+    btn_label = "  METHOD & PARAMETER SETTINGS"
+    if st.button(btn_label, key="method_btn"):
+        st.session_state.show_method_panel = not st.session_state.show_method_panel
+
+    cfg = st.session_state.method_cfg
+
+    # Expose variables globally for rest of app
+    time_unit = cfg["time_unit"]
+    conc_unit = cfg["conc_unit"]
+    dose_mg   = cfg["dose_mg"]
+    q_time    = cfg["q_time"]
+    q_limit   = cfg["q_limit"]
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.25);margin:14px 0;">', unsafe_allow_html=True)
     st.markdown(
@@ -309,6 +307,7 @@ with st.sidebar:
         '</div>',
         unsafe_allow_html=True
     )
+
 
 # --- Constants ---
 OXFORD = "#002147"
@@ -518,6 +517,176 @@ st.markdown(
     "</div>",
     unsafe_allow_html=True
 )
+
+# ===========================================================================
+# METHOD & PARAMETER SETTINGS PANEL (shown above all pages when open)
+# ===========================================================================
+if st.session_state.get("show_method_panel", False):
+    cfg = st.session_state.method_cfg
+    st.markdown(
+        "<div style=\"background:white;border:2px solid #FFBF00;border-radius:10px;"
+        "padding:24px;margin-bottom:20px;\">"
+        "<h2 style=\"color:#002147;margin:0 0 4px;\">Method & Parameter Settings</h2>"
+        "<p style=\"color:#888;font-size:0.85rem;margin:0 0 20px;\">Define your dissolution method and analytical conditions. "
+        "These will be included in the Excel report.</p></div>",
+        unsafe_allow_html=True
+    )
+
+    tab_gen, tab_diss, tab_anal = st.tabs([
+        "General Parameters", "Dissolution Method", "Analytical Method"
+    ])
+
+    # - TAB 1: General Parameters -
+    with tab_gen:
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            cfg["time_unit"] = st.selectbox("Time Unit",
+                ["minutes", "hours"], index=["minutes","hours"].index(cfg["time_unit"]))
+        with c2:
+            cfg["conc_unit"] = st.selectbox("Concentration Unit",
+                ["mg/mL", "ug/mL", "mg/L"], index=["mg/mL","ug/mL","mg/L"].index(cfg["conc_unit"]))
+        with c3:
+            cfg["dose_mg"] = st.number_input("Dose (mg)", value=float(cfg["dose_mg"]), min_value=0.1)
+
+        st.markdown("---")
+        st.markdown("**FDA/USP Acceptance Criterion (Q)**")
+        c4, c5 = st.columns(2)
+        with c4:
+            cfg["q_time"] = st.number_input(
+                "Q Time Point", value=float(cfg["q_time"]), min_value=0.0,
+                help="Time point for Q criterion evaluation (e.g. 45 min for IR)")
+        with c5:
+            cfg["q_limit"] = st.number_input(
+                "Q Value (%)", value=float(cfg["q_limit"]), min_value=0.0, max_value=100.0,
+                help="Minimum % dissolved at Q-time (default 80% per USP <711>)")
+        st.markdown(
+            f"<div class=\"info-banner\">NLT <strong>{cfg['q_limit']:.0f}%</strong> dissolved "
+            f"at <strong>{cfg['q_time']:.0f} {cfg['time_unit']}</strong> &nbsp;|&nbsp; "
+            "USP &lt;711&gt; / FDA 1997</div>",
+            unsafe_allow_html=True
+        )
+
+    # - TAB 2: Dissolution Method -
+    with tab_diss:
+        c1, c2 = st.columns(2)
+        with c1:
+            cfg["apparatus"] = st.selectbox("Dissolution Apparatus",
+                ["USP I (Basket)", "USP II (Paddle)", "USP III (Reciprocating Cylinder)",
+                 "USP IV (Flow-Through Cell)", "Other"],
+                index=["USP I (Basket)","USP II (Paddle)","USP III (Reciprocating Cylinder)",
+                       "USP IV (Flow-Through Cell)","Other"].index(cfg.get("apparatus","USP II (Paddle)")))
+        with c2:
+            cfg["medium"] = st.selectbox("Dissolution Medium",
+                ["0.1N HCl (pH 1.2)", "Acetate Buffer (pH 4.5)", "Phosphate Buffer (pH 6.8)",
+                 "Phosphate Buffer (pH 7.4)", "Purified Water", "SGF (Simulated Gastric Fluid)",
+                 "SIF (Simulated Intestinal Fluid)", "FaSSIF", "FeSSIF", "Other"],
+                index=["0.1N HCl (pH 1.2)","Acetate Buffer (pH 4.5)","Phosphate Buffer (pH 6.8)",
+                       "Phosphate Buffer (pH 7.4)","Purified Water","SGF (Simulated Gastric Fluid)",
+                       "SIF (Simulated Intestinal Fluid)","FaSSIF","FeSSIF","Other"].index(
+                       cfg.get("medium","0.1N HCl (pH 1.2)")))
+        if cfg["medium"] == "Other":
+            cfg["medium"] = st.text_input("Specify Medium", value=cfg.get("medium_custom",""))
+
+        c3, c4, c5 = st.columns(3)
+        with c3:
+            cfg["rpm"] = st.number_input("Rotation Speed (rpm)", value=int(cfg.get("rpm",50)),
+                                         min_value=1, max_value=300, step=5)
+        with c4:
+            cfg["volume_ml"] = st.number_input("Medium Volume (mL)", value=int(cfg.get("volume_ml",900)),
+                                                min_value=100, max_value=4000, step=100)
+        with c5:
+            cfg["temp_c"] = st.number_input("Temperature (degC)", value=float(cfg.get("temp_c",37.0)),
+                                             min_value=20.0, max_value=50.0, step=0.5)
+
+        cfg["notes"] = st.text_area("Additional Method Notes",
+            value=cfg.get("notes",""), height=80,
+            placeholder="e.g. Sinker used, sampling times, filter type...")
+
+    # - TAB 3: Analytical Method -
+    with tab_anal:
+        cfg["analytical"] = st.radio("Analytical Method",
+            ["UV-Vis Spectrophotometry", "HPLC", "UPLC"],
+            horizontal=True,
+            index=["UV-Vis Spectrophotometry","HPLC","UPLC"].index(
+                cfg.get("analytical","UV-Vis Spectrophotometry")
+                if cfg.get("analytical","UV-Vis") in ["UV-Vis Spectrophotometry","HPLC","UPLC"]
+                else "UV-Vis Spectrophotometry"))
+
+        if cfg["analytical"] == "UV-Vis Spectrophotometry":
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                cfg["lambda_max"] = st.number_input("lambda max (nm)",
+                    value=float(cfg.get("lambda_max",272.0)), min_value=190.0, max_value=900.0)
+            with c2:
+                cfg["slit_nm"] = st.number_input("Slit Width (nm)",
+                    value=float(cfg.get("slit_nm",2.0)), min_value=0.1, max_value=10.0)
+            with c3:
+                cfg["ref_wavelength"] = st.text_input("Reference Wavelength (nm)",
+                    value=cfg.get("ref_wavelength",""), placeholder="e.g. 700 (optional)")
+            st.markdown(
+                f"<div class=\"info-banner\">UV detection at "
+                f"<strong>{cfg['lambda_max']:.1f} nm</strong>, "
+                f"slit {cfg['slit_nm']:.1f} nm</div>",
+                unsafe_allow_html=True
+            )
+
+        else:  # HPLC or UPLC
+            method_label = cfg["analytical"]
+            c1, c2 = st.columns(2)
+            with c1:
+                cfg["hplc_column"] = st.text_input(
+                    "Column", value=cfg.get("hplc_column",""),
+                    placeholder="e.g. C18 150x4.6mm 5um")
+            with c2:
+                cfg["hplc_col_temp"] = st.number_input(
+                    "Column Temperature (degC)", value=float(cfg.get("hplc_col_temp",30.0)),
+                    min_value=20.0, max_value=80.0)
+
+            c3, c4, c5 = st.columns(3)
+            with c3:
+                cfg["hplc_mp_a"] = st.text_input(
+                    "Mobile Phase A", value=cfg.get("hplc_mp_a",""),
+                    placeholder="e.g. 0.1% Formic acid/water")
+            with c4:
+                cfg["hplc_mp_b"] = st.text_input(
+                    "Mobile Phase B", value=cfg.get("hplc_mp_b",""),
+                    placeholder="e.g. Acetonitrile")
+            with c5:
+                cfg["hplc_gradient"] = st.text_area(
+                    "Gradient Program", value=cfg.get("hplc_gradient",""),
+                    height=68, placeholder="e.g. 0 min 10%B, 5 min 90%B, 8 min 10%B")
+
+            c6, c7, c8 = st.columns(3)
+            with c6:
+                cfg["hplc_flow"] = st.number_input(
+                    "Flow Rate (mL/min)", value=float(cfg.get("hplc_flow",1.0)),
+                    min_value=0.1, max_value=5.0, step=0.1)
+            with c7:
+                cfg["hplc_detection"] = st.number_input(
+                    "Detection Wavelength (nm)", value=float(cfg.get("hplc_detection",254.0)),
+                    min_value=190.0, max_value=900.0)
+            with c8:
+                cfg["hplc_inj_vol"] = st.number_input(
+                    "Injection Volume (uL)", value=float(cfg.get("hplc_inj_vol",20.0)),
+                    min_value=1.0, max_value=100.0)
+
+            cfg["hplc_run_time"] = st.number_input(
+                "Run Time (min)", value=float(cfg.get("hplc_run_time",10.0)),
+                min_value=1.0, max_value=120.0)
+
+    # Update global vars from cfg after editing
+    st.session_state.method_cfg = cfg
+    time_unit = cfg["time_unit"]
+    conc_unit = cfg["conc_unit"]
+    dose_mg   = cfg["dose_mg"]
+    q_time    = cfg["q_time"]
+    q_limit   = cfg["q_limit"]
+
+    if st.button("Save & Close", key="method_close"):
+        st.session_state.show_method_panel = False
+        st.rerun()
+
+    st.markdown("---")
 
 # ===========================================================================
 # PAGE: DATA INPUT
@@ -1356,6 +1525,69 @@ elif nav == "Excel Report":
         ws.write("A6", "Dept. of Pharmaceutical Technology, Biopharmaceutics & Pharmacokinetics", fmt_n)
         ws.write("A7", "Contact: msinankaynak@gmail.com", fmt_n)
         ws.write("A8", "Generated by DissolvA v2.0 | Powered by AI | 2025", fmt_n)
+
+        # -- Method Report Sheet (page 2) ------------------------------------
+        cfg_r = st.session_state.get("method_cfg", {})
+        wsM = wb.add_worksheet("Method Report")
+        wsM.set_column("A:A", 36)
+        wsM.set_column("B:B", 50)
+        fmt_mh = wb.add_format({"bold":True,"bg_color":"#002147","font_color":"#FFBF00",
+                                 "border":1,"font_size":11})
+        fmt_ml = wb.add_format({"font_color":"#002147","border":1,"font_size":10})
+        fmt_mv = wb.add_format({"border":1,"font_size":10,"bold":False})
+
+        wsM.write("A1", "DissolvA - Method & Parameter Report", fmt_t)
+        wsM.write("A2", "Developed by: M. Sinan KAYNAK, PhD | Anadolu University, Faculty of Pharmacy", fmt_n)
+
+        mrow = [3]  # use list for mutability in nested scope
+        def write_section(title, rows_data):
+            mrow[0] += 1
+            wsM.merge_range(mrow[0], 0, mrow[0], 1, title, fmt_mh)
+            mrow[0] += 1
+            for label, value in rows_data:
+                wsM.write(mrow[0], 0, label, fmt_ml)
+                wsM.write(mrow[0], 1, str(value) if value is not None else "", fmt_mv)
+                mrow[0] += 1
+
+        write_section("General Parameters", [
+            ("Time Unit",              cfg_r.get("time_unit", "minutes")),
+            ("Concentration Unit",     cfg_r.get("conc_unit", "mg/mL")),
+            ("Dose (mg)",              cfg_r.get("dose_mg", 100.0)),
+            ("Q Time Point",           f"{cfg_r.get('q_time', 45.0)} {cfg_r.get('time_unit','min')}"),
+            ("Q Value (USP Criterion)",f"NLT {cfg_r.get('q_limit', 80.0):.0f}%"),
+            ("Regulatory Reference",   "USP <711> / FDA Guidance 1997"),
+        ])
+
+        write_section("Dissolution Method", [
+            ("Apparatus",              cfg_r.get("apparatus", "")),
+            ("Dissolution Medium",     cfg_r.get("medium", "")),
+            ("Rotation Speed (rpm)",   cfg_r.get("rpm", "")),
+            ("Medium Volume (mL)",     cfg_r.get("volume_ml", "")),
+            ("Temperature (degC)",     cfg_r.get("temp_c", "")),
+            ("Additional Notes",       cfg_r.get("notes", "")),
+        ])
+
+        analytical = cfg_r.get("analytical", "UV-Vis Spectrophotometry")
+        if analytical == "UV-Vis Spectrophotometry":
+            write_section("Analytical Method - UV-Vis Spectrophotometry", [
+                ("Method",                     "UV-Vis Spectrophotometry"),
+                ("Lambda max (nm)",            cfg_r.get("lambda_max", "")),
+                ("Slit Width (nm)",            cfg_r.get("slit_nm", "")),
+                ("Reference Wavelength (nm)",  cfg_r.get("ref_wavelength", "N/A")),
+            ])
+        else:
+            write_section(f"Analytical Method - {analytical}", [
+                ("Method",                     analytical),
+                ("Column",                     cfg_r.get("hplc_column", "")),
+                ("Column Temperature (degC)",  cfg_r.get("hplc_col_temp", "")),
+                ("Mobile Phase A",             cfg_r.get("hplc_mp_a", "")),
+                ("Mobile Phase B",             cfg_r.get("hplc_mp_b", "")),
+                ("Gradient Program",           cfg_r.get("hplc_gradient", "")),
+                ("Flow Rate (mL/min)",         cfg_r.get("hplc_flow", "")),
+                ("Detection Wavelength (nm)",  cfg_r.get("hplc_detection", "")),
+                ("Injection Volume (uL)",      cfg_r.get("hplc_inj_vol", "")),
+                ("Run Time (min)",             cfg_r.get("hplc_run_time", "")),
+            ])
 
         ws2=wb.add_worksheet("Dissolution Profiles"); col=0
         for nm,dd in st.session_state.profiles.items():
