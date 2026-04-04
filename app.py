@@ -305,15 +305,7 @@ with st.sidebar:
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.25);margin:14px 0;">', unsafe_allow_html=True)
     st.markdown(
         '<div style="text-align:center;padding:4px 0 8px 0;">'
-        '<div style="font-size:0.80rem;color:#FFBF00;font-weight:600;letter-spacing:0.02em;margin-bottom:2px;">'
-        'M. Sinan KAYNAK, PhD</div>'
-        '<div style="font-size:0.70rem;color:#7a9dbf;line-height:1.5;margin-bottom:4px;">'
-        'Anadolu University<br>'
-        'Faculty of Pharmacy<br>'
-        '<span style="opacity:0.75;">Pharmaceutical Technology</span></div>'
-        '<a href="mailto:msinankaynak@gmail.com" style="font-size:0.68rem;color:rgba(255,191,0,0.65);'
-        'text-decoration:none;letter-spacing:0.01em;">msinankaynak@gmail.com</a><br>'
-        '<div style="font-size:0.65rem;color:#4a5a70;margin-top:6px;">DissolvA v2.0 &nbsp;|&nbsp; 2025</div>'
+        '<div style="font-size:0.65rem;color:#4a5a70;">DissolvA v2.0 &nbsp;|&nbsp; 2025</div>'
         '</div>',
         unsafe_allow_html=True
     )
