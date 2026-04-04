@@ -1223,20 +1223,59 @@ elif nav == "f1 and f2 Similarity":
     })
     st.dataframe(df_cmp,use_container_width=True)
 
-    fig,ax=plt.subplots(figsize=(9,4.5)); style_ax(fig,ax)
-    ax.plot(t_ref,r_ref,"o-",color=OXFORD,lw=2,ms=6,label=f"Reference: {ref_nm}")
-    ax.plot(t_tst,r_tst,"s--",color="#c0392b",lw=2,ms=6,label=f"Test: {test_nm}")
-    ax.axhline(85,color=AMBER,lw=1,ls=":",alpha=0.8,label="85% cutoff (FDA)")
-    ax.fill_between(common,rr,rt,alpha=0.1,color="#c0392b",label="Difference area")
-    ax.set_xlabel(f"Time ({time_unit})"); ax.set_ylabel("Cumulative Release (%)")
-    ax.set_title(f"f1 = {f1:.2f}  |  f2 = {f2:.2f}  |  {ref_nm} vs {test_nm}")
-    ax.legend(fontsize=9); ax.set_ylim(0,110)
-    st.pyplot(fig); plt.close()
+    # -- Plot options
+    opt_c1, opt_c2 = st.columns(2)
+    with opt_c1:
+        show_cutoff = st.radio(
+            "85% Cutoff Line (FDA)",
+            ["Show", "Hide"], horizontal=True, key="f2_cutoff",
+            help="Only time points where reference <= 85% are used in f2 calculation."
+        ) == "Show"
+    with opt_c2:
+        show_diff_area = st.radio(
+            "Difference Area",
+            ["Show", "Hide"], horizontal=True, key="f2_area",
+            help="Shaded area between reference and test profiles."
+        ) == "Show"
 
-    st.markdown(
-        '<div class="eq-box">f1 = [sum|Rt-Tt| / sum(Rt)] x 100 ' +
-        '| f2 = 50 x log10(100 / sqrt(1 + (1/n)*sum(Rt-Tt)^2))</div>',
-        unsafe_allow_html=True
+    fig, ax = plt.subplots(figsize=(10, 5)); style_ax(fig, ax)
+
+    ax.plot(t_ref, r_ref, "o-",  color=OXFORD,    lw=2.5, ms=7,
+            label=f"Reference: {ref_nm}")
+    ax.plot(t_tst, r_tst, "s--", color="#c0392b",  lw=2.5, ms=7,
+            label=f"Test: {test_nm}")
+
+    if show_cutoff:
+        ax.axhline(85, color=AMBER, lw=1.2, ls=":", alpha=0.85,
+                   label="85% cutoff (FDA f2 criterion)")
+    if show_diff_area:
+        ax.fill_between(common, rr, rt, alpha=0.12, color="#c0392b",
+                        label="Difference area")
+
+    # Force origin (0,0)
+    t_all_f2 = np.concatenate([t_ref, t_tst])
+    ax.set_xlim(left=0, right=t_all_f2.max() * 1.05)
+    ax.set_ylim(bottom=0, top=108)
+
+    ax.set_xlabel(f"Time ({time_unit})", fontsize=11)
+    ax.set_ylabel("Cumulative Release (%)", fontsize=11)
+    ax.set_title(
+        f"f1 = {f1:.2f}  |  f2 = {f2:.2f}  |  {ref_nm} vs {test_nm}",
+        fontsize=12, color=OXFORD, pad=12
+    )
+    ax.legend(fontsize=9, framealpha=0.9)
+    st.pyplot(fig)
+    plt.close()
+
+    # -- Equations in proper format
+    st.markdown("**Formulas:**", unsafe_allow_html=False)
+    st.markdown("**Formulas:**")
+    st.latex(r"f_1 = \frac{\sum |R_t - T_t|}{\sum R_t} \times 100")
+    st.latex(r"f_2 = 50 \cdot \log_{10}\left(\frac{100}{\sqrt{1 + \frac{1}{n}\sum(R_t-T_t)^2}}\right)")
+    st.caption(
+        "Rt = reference cumulative release at time t | "
+        "Tt = test cumulative release at time t | "
+        "n = number of time points used (reference <= 85%)"
     )
 
 # ===========================================================================
@@ -1454,6 +1493,109 @@ elif nav == "Excel Report":
                 ws5.write(row_s, 5, round(rv_a[i], 2),   fmt_d)
                 ws5.write(row_s, 6, n_v,                  fmt_p)
                 row_s += 1
+
+        # -- Similarity Report Sheet ------------------------------------------
+        ws6 = wb.add_worksheet("Similarity Report")
+        ws6.set_column("A:A", 28)
+        ws6.set_column("B:H", 16)
+
+        ws6.write("A1", "f1 and f2 Similarity Analysis", fmt_t)
+        ws6.write("A2", "FDA Guidance: Dissolution Testing of Immediate Release Solid Oral Dosage Forms, 1997", fmt_n)
+
+        # Check if we have profiles to compare
+        profile_names = list(st.session_state.profiles.keys())
+        if len(profile_names) >= 2:
+            ref_xl  = profile_names[0]
+            test_xl = profile_names[1]
+            t_rx = np.array(st.session_state.profiles[ref_xl]["time"])
+            r_rx = np.array(st.session_state.profiles[ref_xl]["release"])
+            t_tx = np.array(st.session_state.profiles[test_xl]["time"])
+            r_tx = np.array(st.session_state.profiles[test_xl]["release"])
+            cm_xl = np.intersect1d(t_rx, t_tx)
+
+            if len(cm_xl) > 0:
+                rr_xl = np.array([r_rx[np.where(t_rx==ti)[0][0]] for ti in cm_xl])
+                rt_xl = np.array([r_tx[np.where(t_tx==ti)[0][0]] for ti in cm_xl])
+                msk_xl = rr_xl <= 85
+                rrf_xl = rr_xl[msk_xl]; rtf_xl = rt_xl[msk_xl]
+
+                if len(rrf_xl) > 0:
+                    f1_xl = float(np.sum(np.abs(rrf_xl-rtf_xl))/np.sum(rrf_xl)*100)
+                    f2_xl = float(50*np.log10(100/np.sqrt(1+np.mean((rrf_xl-rtf_xl)**2))))
+
+                    fmt_pass = wb.add_format({"bold":True,"bg_color":"#c6efce","border":1,"align":"center"})
+                    fmt_fail = wb.add_format({"bold":True,"bg_color":"#ffc7ce","border":1,"align":"center"})
+
+                    ws6.write("A4", "Reference Profile", fmt_h)
+                    ws6.write("B4", ref_xl, fmt_p)
+                    ws6.write("A5", "Test Profile", fmt_h)
+                    ws6.write("B5", test_xl, fmt_p)
+                    ws6.write("A6", "Common Time Points (n)", fmt_h)
+                    ws6.write("B6", len(cm_xl), fmt_p)
+                    ws6.write("A7", "Points Used in f2 (ref<=85%)", fmt_h)
+                    ws6.write("B7", len(rrf_xl), fmt_p)
+
+                    ws6.write("A9",  "f1 (Difference Factor)", fmt_h)
+                    ws6.write("B9",  round(f1_xl, 3), fmt_pass if f1_xl<=15 else fmt_fail)
+                    ws6.write("C9",  "PASS (<=15)" if f1_xl<=15 else "FAIL (>15)", fmt_pass if f1_xl<=15 else fmt_fail)
+                    ws6.write("A10", "f2 (Similarity Factor)", fmt_h)
+                    ws6.write("B10", round(f2_xl, 3), fmt_pass if f2_xl>=50 else fmt_fail)
+                    ws6.write("C10", "SIMILAR (>=50)" if f2_xl>=50 else "DISSIMILAR (<50)", fmt_pass if f2_xl>=50 else fmt_fail)
+                    ws6.write("A11", "Max |Delta R| (%)", fmt_h)
+                    ws6.write("B11", round(float(np.max(np.abs(rrf_xl-rtf_xl))), 3), fmt_p)
+
+                    ws6.write("A13", "Formulas", fmt_t)
+                    ws6.write("A14", "f1 = [SUM|Rt-Tt| / SUM(Rt)] x 100", fmt_n)
+                    ws6.write("A15", "f2 = 50 x log10(100 / sqrt(1 + (1/n) x SUM(Rt-Tt)^2))", fmt_n)
+                    ws6.write("A16", "Rt = reference release at time t; Tt = test release at time t", fmt_n)
+
+                    # Point-by-point table
+                    ws6.write("A18", "Point-by-Point Comparison", fmt_t)
+                    hdrs_s = [f"Time ({time_unit})", "Reference (%)", "Test (%)",
+                              "|Diff| (%)", "Used in f2"]
+                    for ci, h in enumerate(hdrs_s):
+                        ws6.write(18, ci, h, fmt_h)
+                    for ri, ti in enumerate(cm_xl):
+                        rval = rr_xl[ri]; tval = rt_xl[ri]
+                        ws6.write(19+ri, 0, ti,               fmt_d)
+                        ws6.write(19+ri, 1, round(rval, 3),   fmt_d)
+                        ws6.write(19+ri, 2, round(tval, 3),   fmt_d)
+                        ws6.write(19+ri, 3, round(abs(rval-tval), 3), fmt_d)
+                        ws6.write(19+ri, 4, "Yes" if rval<=85 else "No", fmt_p)
+
+                    # Similarity chart
+                    chart_s = wb.add_chart({"type": "scatter", "subtype": "straight_with_markers"})
+                    n_pts = len(cm_xl)
+                    chart_s.add_series({
+                        "name": ref_xl,
+                        "categories": ["Similarity Report", 19, 0, 19+n_pts-1, 0],
+                        "values":     ["Similarity Report", 19, 1, 19+n_pts-1, 1],
+                        "line":   {"color": "#002147", "width": 2.5},
+                        "marker": {"type": "circle", "size": 8,
+                                   "fill": {"color": "#002147"},
+                                   "border": {"color": "#002147"}},
+                    })
+                    chart_s.add_series({
+                        "name": test_xl,
+                        "categories": ["Similarity Report", 19, 0, 19+n_pts-1, 0],
+                        "values":     ["Similarity Report", 19, 2, 19+n_pts-1, 2],
+                        "line":   {"color": "#c0392b", "width": 2.5, "dash_type": "dash"},
+                        "marker": {"type": "square", "size": 8,
+                                   "fill": {"color": "#c0392b"},
+                                   "border": {"color": "#c0392b"}},
+                    })
+                    chart_s.set_title({"name": f"f1={f1_xl:.2f} | f2={f2_xl:.2f} | {ref_xl} vs {test_xl}"})
+                    chart_s.set_x_axis({"name": f"Time ({time_unit})", "min": 0,
+                                        "major_gridlines": {"visible": False}})
+                    chart_s.set_y_axis({"name": "Cumulative Release (%)", "min": 0, "max": 105,
+                                        "major_gridlines": {"visible": True,
+                                                            "line": {"color": "#dddddd","dash_type":"dash"}}})
+                    chart_s.set_legend({"position": "bottom"})
+                    chart_s.set_size({"width": 600, "height": 380})
+                    chart_s.set_chartarea({"border": {"color": "#002147"}, "fill": {"color": "#FDFAF5"}})
+                    ws6.insert_chart("G4", chart_s)
+        else:
+            ws6.write("A4", "Load at least 2 profiles to generate similarity report.", fmt_n)
 
         wb.close(); buf.seek(0)
         st.success("Report ready!")
