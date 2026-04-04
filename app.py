@@ -50,42 +50,44 @@ section[data-testid="stSidebar"] .stRadio > div {
   flex-direction: column !important;
 }
 
-section[data-testid="stSidebar"] .stRadio > div > label:not(:first-child) {
-  border-top: 0.5px solid rgba(255,255,255,0.07) !important;
-}
-
 section[data-testid="stSidebar"] .stRadio label {
   background: transparent !important;
   border: none !important;
   border-left: 3px solid transparent !important;
+  border-top: 0.5px solid rgba(255,255,255,0.06) !important;
   border-radius: 0 !important;
-  padding: 9px 14px !important;
+  padding: 10px 14px !important;
   font-size: 0.92rem !important;
   color: #8aafc8 !important;
-  transition: all 0.15s ease !important;
+  transition: color 0.15s ease, border-left-color 0.15s ease, background 0.15s ease !important;
   cursor: pointer !important;
-  display: block !important;
+  display: flex !important;
+  align-items: center !important;
   width: 100% !important;
   letter-spacing: 0.01em !important;
 }
 
 section[data-testid="stSidebar"] .stRadio label:hover {
-  border-left-color: rgba(255,191,0,0.5) !important;
-  background: rgba(255,191,0,0.06) !important;
-  color: #e8e0d0 !important;
+  border-left-color: rgba(255,191,0,0.55) !important;
+  background: rgba(255,191,0,0.05) !important;
+  color: #d4c078 !important;
 }
 
 section[data-testid="stSidebar"] .stRadio [aria-checked="true"] ~ label,
 section[data-testid="stSidebar"] .stRadio input:checked ~ label,
 section[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
   border-left: 3px solid #FFBF00 !important;
-  background: rgba(255,191,0,0.09) !important;
+  background: rgba(255,191,0,0.08) !important;
   color: #FFBF00 !important;
   font-weight: 600 !important;
 }
 
-section[data-testid="stSidebar"] .stRadio label span { display: none !important; }
-section[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] { display: block !important; }
+section[data-testid="stSidebar"] .stRadio label > div:first-child { display: none !important; }
+section[data-testid="stSidebar"] .stRadio label > div[data-testid="stMarkdownContainer"] p {
+  color: inherit !important;
+  font-size: 0.92rem !important;
+  margin: 0 !important;
+}
 
 section[data-testid="stSidebar"] .stSelectbox > div > div {
   background: #002a5c !important;
