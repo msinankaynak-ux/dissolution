@@ -45,19 +45,23 @@ section[data-testid="stSidebar"] label {
 }
 
 section[data-testid="stSidebar"] .stRadio > div {
-  gap: 2px !important;
+  gap: 0 !important;
   display: flex !important;
   flex-direction: column !important;
+}
+
+section[data-testid="stSidebar"] .stRadio > div > label:not(:first-child) {
+  border-top: 0.5px solid rgba(255,255,255,0.07) !important;
 }
 
 section[data-testid="stSidebar"] .stRadio label {
   background: transparent !important;
   border: none !important;
   border-left: 3px solid transparent !important;
-  border-radius: 0 5px 5px 0 !important;
-  padding: 8px 12px !important;
-  font-size: 0.93rem !important;
-  color: rgba(232,224,208,0.75) !important;
+  border-radius: 0 !important;
+  padding: 9px 14px !important;
+  font-size: 0.92rem !important;
+  color: #8aafc8 !important;
   transition: all 0.15s ease !important;
   cursor: pointer !important;
   display: block !important;
@@ -80,10 +84,29 @@ section[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
   font-weight: 600 !important;
 }
 
-section[data-testid="stSidebar"] .stSelectbox > div > div,
-section[data-testid="stSidebar"] .stSelectbox > div > div > div,
-section[data-testid="stSidebar"] .stNumberInput > div,
-section[data-testid="stSidebar"] .stNumberInput input,
+section[data-testid="stSidebar"] .stRadio label span { display: none !important; }
+section[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] { display: block !important; }
+
+section[data-testid="stSidebar"] .stSelectbox > div > div {
+  background: #002a5c !important;
+  border: 1px solid rgba(255,191,0,0.40) !important;
+  border-radius: 5px !important;
+}
+section[data-testid="stSidebar"] .stSelectbox > div > div > div {
+  background: #002a5c !important;
+  border: none !important;
+  color: #e8e0d0 !important;
+}
+section[data-testid="stSidebar"] .stNumberInput > div {
+  background: #002a5c !important;
+  border: 1px solid rgba(255,191,0,0.40) !important;
+  border-radius: 5px !important;
+}
+section[data-testid="stSidebar"] .stNumberInput input {
+  background: #002a5c !important;
+  border: none !important;
+  color: #e8e0d0 !important;
+}
 section[data-testid="stSidebar"] .stTextInput input {
   background: #002a5c !important;
   border: 1px solid rgba(255,191,0,0.40) !important;
@@ -96,7 +119,7 @@ section[data-testid="stSidebar"] .stNumberInput svg {
 }
 section[data-testid="stSidebar"] .stNumberInput button {
   background: #002a5c !important;
-  border-color: rgba(255,191,0,0.40) !important;
+  border: none !important;
   color: #FFD966 !important;
 }
 [data-testid="metric-container"] {
