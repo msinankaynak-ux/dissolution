@@ -566,112 +566,163 @@ if st.session_state.get("show_method_panel", False):
             unsafe_allow_html=True
         )
 
-    # - TAB 2: Dissolution Method -
+    # -- TAB 2: Dissolution Method -------------------------------------------
     with tab_diss:
         c1, c2 = st.columns(2)
         with c1:
+            apparatus_opts = [
+                "USP I (Basket)", "USP II (Paddle)",
+                "USP III (Reciprocating Cylinder)",
+                "USP IV (Flow-Through Cell)", "Other"
+            ]
+            cur_app = cfg.get("apparatus", "USP II (Paddle)")
+            if cur_app not in apparatus_opts:
+                cur_app = "USP II (Paddle)"
             cfg["apparatus"] = st.selectbox("Dissolution Apparatus",
-                ["USP I (Basket)", "USP II (Paddle)", "USP III (Reciprocating Cylinder)",
-                 "USP IV (Flow-Through Cell)", "Other"],
-                index=["USP I (Basket)","USP II (Paddle)","USP III (Reciprocating Cylinder)",
-                       "USP IV (Flow-Through Cell)","Other"].index(cfg.get("apparatus","USP II (Paddle)")))
+                apparatus_opts, index=apparatus_opts.index(cur_app))
+
         with c2:
+            medium_opts = [
+                "0.1N HCl (pH 1.2)", "Acetate Buffer (pH 4.5)",
+                "Phosphate Buffer (pH 6.8)", "Phosphate Buffer (pH 7.4)",
+                "Purified Water", "SGF (Simulated Gastric Fluid)",
+                "SIF (Simulated Intestinal Fluid)", "FaSSIF", "FeSSIF", "Other"
+            ]
+            cur_med = cfg.get("medium", "0.1N HCl (pH 1.2)")
+            if cur_med not in medium_opts:
+                cur_med = "Other"
             cfg["medium"] = st.selectbox("Dissolution Medium",
-                ["0.1N HCl (pH 1.2)", "Acetate Buffer (pH 4.5)", "Phosphate Buffer (pH 6.8)",
-                 "Phosphate Buffer (pH 7.4)", "Purified Water", "SGF (Simulated Gastric Fluid)",
-                 "SIF (Simulated Intestinal Fluid)", "FaSSIF", "FeSSIF", "Other"],
-                index=["0.1N HCl (pH 1.2)","Acetate Buffer (pH 4.5)","Phosphate Buffer (pH 6.8)",
-                       "Phosphate Buffer (pH 7.4)","Purified Water","SGF (Simulated Gastric Fluid)",
-                       "SIF (Simulated Intestinal Fluid)","FaSSIF","FeSSIF","Other"].index(
-                       cfg.get("medium","0.1N HCl (pH 1.2)")))
+                medium_opts, index=medium_opts.index(cur_med))
+
         if cfg["medium"] == "Other":
-            cfg["medium"] = st.text_input("Specify Medium", value=cfg.get("medium_custom",""))
+            cfg["medium_custom"] = st.text_input(
+                "Specify Medium", value=cfg.get("medium_custom", ""),
+                placeholder="e.g. Phosphate Buffer pH 7.2")
+
+        # Surfactant / additional agent
+        st.markdown("**Additional Dissolution Agent (Surfactant etc.)**")
+        ca1, ca2, ca3 = st.columns(3)
+        with ca1:
+            surfactant_opts = [
+                "None", "SLS (Sodium Lauryl Sulfate)",
+                "Tween 80", "Poloxamer 188", "CTAB", "Other"
+            ]
+            cur_surf = cfg.get("surfactant", "None")
+            if cur_surf not in surfactant_opts:
+                cur_surf = "Other"
+            cfg["surfactant"] = st.selectbox(
+                "Agent", surfactant_opts,
+                index=surfactant_opts.index(cur_surf))
+        with ca2:
+            cfg["surfactant_conc"] = st.number_input(
+                "Concentration (%)", value=float(cfg.get("surfactant_conc", 0.0)),
+                min_value=0.0, max_value=5.0, step=0.05,
+                help="e.g. 0.5% SLS, 1% Tween 80")
+        with ca3:
+            if cfg["surfactant"] == "Other":
+                cfg["surfactant_custom"] = st.text_input(
+                    "Specify Agent", value=cfg.get("surfactant_custom", ""))
 
         c3, c4, c5 = st.columns(3)
         with c3:
-            cfg["rpm"] = st.number_input("Rotation Speed (rpm)", value=int(cfg.get("rpm",50)),
-                                         min_value=1, max_value=300, step=5)
+            cfg["rpm"] = st.number_input(
+                "Rotation Speed (rpm)", value=int(cfg.get("rpm", 50)),
+                min_value=1, max_value=300, step=5)
         with c4:
-            cfg["volume_ml"] = st.number_input("Medium Volume (mL)", value=int(cfg.get("volume_ml",900)),
-                                                min_value=100, max_value=4000, step=100)
+            cfg["volume_ml"] = st.number_input(
+                "Medium Volume (mL)", value=int(cfg.get("volume_ml", 900)),
+                min_value=100, max_value=4000, step=100)
         with c5:
-            cfg["temp_c"] = st.number_input("Temperature (degC)", value=float(cfg.get("temp_c",37.0)),
-                                             min_value=20.0, max_value=50.0, step=0.5)
+            cfg["temp_c"] = st.number_input(
+                "Temperature (degC)", value=float(cfg.get("temp_c", 37.0)),
+                min_value=20.0, max_value=50.0, step=0.5)
 
-        cfg["notes"] = st.text_area("Additional Method Notes",
-            value=cfg.get("notes",""), height=80,
+        cfg["notes"] = st.text_area(
+            "Additional Method Notes",
+            value=cfg.get("notes", ""), height=80,
             placeholder="e.g. Sinker used, sampling times, filter type...")
 
-    # - TAB 3: Analytical Method -
+    # -- TAB 3: Analytical Method ---------------------------------------------
     with tab_anal:
-        cfg["analytical"] = st.radio("Analytical Method",
-            ["UV-Vis Spectrophotometry", "HPLC", "UPLC"],
+        anal_opts = ["UV-Vis Spectrophotometry", "HPLC", "UPLC"]
+        cur_anal = cfg.get("analytical", "UV-Vis Spectrophotometry")
+        if cur_anal not in anal_opts:
+            cur_anal = "UV-Vis Spectrophotometry"
+        cfg["analytical"] = st.radio(
+            "Analytical Method", anal_opts,
             horizontal=True,
-            index=["UV-Vis Spectrophotometry","HPLC","UPLC"].index(
-                cfg.get("analytical","UV-Vis Spectrophotometry")
-                if cfg.get("analytical","UV-Vis") in ["UV-Vis Spectrophotometry","HPLC","UPLC"]
-                else "UV-Vis Spectrophotometry"))
+            index=anal_opts.index(cur_anal))
 
         if cfg["analytical"] == "UV-Vis Spectrophotometry":
             c1, c2, c3 = st.columns(3)
             with c1:
-                cfg["lambda_max"] = st.number_input("lambda max (nm)",
-                    value=float(cfg.get("lambda_max",272.0)), min_value=190.0, max_value=900.0)
+                cfg["lambda_max"] = st.number_input(
+                    "lambda max (nm)",
+                    value=float(cfg.get("lambda_max", 272.0)),
+                    min_value=190.0, max_value=900.0)
             with c2:
-                cfg["slit_nm"] = st.number_input("Slit Width (nm)",
-                    value=float(cfg.get("slit_nm",2.0)), min_value=0.1, max_value=10.0)
+                cfg["slit_nm"] = st.number_input(
+                    "Slit Width (nm)",
+                    value=float(cfg.get("slit_nm", 2.0)),
+                    min_value=0.1, max_value=10.0)
             with c3:
-                cfg["ref_wavelength"] = st.text_input("Reference Wavelength (nm)",
-                    value=cfg.get("ref_wavelength",""), placeholder="e.g. 700 (optional)")
+                cfg["ref_wavelength"] = st.text_input(
+                    "Reference Wavelength (nm)",
+                    value=cfg.get("ref_wavelength", ""),
+                    placeholder="e.g. 700 (optional)")
             st.markdown(
                 f"<div class=\"info-banner\">UV detection at "
                 f"<strong>{cfg['lambda_max']:.1f} nm</strong>, "
                 f"slit {cfg['slit_nm']:.1f} nm</div>",
-                unsafe_allow_html=True
-            )
+                unsafe_allow_html=True)
 
-        else:  # HPLC or UPLC
-            method_label = cfg["analytical"]
+        else:
             c1, c2 = st.columns(2)
             with c1:
                 cfg["hplc_column"] = st.text_input(
-                    "Column", value=cfg.get("hplc_column",""),
+                    "Column", value=cfg.get("hplc_column", ""),
                     placeholder="e.g. C18 150x4.6mm 5um")
             with c2:
                 cfg["hplc_col_temp"] = st.number_input(
-                    "Column Temperature (degC)", value=float(cfg.get("hplc_col_temp",30.0)),
+                    "Column Temperature (degC)",
+                    value=float(cfg.get("hplc_col_temp", 30.0)),
                     min_value=20.0, max_value=80.0)
 
             c3, c4, c5 = st.columns(3)
             with c3:
                 cfg["hplc_mp_a"] = st.text_input(
-                    "Mobile Phase A", value=cfg.get("hplc_mp_a",""),
+                    "Mobile Phase A", value=cfg.get("hplc_mp_a", ""),
                     placeholder="e.g. 0.1% Formic acid/water")
             with c4:
                 cfg["hplc_mp_b"] = st.text_input(
-                    "Mobile Phase B", value=cfg.get("hplc_mp_b",""),
+                    "Mobile Phase B", value=cfg.get("hplc_mp_b", ""),
                     placeholder="e.g. Acetonitrile")
             with c5:
                 cfg["hplc_gradient"] = st.text_area(
-                    "Gradient Program", value=cfg.get("hplc_gradient",""),
-                    height=68, placeholder="e.g. 0 min 10%B, 5 min 90%B, 8 min 10%B")
+                    "Gradient Program",
+                    value=cfg.get("hplc_gradient", ""), height=68,
+                    placeholder="e.g. 0 min 10%B, 5 min 90%B, 8 min 10%B")
 
             c6, c7, c8 = st.columns(3)
             with c6:
                 cfg["hplc_flow"] = st.number_input(
-                    "Flow Rate (mL/min)", value=float(cfg.get("hplc_flow",1.0)),
+                    "Flow Rate (mL/min)",
+                    value=float(cfg.get("hplc_flow", 1.0)),
                     min_value=0.1, max_value=5.0, step=0.1)
             with c7:
                 cfg["hplc_detection"] = st.number_input(
-                    "Detection Wavelength (nm)", value=float(cfg.get("hplc_detection",254.0)),
+                    "Detection Wavelength (nm)",
+                    value=float(cfg.get("hplc_detection", 254.0)),
                     min_value=190.0, max_value=900.0)
             with c8:
                 cfg["hplc_inj_vol"] = st.number_input(
-                    "Injection Volume (uL)", value=float(cfg.get("hplc_inj_vol",20.0)),
+                    "Injection Volume (uL)",
+                    value=float(cfg.get("hplc_inj_vol", 20.0)),
                     min_value=1.0, max_value=100.0)
 
             cfg["hplc_run_time"] = st.number_input(
-                "Run Time (min)", value=float(cfg.get("hplc_run_time",10.0)),
+                "Run Time (min)",
+                value=float(cfg.get("hplc_run_time", 10.0)),
                 min_value=1.0, max_value=120.0)
 
     # Update global vars from cfg after editing
@@ -1558,13 +1609,26 @@ elif nav == "Excel Report":
             ("Regulatory Reference",   "USP <711> / FDA Guidance 1997"),
         ])
 
+        # Build medium string
+        medium_str = cfg_r.get("medium", "")
+        if medium_str == "Other":
+            medium_str = cfg_r.get("medium_custom", "")
+        surf = cfg_r.get("surfactant", "None")
+        if surf and surf != "None":
+            if surf == "Other":
+                surf = cfg_r.get("surfactant_custom", "")
+            surf_str = f"{surf} {cfg_r.get('surfactant_conc', 0.0):.2f}%"
+        else:
+            surf_str = "None"
+
         write_section("Dissolution Method", [
-            ("Apparatus",              cfg_r.get("apparatus", "")),
-            ("Dissolution Medium",     cfg_r.get("medium", "")),
-            ("Rotation Speed (rpm)",   cfg_r.get("rpm", "")),
-            ("Medium Volume (mL)",     cfg_r.get("volume_ml", "")),
-            ("Temperature (degC)",     cfg_r.get("temp_c", "")),
-            ("Additional Notes",       cfg_r.get("notes", "")),
+            ("Apparatus",                    cfg_r.get("apparatus", "")),
+            ("Dissolution Medium",           medium_str),
+            ("Surfactant / Additional Agent",surf_str),
+            ("Rotation Speed (rpm)",         cfg_r.get("rpm", "")),
+            ("Medium Volume (mL)",           cfg_r.get("volume_ml", "")),
+            ("Temperature (degC)",           cfg_r.get("temp_c", "")),
+            ("Additional Notes",             cfg_r.get("notes", "")),
         ])
 
         analytical = cfg_r.get("analytical", "UV-Vis Spectrophotometry")
