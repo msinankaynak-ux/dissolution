@@ -1356,6 +1356,105 @@ elif nav == "Excel Report":
                 pstr="; ".join(f"{k}={pv:.4g}" for k,pv in v["params"].items())
                 ws4.write(row,7,pstr,fmt_p); ws4.write(row,8,v["reference"],fmt_p)
 
+        # -- Dissolution Profile Chart Sheet ------------------------------------
+        ws5 = wb.add_worksheet("Dissolution Chart")
+        ws5.write("A1", "Dissolution Profile Chart", fmt_t)
+        ws5.write("A2", "Mean cumulative release (%) vs Time", fmt_n)
+
+        # Write chart data in a clean table first
+        chart_data_row = 4
+        ws5.write(chart_data_row, 0, f"Time ({time_unit})", fmt_h)
+        for ci, nm in enumerate(st.session_state.profiles.keys()):
+            ws5.write(chart_data_row, ci + 1, nm, fmt_h)
+            ws5.set_column(ci + 1, ci + 1, 14)
+        ws5.set_column(0, 0, 14)
+
+        # Find max time points
+        max_rows = max(len(d["time"]) for d in st.session_state.profiles.values())
+        all_times = sorted(set(
+            t for d in st.session_state.profiles.values() for t in d["time"]
+        ))
+
+        for ri, ti in enumerate(all_times):
+            ws5.write(chart_data_row + 1 + ri, 0, ti, fmt_d)
+            for ci, (nm, dd) in enumerate(st.session_state.profiles.items()):
+                t_arr = dd["time"]
+                r_arr = dd["release"]
+                if ti in t_arr:
+                    idx = t_arr.index(ti)
+                    ws5.write(chart_data_row + 1 + ri, ci + 1, round(r_arr[idx], 3), fmt_d)
+                    # Add SD if available
+                    if dd.get("sd"):
+                        sd_val = dd["sd"][idx]
+                        ws5.write(chart_data_row + 1 + ri, ci + 1, round(r_arr[idx], 3), fmt_d)
+
+        # Create scatter chart
+        chart = wb.add_chart({"type": "scatter", "subtype": "straight_with_markers"})
+        n_profiles = len(st.session_state.profiles)
+        colors = ["#002147","#e6194B","#3cb44b","#4363d8","#f58231","#911eb4"]
+        markers = ["circle","square","diamond","triangle","x","star"]
+
+        for ci, nm in enumerate(st.session_state.profiles.keys()):
+            n_rows = len(all_times)
+            chart.add_series({
+                "name":       nm,
+                "categories": ["Dissolution Chart", chart_data_row + 1,
+                                0, chart_data_row + n_rows, 0],
+                "values":     ["Dissolution Chart", chart_data_row + 1,
+                                ci + 1, chart_data_row + n_rows, ci + 1],
+                "line":       {"color": colors[ci % len(colors)], "width": 2},
+                "marker": {
+                    "type": markers[ci % len(markers)],
+                    "size": 7,
+                    "fill":   {"color": colors[ci % len(colors)]},
+                    "border": {"color": colors[ci % len(colors)]},
+                },
+            })
+
+        chart.set_title({"name": "Mean Dissolution Profiles"})
+        chart.set_x_axis({
+            "name": f"Time ({time_unit})",
+            "min": 0,
+            "major_gridlines": {"visible": False},
+        })
+        chart.set_y_axis({
+            "name": "Cumulative Release (%)",
+            "min": 0, "max": 105,
+            "major_gridlines": {"visible": True,
+                                "line": {"color": "#dddddd", "dash_type": "dash"}},
+        })
+        chart.set_legend({"position": "bottom"})
+        chart.set_size({"width": 620, "height": 400})
+        chart.set_chartarea({"border": {"color": "#002147"}, "fill": {"color": "#FDFAF5"}})
+        chart.set_plotarea({"fill": {"color": "#F8F4EC"}})
+
+        ws5.insert_chart("A10", chart)
+
+        # Also add per-profile statistics below chart
+        stat_start = 35
+        ws5.write(stat_start, 0, "Per-Profile Statistics", fmt_t)
+        stat_hdrs = [f"Time ({time_unit})", "Profile", "Mean (%)", "SD", "RSD (%)", "CV (%)", "n vessels"]
+        for ci, h in enumerate(stat_hdrs):
+            ws5.write(stat_start + 1, ci, h, fmt_h)
+            ws5.set_column(ci, ci, 14)
+
+        row_s = stat_start + 2
+        for nm, dd in st.session_state.profiles.items():
+            t_a  = dd["time"]
+            r_a  = dd["release"]
+            sd_a = dd.get("sd") or [0.0] * len(t_a)
+            rv_a = dd.get("rsd") or [0.0] * len(t_a)
+            n_v  = dd.get("n", 1)
+            for i in range(len(t_a)):
+                ws5.write(row_s, 0, t_a[i],              fmt_d)
+                ws5.write(row_s, 1, nm,                  fmt_p)
+                ws5.write(row_s, 2, round(r_a[i], 3),    fmt_d)
+                ws5.write(row_s, 3, round(sd_a[i], 4),   fmt_d)
+                ws5.write(row_s, 4, round(rv_a[i], 2),   fmt_d)
+                ws5.write(row_s, 5, round(rv_a[i], 2),   fmt_d)
+                ws5.write(row_s, 6, n_v,                  fmt_p)
+                row_s += 1
+
         wb.close(); buf.seek(0)
         st.success("Report ready!")
         st.download_button("Download Excel Report", data=buf.getvalue(),
