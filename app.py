@@ -45,7 +45,7 @@ if not st.session_state.get("authentication_status"):
     col_login, col_google = st.columns([2, 1])
     with col_login:
         authenticator.login(location='main')
-   with col_google:
+    with col_google:
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("**or**")
         st.markdown("""
