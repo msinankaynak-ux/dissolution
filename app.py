@@ -13,35 +13,32 @@ except ImportError:
     _PLOTLY_OK = False
 
 # ===========================================================================
-# AUTHENTICATION — Google OAuth
+# AUTHENTICATION — streamlit-authenticator
 # ===========================================================================
-if not st.experimental_user.is_logged_in:
-    st.markdown(
-        "<h1 style='color:#002147;text-align:center;margin-top:80px;'>"
-        "DissolvA<sup style='font-size:1rem;'>™</sup></h1>"
-        "<p style='text-align:center;color:#888;margin-bottom:40px;'>"
-        "Predictive Dissolution Suite</p>",
-        unsafe_allow_html=True
-    )
-    col1, col2, col3 = st.columns([1,1,1])
-    with col2:
-        if st.button("🔵  Google ile Giriş Yap", use_container_width=True, type="primary"):
-            st.login("google")
+import streamlit_authenticator as stauth
+import yaml
+from yaml.loader import SafeLoader
+
+with open('config.yaml') as file:
+    config = yaml.load(file, Loader=SafeLoader)
+
+authenticator = stauth.Authenticate(
+    config['credentials'],
+    config['cookie']['name'],
+    config['cookie']['key'],
+    config['cookie']['expiry_days'],
+)
+
+authenticator.login(location='main')
+
+if st.session_state.get('authentication_status') is False:
+    st.error('Kullanici adi veya sifre hatali.')
+    st.stop()
+elif st.session_state.get('authentication_status') is None:
+    st.info('Lutfen kullanici adi ve sifrenizi girerek giris yapin.')
     st.stop()
 
-with st.sidebar:
-    st.markdown(
-        f"<div style='padding:8px 12px;background:rgba(255,191,0,0.1);"
-        f"border-radius:6px;border:1px solid rgba(255,191,0,0.3);margin-bottom:12px;'>"
-        f"<strong style='color:#FFBF00;'>{st.experimental_user.name}</strong><br>"
-        f"<span style='font-size:0.75rem;color:#7a9dbf;'>{st.experimental_user.email}</span>"
-        f"</div>",
-        unsafe_allow_html=True
-    )
-    if st.button("Çıkış Yap"):
-        st.logout()
 # ===========================================================================
-
 from scipy.optimize import curve_fit, root
 from scipy.stats import norm as sp_norm
 from scipy.integrate import trapezoid
@@ -292,6 +289,17 @@ for key in ["profiles", "fit_results"]:
 
 # --- Sidebar ---
 with st.sidebar:
+    # Kullanici bilgisi ve cikis
+    _uname = st.session_state.get('name', st.session_state.get('username', ''))
+    st.markdown(
+        f"<div style='padding:8px 12px;background:rgba(255,191,0,0.1);"
+        f"border-radius:6px;border:1px solid rgba(255,191,0,0.3);margin-bottom:12px;'>"
+        f"<strong style='color:#FFBF00;'>{_uname}</strong>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+    authenticator.logout('Cikis Yap')
+
     st.markdown(
         f'''<div style="border-radius:8px;overflow:hidden;margin-bottom:20px;
                     box-shadow:0 4px 18px rgba(0,0,0,0.5);">
@@ -1524,28 +1532,13 @@ elif nav == "f1 and f2 Similarity":
         "n = number of time points used (reference <= 85%)"
     )
 
-
+# ===========================================================================
+# PAGE: BOOTSTRAP f2 ANALYSIS
+# ===========================================================================
 # ===========================================================================
 # PAGE: BOOTSTRAP f2 ANALYSIS
 # ===========================================================================
 elif nav == "Bootstrap f2 Analysis":
-
-    def run_bootstrap_f2(ref_raw, test_raw, iterations=5000, seed=42):
-        rng = np.random.default_rng(seed if seed > 0 else None)
-        n_v_ref  = ref_raw.shape[1]
-        n_v_test = test_raw.shape[1]
-        f2_results = []
-        for _ in range(iterations):
-            ref_sample  = ref_raw[:,  rng.integers(0, n_v_ref,  size=n_v_ref)]
-            test_sample = test_raw[:, rng.integers(0, n_v_test, size=n_v_test)]
-            R_bar = np.mean(ref_sample,  axis=1)
-            T_bar = np.mean(test_sample, axis=1)
-            mask  = R_bar <= 85
-            if np.any(mask):
-                mse = np.mean((R_bar[mask] - T_bar[mask]) ** 2)
-                f2_results.append(50 * np.log10(100 / np.sqrt(1 + mse)))
-        f2_arr = np.array(f2_results)
-        return f2_arr, float(np.percentile(f2_arr, 5))
 
     st.markdown(
         "<h2 style='color:#002147;margin:0 0 4px;'>Bootstrap f2 Analysis</h2>"
@@ -1557,15 +1550,15 @@ elif nav == "Bootstrap f2 Analysis":
     st.markdown(
         "<div class='step-box'>"
         "<strong>FDA Bootstrap Criterion (Shah et al. 1998):</strong><br>"
-        "1. Resample with replacement from each formulation's individual vessel data.<br>"
+        "1. Resample with replacement from each formulation vessel data.<br>"
         "2. Calculate f2 for each iteration.<br>"
         "3. Report the <strong>5th percentile</strong> (lower bound of 90% CI).<br>"
-        "4. If ≥ 50, profiles are considered similar."
+        "4. If >= 50, profiles are considered similar."
         "</div>", unsafe_allow_html=True
     )
 
     if len(st.session_state.profiles) < 2:
-        st.warning("En az 2 profil gereklidir. Data Input'tan Excel yükleyin.")
+        st.warning("At least 2 profiles required. Upload data in Data Input first.")
         st.stop()
 
     profiles_with_raw = {
@@ -1573,10 +1566,11 @@ elif nav == "Bootstrap f2 Analysis":
         if d.get("raw") and d.get("vessels") and len(d.get("vessels", [])) >= 2
     }
     if len(profiles_with_raw) < 2:
+        available = list(profiles_with_raw.keys()) or ["None"]
         st.warning(
-            "Bootstrap için ham vessel verisi olan en az 2 profil gereklidir. "
-            f"Mevcut: {list(profiles_with_raw.keys()) or 'Yok'}. "
-            "'Excel / CSV Upload (Raw Vessel Data)' modunu kullanın."
+            "Bootstrap requires raw vessel data for at least 2 profiles. "
+            "Currently available: " + str(available) + ". "
+            "Use 'Excel / CSV Upload (Raw Vessel Data)' mode."
         )
         st.stop()
 
@@ -1587,15 +1581,15 @@ elif nav == "Bootstrap f2 Analysis":
         st.markdown("**Reference Profile** *(innovator / originator)*")
         ref_bs = st.selectbox("Reference", names_raw, index=0,
                               label_visibility="collapsed", key="bs_ref")
-        st.caption(f"{ref_bs} — {st.session_state.profiles[ref_bs].get('n',0)} vessels")
+        st.caption(str(ref_bs) + " — " + str(st.session_state.profiles[ref_bs].get('n',0)) + " vessels")
     with col2:
         st.markdown("**Test Profile** *(your formulation)*")
         test_options = [nm for nm in names_raw if nm != ref_bs]
         if not test_options:
-            st.error("En az 2 farklı profil gereklidir."); st.stop()
+            st.error("Need at least 2 profiles with raw data."); st.stop()
         test_bs = st.selectbox("Test", test_options, index=0,
                                label_visibility="collapsed", key="bs_test")
-        st.caption(f"{test_bs} — {st.session_state.profiles[test_bs].get('n',0)} vessels")
+        st.caption(str(test_bs) + " — " + str(st.session_state.profiles[test_bs].get('n',0)) + " vessels")
 
     st.markdown("---")
     col3, col4, col5 = st.columns(3)
@@ -1603,15 +1597,12 @@ elif nav == "Bootstrap f2 Analysis":
         n_iter = st.number_input("Bootstrap Iterations", min_value=1000,
                                   max_value=50000, value=5000, step=500)
     with col4:
-        lower_pctile = st.selectbox(
-            "CI Lower Bound",
-            [5.0, 2.5, 0.5], index=0,
-            format_func=lambda x: f"{x}th pctl — {'90% CI (FDA)' if x==5.0 else str(int(100-x*2))+'% CI'}"
-        )
+        lower_pctile = st.selectbox("CI Lower Bound", [5.0, 2.5, 0.5], index=0,
+            format_func=lambda x: (str(x) + "th pctl — 90% CI (FDA)") if x == 5.0 else (str(x) + "th pctl — " + str(int(100-x*2)) + "% CI"))
     with col5:
         seed_val = st.number_input("Random Seed", min_value=0, max_value=99999, value=42)
 
-    if st.button("▶  Run Bootstrap Simulation", type="primary"):
+    if st.button("Run Bootstrap Simulation", type="primary"):
         d_ref  = st.session_state.profiles[ref_bs]
         d_test = st.session_state.profiles[test_bs]
         t_ref_arr  = np.array(d_ref["time"],  dtype=float)
@@ -1621,36 +1612,38 @@ elif nav == "Bootstrap f2 Analysis":
 
         t_common = np.intersect1d(t_ref_arr, t_test_arr)
         if len(t_common) == 0:
-            st.error("İki profil arasında ortak zaman noktası yok."); st.stop()
+            st.error("No common time points between the two profiles."); st.stop()
 
         rr_obs = np.array([raw_ref[np.where(t_ref_arr==ti)[0][0],:].mean() for ti in t_common])
         rt_obs = np.array([raw_test[np.where(t_test_arr==ti)[0][0],:].mean() for ti in t_common])
         mask_obs = rr_obs <= 85
         if not np.any(mask_obs):
-            st.error("Referans ≤ 85% olan zaman noktası bulunamadı."); st.stop()
+            st.error("No valid time points where reference release <= 85%."); st.stop()
 
         f2_obs = float(50*np.log10(100/np.sqrt(1+np.mean((rr_obs[mask_obs]-rt_obs[mask_obs])**2))))
 
         ref_idx  = [np.where(t_ref_arr ==ti)[0][0] for ti in t_common]
         test_idx = [np.where(t_test_arr==ti)[0][0] for ti in t_common]
+        raw_ref_c  = raw_ref[ref_idx,  :]
+        raw_test_c = raw_test[test_idx, :]
 
-        prog = st.progress(0, text="Bootstrap simülasyonu çalışıyor…")
+        prog = st.progress(0, text="Running bootstrap simulation...")
         rng = np.random.default_rng(int(seed_val) if seed_val > 0 else None)
         n_v_ref  = raw_ref.shape[1]
         n_v_test = raw_test.shape[1]
-        raw_ref_c  = raw_ref[ref_idx,  :]
-        raw_test_c = raw_test[test_idx, :]
         results = []
         chunk = max(1, int(n_iter) // 100)
         for i in range(int(n_iter)):
             rs = raw_ref_c[:,  rng.integers(0, n_v_ref,  size=n_v_ref)]
             ts = raw_test_c[:, rng.integers(0, n_v_test, size=n_v_test)]
-            R  = np.mean(rs, axis=1); T = np.mean(ts, axis=1)
+            R  = np.mean(rs, axis=1)
+            T  = np.mean(ts, axis=1)
             m  = R <= 85
             if np.any(m):
                 results.append(50*np.log10(100/np.sqrt(1+np.mean((R[m]-T[m])**2))))
             if (i+1) % chunk == 0:
-                prog.progress((i+1)/int(n_iter), text=f"İterasyon {i+1:,}/{int(n_iter):,}…")
+                prog.progress((i+1)/int(n_iter),
+                              text="Iteration " + str(i+1) + "/" + str(int(n_iter)) + "...")
         prog.empty()
 
         f2_boot  = np.array(results)
@@ -1663,112 +1656,71 @@ elif nav == "Bootstrap f2 Analysis":
         is_sim   = f2_lower >= 50
 
         verdict_color = "#c6efce" if is_sim else "#ffc7ce"
-        verdict_icon  = "✅ BENZER (SIMILAR)" if is_sim else "❌ BENZER DEĞİL (NOT SIMILAR)"
+        verdict_icon  = "SIMILAR" if is_sim else "NOT SIMILAR"
+        border_color  = "#27ae60" if is_sim else "#e74c3c"
+        cmp_sign      = ">=" if is_sim else "<"
         st.markdown(
-            f"<div style='background:{verdict_color};border-radius:8px;padding:16px 22px;"
-            f"font-size:1.15rem;font-weight:700;margin:14px 0;"
-            f"border-left:6px solid {'#27ae60' if is_sim else '#e74c3c'};'>"
-            f"{verdict_icon} &nbsp;|&nbsp; FDA Karar Noktası — "
-            f"{lower_pctile:.0f}. Persentil f2 = "
-            f"<span style='font-size:1.4rem;'><strong>{f2_lower:.2f}</strong></span> "
-            f"({'≥' if is_sim else '<'} 50)</div>",
+            "<div style='background:" + verdict_color + ";border-radius:8px;padding:16px 22px;"
+            "font-size:1.15rem;font-weight:700;margin:14px 0;"
+            "border-left:6px solid " + border_color + ";'>"
+            + verdict_icon + " | FDA Decision: " + str(lower_pctile) + "th Percentile f2 = "
+            "<strong>" + str(round(f2_lower, 2)) + "</strong> (" + cmp_sign + " 50)</div>",
             unsafe_allow_html=True
         )
 
         mc1,mc2,mc3,mc4,mc5 = st.columns(5)
-        mc1.metric("Gözlenen f2",      f"{f2_obs:.2f}")
-        mc2.metric("Bootstrap Ortalama",f"{f2_mean:.2f}")
-        mc3.metric("Bootstrap Medyan",  f"{f2_med:.2f}")
-        mc4.metric(f"{lower_pctile:.0f}. Pctl (FDA)",f"{f2_lower:.2f}")
+        mc1.metric("Observed f2",       f"{f2_obs:.2f}")
+        mc2.metric("Bootstrap Mean f2", f"{f2_mean:.2f}")
+        mc3.metric("Bootstrap Median",  f"{f2_med:.2f}")
+        mc4.metric(str(lower_pctile) + "th Pctl (FDA)", f"{f2_lower:.2f}")
         mc5.metric("Bootstrap SD",      f"{f2_sd:.2f}")
 
-        st.markdown("#### Bootstrap Özet İstatistikleri")
+        st.markdown("#### Bootstrap Summary Statistics")
         df_summary = pd.DataFrame({
-            "İstatistik": [
-                "Gözlenen f2 (ortalama profiller)",
-                "Bootstrap Ortalama f2",
-                "Bootstrap Medyan f2",
-                "Bootstrap SD",
-                f"{lower_pctile:.0f}. Persentil ← FDA Karar Noktası",
-                f"{100-lower_pctile:.0f}. Persentil (Üst)",
-                "Geçerli iterasyon (n)",
-                "FDA Benzerlik Kararı",
+            "Statistic": [
+                "Observed f2 (mean profiles)",
+                "Bootstrap Mean f2", "Bootstrap Median f2", "Bootstrap SD",
+                str(lower_pctile) + "th Percentile (FDA Decision Point)",
+                str(100-lower_pctile) + "th Percentile (Upper)",
+                "Valid iterations (n)", "FDA Verdict",
             ],
-            "Değer": [
-                f"{f2_obs:.4f}", f"{f2_mean:.4f}", f"{f2_med:.4f}",
-                f"{f2_sd:.4f}", f"{f2_lower:.4f}", f"{f2_upper:.4f}",
-                f"{len(f2_boot):,}", verdict_icon,
+            "Value": [
+                f"{f2_obs:.4f}", f"{f2_mean:.4f}", f"{f2_med:.4f}", f"{f2_sd:.4f}",
+                f"{f2_lower:.4f}", f"{f2_upper:.4f}", f"{len(f2_boot):,}", verdict_icon,
             ]
         })
         st.dataframe(df_summary, use_container_width=True, hide_index=True)
 
-        st.markdown("#### f2 Bootstrap Dağılımı")
-        if _PLOTLY_OK:
-            try:
-                fig_dist = ff.create_distplot(
-                    [f2_boot.tolist()], group_labels=["Bootstrap f2"],
-                    bin_size=max(0.5,(f2_boot.max()-f2_boot.min())/60),
-                    colors=[OXFORD], show_rug=False,
-                )
-                fig_dist.add_vline(x=50, line_width=2.5, line_dash="dash",
-                    line_color=AMBER, annotation_text="f2=50 (FDA)",
-                    annotation_position="top right", annotation_font_color=AMBER)
-                fig_dist.add_vline(x=f2_lower, line_width=2, line_dash="dot",
-                    line_color="#e74c3c",
-                    annotation_text=f"{lower_pctile:.0f}. Pctl={f2_lower:.2f}",
-                    annotation_position="top left", annotation_font_color="#e74c3c")
-                fig_dist.add_vline(x=f2_obs, line_width=2, line_dash="solid",
-                    line_color="#27ae60",
-                    annotation_text=f"Gözlenen f2={f2_obs:.2f}",
-                    annotation_position="top right", annotation_font_color="#27ae60",
-                    annotation_yshift=30)
-                fig_dist.add_vrect(
-                    x0=float(f2_boot.min()), x1=min(50.0, float(f2_boot.max())),
-                    fillcolor="#e74c3c", opacity=0.07, layer="below", line_width=0)
-                fig_dist.update_layout(
-                    title=dict(
-                        text=(f"Bootstrap f2 Dağılımı — {ref_bs} vs {test_bs}<br>"
-                              f"<sup>{len(f2_boot):,} iterasyon | "
-                              f"{lower_pctile:.0f}. Pctl = {f2_lower:.2f} | "
-                              f"{'BENZER ✓' if is_sim else 'BENZER DEĞİL ✗'}</sup>"),
-                        font=dict(color=OXFORD, size=15)),
-                    xaxis_title="f2 Değeri", yaxis_title="Yoğunluk / Frekans",
-                    plot_bgcolor="#F8F4EC", paper_bgcolor="#FDFAF5",
-                    font=dict(family="EB Garamond, Georgia, serif", color=OXFORD),
-                    height=460,
-                )
-                st.plotly_chart(fig_dist, use_container_width=True)
-            except Exception as _pe:
-                st.warning(f"Plotly render edilemedi ({_pe}). Matplotlib'e geçiliyor.")
-                _PLOTLY_OK = False
+        st.markdown("#### f2 Bootstrap Distribution")
+        fig_fb, ax_fb = plt.subplots(figsize=(10,4.5))
+        style_ax(fig_fb, ax_fb)
+        ax_fb.hist(f2_boot, bins=60, color=OXFORD, alpha=0.78, edgecolor="white", lw=0.4, label="Bootstrap f2")
+        ax_fb.axvline(50,       color=AMBER,     lw=2.2, ls="--", label="f2=50 (FDA Threshold)")
+        ax_fb.axvline(f2_lower, color="#e74c3c", lw=1.8, ls=":",  label=str(lower_pctile)+"th Pctl="+str(round(f2_lower,2)))
+        ax_fb.axvline(f2_obs,   color="#27ae60", lw=1.8, ls="-",  label="Observed f2="+str(round(f2_obs,2)))
+        ax_fb.set_xlabel("f2 Value")
+        ax_fb.set_ylabel("Frequency")
+        ax_fb.set_title("Bootstrap f2 Distribution — " + ref_bs + " vs " + test_bs)
+        ax_fb.legend(fontsize=9)
+        st.pyplot(fig_fb)
+        plt.close()
 
-        if not _PLOTLY_OK:
-            fig_fb, ax_fb = plt.subplots(figsize=(10,4.5)); style_ax(fig_fb, ax_fb)
-            ax_fb.hist(f2_boot, bins=60, color=OXFORD, alpha=0.78, edgecolor="white", lw=0.4)
-            ax_fb.axvline(50,       color=AMBER,     lw=2.2, ls="--", label="f2=50 (FDA)")
-            ax_fb.axvline(f2_lower, color="#e74c3c", lw=1.8, ls=":",
-                          label=f"{lower_pctile:.0f}. Pctl={f2_lower:.2f}")
-            ax_fb.axvline(f2_obs,   color="#27ae60", lw=1.8, ls="-",
-                          label=f"Gözlenen f2={f2_obs:.2f}")
-            ax_fb.set_xlabel("f2 Değeri"); ax_fb.set_ylabel("Frekans")
-            ax_fb.legend(fontsize=9); st.pyplot(fig_fb); plt.close()
-
-        st.markdown("#### Nokta Nokta Karşılaştırma")
+        st.markdown("#### Point-by-Point Comparison")
         df_pts = pd.DataFrame({
-            f"Zaman ({time_unit})":        t_common,
-            f"Referans Ort. % ({ref_bs})": rr_obs.round(2),
-            f"Test Ort. % ({test_bs})":    rt_obs.round(2),
-            "|Fark| (%)":                  np.abs(rr_obs-rt_obs).round(2),
-            "f2'de kullanıldı (ref≤85%)": ["Evet" if r<=85 else "Hayır" for r in rr_obs],
+            "Time (" + time_unit + ")":         t_common,
+            "Reference Mean % (" + ref_bs + ")": rr_obs.round(2),
+            "Test Mean % (" + test_bs + ")":     rt_obs.round(2),
+            "|Diff| (%)":                         np.abs(rr_obs-rt_obs).round(2),
+            "Used in f2 (ref<=85%)":              ["Yes" if r<=85 else "No" for r in rr_obs],
         })
         st.dataframe(df_pts, use_container_width=True, hide_index=True)
-
         st.markdown(
             "<div class='info-banner' style='font-size:0.83rem;'>"
-            "<strong>Kaynak:</strong> Shah VP et al. Pharm Res. 1998;15(6):889-896. &nbsp;|&nbsp; "
+            "<strong>Reference:</strong> Shah VP et al. Pharm Res. 1998;15(6):889-896. | "
             "FDA Guidance: Dissolution Testing of IR Solid Oral Dosage Forms (1997)."
             "</div>", unsafe_allow_html=True
         )
+
 
 # ===========================================================================
 # PAGE: IVIVC
@@ -2170,3 +2122,4 @@ elif nav == "Excel Report":
         st.download_button("Download Excel Report", data=buf.getvalue(),
                            file_name="DissolvA_Report.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
