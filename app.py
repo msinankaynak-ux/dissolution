@@ -22,11 +22,10 @@ authenticator = None
 
 # --- Google OAuth ile giris (Streamlit 1.42+) ---
 try:
-    user_info = st.experimental_user
-    if user_info and getattr(user_info, "email", None):
+    if st.experimental_user and st.experimental_user.is_logged_in:
         st.session_state["authentication_status"] = True
-        st.session_state["name"] = getattr(user_info, "name", None) or getattr(user_info, "email", "")
-        st.session_state["email"] = getattr(user_info, "email", "")
+        st.session_state["name"] = st.experimental_user.name or st.experimental_user.email
+        st.session_state["email"] = st.experimental_user.email
 except Exception:
     pass
 
