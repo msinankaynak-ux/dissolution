@@ -7,36 +7,56 @@ warnings.filterwarnings("ignore")
 
 try:
     import plotly.figure_factory as ff
-    import plotly.graph_objects as go
     _PLOTLY_OK = True
 except ImportError:
     _PLOTLY_OK = False
 
 # ===========================================================================
-# AUTHENTICATION — streamlit-authenticator
+# AUTHENTICATION
 # ===========================================================================
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
 
-with open('config.yaml') as file:
-    config = yaml.load(file, Loader=SafeLoader)
+authenticator = None
 
-authenticator = stauth.Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    config['cookie']['key'],
-    config['cookie']['expiry_days'],
-)
+# --- Google OAuth ile giris (Streamlit 1.42+) ---
+try:
+    user_info = st.experimental_user
+    if user_info and getattr(user_info, "email", None):
+        st.session_state["authentication_status"] = True
+        st.session_state["name"] = getattr(user_info, "name", None) or getattr(user_info, "email", "")
+        st.session_state["email"] = getattr(user_info, "email", "")
+except Exception:
+    pass
 
-authenticator.login(location='main')
+# --- Kullanici adi / sifre ile giris ---
+if not st.session_state.get("authentication_status"):
+    with open('config.yaml') as file:
+        config = yaml.load(file, Loader=SafeLoader)
 
-if st.session_state.get('authentication_status') is False:
-    st.error('Kullanici adi veya sifre hatali.')
-    st.stop()
-elif st.session_state.get('authentication_status') is None:
-    st.info('Lutfen kullanici adi ve sifrenizi girerek giris yapin.')
-    st.stop()
+    authenticator = stauth.Authenticate(
+        config['credentials'],
+        config['cookie']['name'],
+        config['cookie']['key'],
+        config['cookie']['expiry_days'],
+    )
+
+    col_login, col_google = st.columns([2, 1])
+    with col_login:
+        authenticator.login(location='main')
+    with col_google:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("**veya**")
+        if st.button("Google ile Giris Yap", use_container_width=True):
+            st.login("google")
+
+    if st.session_state.get('authentication_status') is False:
+        st.error('Kullanici adi veya sifre hatali.')
+        st.stop()
+    elif st.session_state.get('authentication_status') is None:
+        st.info('Lutfen giris yapin.')
+        st.stop()
 
 # ===========================================================================
 from scipy.optimize import curve_fit, root
@@ -289,17 +309,19 @@ for key in ["profiles", "fit_results"]:
 
 # --- Sidebar ---
 with st.sidebar:
-    # Kullanici bilgisi ve cikis
     _uname = st.session_state.get('name', st.session_state.get('username', ''))
     st.markdown(
-        f"<div style='padding:8px 12px;background:rgba(255,191,0,0.1);"
-        f"border-radius:6px;border:1px solid rgba(255,191,0,0.3);margin-bottom:12px;'>"
-        f"<strong style='color:#FFBF00;'>{_uname}</strong>"
-        f"</div>",
+        "<div style='padding:8px 12px;background:rgba(255,191,0,0.1);"
+        "border-radius:6px;border:1px solid rgba(255,191,0,0.3);margin-bottom:8px;'>"
+        "<strong style='color:#FFBF00;'>" + _uname + "</strong>"
+        "</div>",
         unsafe_allow_html=True
     )
-    authenticator.logout('Cikis Yap')
-
+    if authenticator:
+        authenticator.logout('Cikis Yap')
+    else:
+        if st.button('Cikis Yap'):
+            st.logout()
     st.markdown(
         f'''<div style="border-radius:8px;overflow:hidden;margin-bottom:20px;
                     box-shadow:0 4px 18px rgba(0,0,0,0.5);">
@@ -1535,9 +1557,6 @@ elif nav == "f1 and f2 Similarity":
 # ===========================================================================
 # PAGE: BOOTSTRAP f2 ANALYSIS
 # ===========================================================================
-# ===========================================================================
-# PAGE: BOOTSTRAP f2 ANALYSIS
-# ===========================================================================
 elif nav == "Bootstrap f2 Analysis":
 
     st.markdown(
@@ -1567,159 +1586,142 @@ elif nav == "Bootstrap f2 Analysis":
     }
     if len(profiles_with_raw) < 2:
         available = list(profiles_with_raw.keys()) or ["None"]
-        st.warning(
-            "Bootstrap requires raw vessel data for at least 2 profiles. "
-            "Currently available: " + str(available) + ". "
-            "Use 'Excel / CSV Upload (Raw Vessel Data)' mode."
-        )
+        st.warning("Bootstrap requires raw vessel data for at least 2 profiles. Available: " + str(available))
         st.stop()
 
     names_raw = list(profiles_with_raw.keys())
-
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("**Reference Profile** *(innovator / originator)*")
-        ref_bs = st.selectbox("Reference", names_raw, index=0,
-                              label_visibility="collapsed", key="bs_ref")
-        st.caption(str(ref_bs) + " — " + str(st.session_state.profiles[ref_bs].get('n',0)) + " vessels")
+        st.markdown("**Reference Profile**")
+        ref_bs = st.selectbox("Reference", names_raw, index=0, label_visibility="collapsed", key="bs_ref")
+        st.caption(ref_bs + " — " + str(st.session_state.profiles[ref_bs].get("n", 0)) + " vessels")
     with col2:
-        st.markdown("**Test Profile** *(your formulation)*")
-        test_options = [nm for nm in names_raw if nm != ref_bs]
-        if not test_options:
+        st.markdown("**Test Profile**")
+        test_opts = [nm for nm in names_raw if nm != ref_bs]
+        if not test_opts:
             st.error("Need at least 2 profiles with raw data."); st.stop()
-        test_bs = st.selectbox("Test", test_options, index=0,
-                               label_visibility="collapsed", key="bs_test")
-        st.caption(str(test_bs) + " — " + str(st.session_state.profiles[test_bs].get('n',0)) + " vessels")
+        test_bs = st.selectbox("Test", test_opts, index=0, label_visibility="collapsed", key="bs_test")
+        st.caption(test_bs + " — " + str(st.session_state.profiles[test_bs].get("n", 0)) + " vessels")
 
     st.markdown("---")
     col3, col4, col5 = st.columns(3)
     with col3:
-        n_iter = st.number_input("Bootstrap Iterations", min_value=1000,
-                                  max_value=50000, value=5000, step=500)
+        n_iter = st.number_input("Bootstrap Iterations", min_value=1000, max_value=50000, value=5000, step=500)
     with col4:
         lower_pctile = st.selectbox("CI Lower Bound", [5.0, 2.5, 0.5], index=0,
-            format_func=lambda x: (str(x) + "th pctl — 90% CI (FDA)") if x == 5.0 else (str(x) + "th pctl — " + str(int(100-x*2)) + "% CI"))
+            format_func=lambda x: ("5th pctl — 90% CI (FDA)") if x == 5.0 else (str(x) + "th pctl — " + str(int(100-x*2)) + "% CI"))
     with col5:
         seed_val = st.number_input("Random Seed", min_value=0, max_value=99999, value=42)
 
     if st.button("Run Bootstrap Simulation", type="primary"):
-        d_ref  = st.session_state.profiles[ref_bs]
+        d_ref = st.session_state.profiles[ref_bs]
         d_test = st.session_state.profiles[test_bs]
-        t_ref_arr  = np.array(d_ref["time"],  dtype=float)
+        t_ref_arr = np.array(d_ref["time"], dtype=float)
         t_test_arr = np.array(d_test["time"], dtype=float)
-        raw_ref    = np.array(d_ref["raw"],   dtype=float)
-        raw_test   = np.array(d_test["raw"],  dtype=float)
+        raw_ref = np.array(d_ref["raw"], dtype=float)
+        raw_test = np.array(d_test["raw"], dtype=float)
 
         t_common = np.intersect1d(t_ref_arr, t_test_arr)
         if len(t_common) == 0:
-            st.error("No common time points between the two profiles."); st.stop()
+            st.error("No common time points."); st.stop()
 
-        rr_obs = np.array([raw_ref[np.where(t_ref_arr==ti)[0][0],:].mean() for ti in t_common])
-        rt_obs = np.array([raw_test[np.where(t_test_arr==ti)[0][0],:].mean() for ti in t_common])
+        rr_obs = np.array([raw_ref[np.where(t_ref_arr == ti)[0][0], :].mean() for ti in t_common])
+        rt_obs = np.array([raw_test[np.where(t_test_arr == ti)[0][0], :].mean() for ti in t_common])
         mask_obs = rr_obs <= 85
         if not np.any(mask_obs):
-            st.error("No valid time points where reference release <= 85%."); st.stop()
+            st.error("No valid time points where reference <= 85%."); st.stop()
 
-        f2_obs = float(50*np.log10(100/np.sqrt(1+np.mean((rr_obs[mask_obs]-rt_obs[mask_obs])**2))))
+        f2_obs = float(50 * np.log10(100 / np.sqrt(1 + np.mean((rr_obs[mask_obs] - rt_obs[mask_obs]) ** 2))))
 
-        ref_idx  = [np.where(t_ref_arr ==ti)[0][0] for ti in t_common]
-        test_idx = [np.where(t_test_arr==ti)[0][0] for ti in t_common]
-        raw_ref_c  = raw_ref[ref_idx,  :]
+        ref_idx = [np.where(t_ref_arr == ti)[0][0] for ti in t_common]
+        test_idx = [np.where(t_test_arr == ti)[0][0] for ti in t_common]
+        raw_ref_c = raw_ref[ref_idx, :]
         raw_test_c = raw_test[test_idx, :]
 
         prog = st.progress(0, text="Running bootstrap simulation...")
         rng = np.random.default_rng(int(seed_val) if seed_val > 0 else None)
-        n_v_ref  = raw_ref.shape[1]
+        n_v_ref = raw_ref.shape[1]
         n_v_test = raw_test.shape[1]
         results = []
         chunk = max(1, int(n_iter) // 100)
         for i in range(int(n_iter)):
-            rs = raw_ref_c[:,  rng.integers(0, n_v_ref,  size=n_v_ref)]
+            rs = raw_ref_c[:, rng.integers(0, n_v_ref, size=n_v_ref)]
             ts = raw_test_c[:, rng.integers(0, n_v_test, size=n_v_test)]
-            R  = np.mean(rs, axis=1)
-            T  = np.mean(ts, axis=1)
-            m  = R <= 85
+            R = np.mean(rs, axis=1)
+            T = np.mean(ts, axis=1)
+            m = R <= 85
             if np.any(m):
-                results.append(50*np.log10(100/np.sqrt(1+np.mean((R[m]-T[m])**2))))
-            if (i+1) % chunk == 0:
-                prog.progress((i+1)/int(n_iter),
-                              text="Iteration " + str(i+1) + "/" + str(int(n_iter)) + "...")
+                results.append(50 * np.log10(100 / np.sqrt(1 + np.mean((R[m] - T[m]) ** 2))))
+            if (i + 1) % chunk == 0:
+                prog.progress((i + 1) / int(n_iter), text="Iteration " + str(i + 1) + "/" + str(int(n_iter)))
         prog.empty()
 
-        f2_boot  = np.array(results)
-        f2_boot  = f2_boot[~np.isnan(f2_boot)]
+        f2_boot = np.array(results)
+        f2_boot = f2_boot[~np.isnan(f2_boot)]
         f2_lower = float(np.percentile(f2_boot, lower_pctile))
-        f2_upper = float(np.percentile(f2_boot, 100-lower_pctile))
-        f2_mean  = float(np.mean(f2_boot))
-        f2_med   = float(np.median(f2_boot))
-        f2_sd    = float(np.std(f2_boot, ddof=1))
-        is_sim   = f2_lower >= 50
+        f2_upper = float(np.percentile(f2_boot, 100 - lower_pctile))
+        f2_mean = float(np.mean(f2_boot))
+        f2_med = float(np.median(f2_boot))
+        f2_sd = float(np.std(f2_boot, ddof=1))
+        is_sim = f2_lower >= 50
 
-        verdict_color = "#c6efce" if is_sim else "#ffc7ce"
-        verdict_icon  = "SIMILAR" if is_sim else "NOT SIMILAR"
-        border_color  = "#27ae60" if is_sim else "#e74c3c"
-        cmp_sign      = ">=" if is_sim else "<"
+        vc = "#c6efce" if is_sim else "#ffc7ce"
+        vi = "SIMILAR" if is_sim else "NOT SIMILAR"
+        bc = "#27ae60" if is_sim else "#e74c3c"
+        cs = ">=" if is_sim else "<"
         st.markdown(
-            "<div style='background:" + verdict_color + ";border-radius:8px;padding:16px 22px;"
-            "font-size:1.15rem;font-weight:700;margin:14px 0;"
-            "border-left:6px solid " + border_color + ";'>"
-            + verdict_icon + " | FDA Decision: " + str(lower_pctile) + "th Percentile f2 = "
-            "<strong>" + str(round(f2_lower, 2)) + "</strong> (" + cmp_sign + " 50)</div>",
+            "<div style='background:" + vc + ";border-radius:8px;padding:16px 22px;"
+            "font-size:1.15rem;font-weight:700;margin:14px 0;border-left:6px solid " + bc + ";'>"
+            + vi + " | FDA Decision: " + str(lower_pctile) + "th Percentile f2 = "
+            "<strong>" + str(round(f2_lower, 2)) + "</strong> (" + cs + " 50)</div>",
             unsafe_allow_html=True
         )
 
-        mc1,mc2,mc3,mc4,mc5 = st.columns(5)
-        mc1.metric("Observed f2",       f"{f2_obs:.2f}")
-        mc2.metric("Bootstrap Mean f2", f"{f2_mean:.2f}")
-        mc3.metric("Bootstrap Median",  f"{f2_med:.2f}")
+        mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+        mc1.metric("Observed f2", f"{f2_obs:.2f}")
+        mc2.metric("Bootstrap Mean", f"{f2_mean:.2f}")
+        mc3.metric("Bootstrap Median", f"{f2_med:.2f}")
         mc4.metric(str(lower_pctile) + "th Pctl (FDA)", f"{f2_lower:.2f}")
-        mc5.metric("Bootstrap SD",      f"{f2_sd:.2f}")
+        mc5.metric("Bootstrap SD", f"{f2_sd:.2f}")
 
-        st.markdown("#### Bootstrap Summary Statistics")
-        df_summary = pd.DataFrame({
+        st.markdown("#### Bootstrap Summary")
+        df_sum = pd.DataFrame({
             "Statistic": [
-                "Observed f2 (mean profiles)",
-                "Bootstrap Mean f2", "Bootstrap Median f2", "Bootstrap SD",
-                str(lower_pctile) + "th Percentile (FDA Decision Point)",
-                str(100-lower_pctile) + "th Percentile (Upper)",
-                "Valid iterations (n)", "FDA Verdict",
+                "Observed f2", "Bootstrap Mean f2", "Bootstrap Median", "Bootstrap SD",
+                str(lower_pctile) + "th Percentile (FDA)", str(100 - lower_pctile) + "th Percentile",
+                "Valid iterations", "FDA Verdict"
             ],
             "Value": [
                 f"{f2_obs:.4f}", f"{f2_mean:.4f}", f"{f2_med:.4f}", f"{f2_sd:.4f}",
-                f"{f2_lower:.4f}", f"{f2_upper:.4f}", f"{len(f2_boot):,}", verdict_icon,
+                f"{f2_lower:.4f}", f"{f2_upper:.4f}", f"{len(f2_boot):,}", vi
             ]
         })
-        st.dataframe(df_summary, use_container_width=True, hide_index=True)
+        st.dataframe(df_sum, use_container_width=True, hide_index=True)
 
         st.markdown("#### f2 Bootstrap Distribution")
-        fig_fb, ax_fb = plt.subplots(figsize=(10,4.5))
+        fig_fb, ax_fb = plt.subplots(figsize=(10, 4.5))
         style_ax(fig_fb, ax_fb)
         ax_fb.hist(f2_boot, bins=60, color=OXFORD, alpha=0.78, edgecolor="white", lw=0.4, label="Bootstrap f2")
-        ax_fb.axvline(50,       color=AMBER,     lw=2.2, ls="--", label="f2=50 (FDA Threshold)")
-        ax_fb.axvline(f2_lower, color="#e74c3c", lw=1.8, ls=":",  label=str(lower_pctile)+"th Pctl="+str(round(f2_lower,2)))
-        ax_fb.axvline(f2_obs,   color="#27ae60", lw=1.8, ls="-",  label="Observed f2="+str(round(f2_obs,2)))
+        ax_fb.axvline(50, color=AMBER, lw=2.2, ls="--", label="f2=50 (FDA)")
+        ax_fb.axvline(f2_lower, color="#e74c3c", lw=1.8, ls=":", label=str(lower_pctile) + "th Pctl=" + str(round(f2_lower, 2)))
+        ax_fb.axvline(f2_obs, color="#27ae60", lw=1.8, ls="-", label="Observed f2=" + str(round(f2_obs, 2)))
         ax_fb.set_xlabel("f2 Value")
         ax_fb.set_ylabel("Frequency")
-        ax_fb.set_title("Bootstrap f2 Distribution — " + ref_bs + " vs " + test_bs)
+        ax_fb.set_title("Bootstrap f2 — " + ref_bs + " vs " + test_bs)
         ax_fb.legend(fontsize=9)
         st.pyplot(fig_fb)
         plt.close()
 
         st.markdown("#### Point-by-Point Comparison")
         df_pts = pd.DataFrame({
-            "Time (" + time_unit + ")":         t_common,
+            "Time (" + time_unit + ")": t_common,
             "Reference Mean % (" + ref_bs + ")": rr_obs.round(2),
-            "Test Mean % (" + test_bs + ")":     rt_obs.round(2),
-            "|Diff| (%)":                         np.abs(rr_obs-rt_obs).round(2),
-            "Used in f2 (ref<=85%)":              ["Yes" if r<=85 else "No" for r in rr_obs],
+            "Test Mean % (" + test_bs + ")": rt_obs.round(2),
+            "|Diff| (%)": np.abs(rr_obs - rt_obs).round(2),
+            "Used in f2 (ref<=85%)": ["Yes" if r <= 85 else "No" for r in rr_obs],
         })
         st.dataframe(df_pts, use_container_width=True, hide_index=True)
-        st.markdown(
-            "<div class='info-banner' style='font-size:0.83rem;'>"
-            "<strong>Reference:</strong> Shah VP et al. Pharm Res. 1998;15(6):889-896. | "
-            "FDA Guidance: Dissolution Testing of IR Solid Oral Dosage Forms (1997)."
-            "</div>", unsafe_allow_html=True
-        )
+        st.caption("Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997")
 
 
 # ===========================================================================
@@ -2122,4 +2124,3 @@ elif nav == "Excel Report":
         st.download_button("Download Excel Report", data=buf.getvalue(),
                            file_name="DissolvA_Report.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
