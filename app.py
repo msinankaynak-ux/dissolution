@@ -1,4 +1,8 @@
 import streamlit as st
+import streamlit_authenticator as stauth
+st.code(stauth.Hasher(['sifre123']).generate()[0])
+st.stop()
+import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
