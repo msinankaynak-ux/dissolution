@@ -3,11 +3,11 @@ credentials:
     sinan:
       email: msinankaynak@gmail.com
       name: M. Sinan Kaynak
-      password: $2b$12$tXK2H9tEIFMqFNPTNxMH6.N8dVCjRcfyUjNJe.e1wOOFHlInQLQqe
+      password: $2b$12$cT8d9tgCkAGNQlcCsjxc/ey/A.vw40ot0jeBQBz9haEkZVyXjRUfu
     kullanici2:
       email: kullanici2@example.com
       name: Kullanici Iki
-      password: $2b$12$tXK2H9tEIFMqFNPTNxMH6.N8dVCjRcfyUjNJe.e1wOOFHlInQLQqe
+      password: $2b$12$cT8d9tgCkAGNQlcCsjxc/ey/A.vw40ot0jeBQBz9haEkZVyXjRUfu
 
 cookie:
   expiry_days: 30
