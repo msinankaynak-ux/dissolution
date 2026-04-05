@@ -13,41 +13,33 @@ except ImportError:
     _PLOTLY_OK = False
 
 # ===========================================================================
-# AUTHENTICATION  —  must come before any other st.* calls
+# AUTHENTICATION — Google OAuth
 # ===========================================================================
-import streamlit_authenticator as stauth
-import yaml
-from yaml.loader import SafeLoader
-
-with open('config.yaml') as file:
-    config = yaml.load(file, Loader=SafeLoader)
-
-authenticator = stauth.Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    config['cookie']['key'],
-    config['cookie']['expiry_days'],
-)
-
-authenticator.login(location='main')
-
-if st.session_state.get('authentication_status') is False:
-    st.error('❌ Kullanıcı adı veya şifre hatalı.')
-    st.stop()
-elif st.session_state.get('authentication_status') is None:
-    st.info('ð Lütfen kullanıcı adı ve şifrenizi girerek giriş yapın.')
+if not st.experimental_user.is_logged_in:
+    st.markdown(
+        "<h1 style='color:#002147;text-align:center;margin-top:80px;'>"
+        "DissolvA<sup style='font-size:1rem;'>™</sup></h1>"
+        "<p style='text-align:center;color:#888;margin-bottom:40px;'>"
+        "Predictive Dissolution Suite</p>",
+        unsafe_allow_html=True
+    )
+    col1, col2, col3 = st.columns([1,1,1])
+    with col2:
+        if st.button("🔵  Google ile Giriş Yap", use_container_width=True, type="primary"):
+            st.login("google")
     st.stop()
 
-# Buradan aşağısı sadece giriş yapmış kullanıcılara gösterilir
 with st.sidebar:
     st.markdown(
         f"<div style='padding:8px 12px;background:rgba(255,191,0,0.1);"
         f"border-radius:6px;border:1px solid rgba(255,191,0,0.3);margin-bottom:12px;'>"
-        f"👤 <strong style='color:#FFBF00;'>{st.session_state.get('name','')}</strong>"
+        f"<strong style='color:#FFBF00;'>{st.experimental_user.name}</strong><br>"
+        f"<span style='font-size:0.75rem;color:#7a9dbf;'>{st.experimental_user.email}</span>"
         f"</div>",
         unsafe_allow_html=True
     )
-    authenticator.logout('Çıkış Yap')
+    if st.button("Çıkış Yap"):
+        st.logout()
 # ===========================================================================
 
 from scipy.optimize import curve_fit, root
