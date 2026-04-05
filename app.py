@@ -48,7 +48,7 @@ if not st.session_state.get("authentication_status"):
     with col_google:
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("**veya**")
-        if st.button("Google ile Giris Yap", use_container_width=True):
+         if st.button("🔴 Google ile Giris Yap", use_container_width=True):
             st.login("google")
 
     if st.session_state.get('authentication_status') is False:
