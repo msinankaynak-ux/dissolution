@@ -4,3 +4,4 @@ numpy
 pandas
 matplotlib
 xlsxwriter
+streamlit-authenticator
