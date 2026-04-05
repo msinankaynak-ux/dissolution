@@ -1,6 +1,7 @@
 import streamlit as st
-import streamlit_authenticator as stauth
-st.code(stauth.Hasher(['sifre123']).generate()[0])
+import bcrypt
+hashed = bcrypt.hashpw('sifre123'.encode(), bcrypt.gensalt()).decode()
+st.code(hashed)
 st.stop()
 import streamlit as st
 import numpy as np
