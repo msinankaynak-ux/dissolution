@@ -1,0 +1,19 @@
+credentials:
+  usernames:
+    sinan:
+      email: msinankaynak@gmail.com
+      name: M. Sinan Kaynak
+      password: $2b$12$ExVDUMvDdxKMlPGDwmLnFuGnkxbL5MCN.Qn9O/dl3mBwMKOCXCVrC
+    kullanici2:
+      email: kullanici2@example.com
+      name: Kullanici Iki
+      password: $2b$12$ExVDUMvDdxKMlPGDwmLnFuGnkxbL5MCN.Qn9O/dl3mBwMKOCXCVrC
+
+cookie:
+  expiry_days: 30
+  key: dissolva_gizli_anahtar_2025
+  name: dissolva_cookie
+
+preauthorized:
+  emails:
+    - msinankaynak@gmail.com
