@@ -5,3 +5,4 @@ pandas
 matplotlib
 xlsxwriter
 streamlit-authenticator
+Authlib>=1.3.2
