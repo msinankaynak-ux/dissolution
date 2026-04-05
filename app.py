@@ -12,7 +12,7 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days'],
 )
 
-name, authentication_status, username = authenticator.login('Login', 'main')
+name, authentication_status, username = authenticator.login(location='main')
 
 if authentication_status is False:
     st.error('Kullanıcı adı veya şifre hatalı')
