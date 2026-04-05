@@ -12,17 +12,18 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days'],
 )
 
-name, authentication_status, username = authenticator.login(location='main')
+authenticator.login(location='main')
 
-if authentication_status is False:
+if st.session_state.get('authentication_status') is False:
     st.error('Kullanıcı adı veya şifre hatalı')
     st.stop()
-elif authentication_status is None:
+elif st.session_state.get('authentication_status') is None:
     st.warning('Lütfen giriş yapın')
     st.stop()
 
 # buradan sonra mevcut DissolvA kodun devam eder
-authenticator.logout('Çıkış Yap', 'sidebar')
+with st.sidebar:
+    authenticator.logout()
 import streamlit as st
 import numpy as np
 import pandas as pd
