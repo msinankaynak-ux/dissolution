@@ -43,7 +43,7 @@ with st.sidebar:
     st.markdown(
         f"<div style='padding:8px 12px;background:rgba(255,191,0,0.1);"
         f"border-radius:6px;border:1px solid rgba(255,191,0,0.3);margin-bottom:12px;'>"
-        f"ð¤ <strong style='color:#FFBF00;'>{st.session_state.get('name','')}</strong>"
+        f"👤¤ <strong style='color:#FFBF00;'>{st.session_state.get('name','')}</strong>"
         f"</div>",
         unsafe_allow_html=True
     )
