@@ -1,9 +1,4 @@
 import streamlit as st
-import bcrypt
-hashed = bcrypt.hashpw('sifre123'.encode(), bcrypt.gensalt()).decode()
-st.code(hashed)
-st.stop()
-import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
