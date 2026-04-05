@@ -10,6 +10,13 @@ from scipy.stats import norm as sp_norm
 from scipy.integrate import trapezoid
 import io
 
+try:
+    import plotly.figure_factory as ff
+    import plotly.graph_objects as go
+    _PLOTLY_OK = True
+except ImportError:
+    _PLOTLY_OK = False
+
 st.set_page_config(
     page_title="DissolvA - Predictive Dissolution Suite",
     page_icon="D",
@@ -263,16 +270,6 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    nav = st.radio("", [
-        "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
-        "f1 and f2 Similarity", "IVIVC Analysis", "Excel Report"
-    ], label_visibility="hidden")
-
-    st.markdown('<hr style="border:1px solid rgba(255,191,0,0.3);margin:14px 0;">', unsafe_allow_html=True)
-
-    # Method & Parameter Settings button
-    if "show_method_panel" not in st.session_state:
-        st.session_state.show_method_panel = False
     if "method_cfg" not in st.session_state:
         st.session_state.method_cfg = {
             "time_unit": "minutes", "conc_unit": "mg/mL", "dose_mg": 100.0,
@@ -287,10 +284,6 @@ with st.sidebar:
             "hplc_run_time": 10.0, "notes": "",
         }
 
-    btn_label = "  METHOD & PARAMETER SETTINGS"
-    if st.button(btn_label, key="method_btn"):
-        st.session_state.show_method_panel = not st.session_state.show_method_panel
-
     cfg = st.session_state.method_cfg
 
     # Expose variables globally for rest of app
@@ -299,6 +292,12 @@ with st.sidebar:
     dose_mg   = cfg["dose_mg"]
     q_time    = cfg["q_time"]
     q_limit   = cfg["q_limit"]
+
+    nav = st.radio("", [
+        "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
+        "f1 and f2 Similarity", "Bootstrap f2 Analysis", "IVIVC Analysis",
+        "Excel Report", "Method Settings", "Analytical Settings",
+    ], label_visibility="hidden")
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.25);margin:14px 0;">', unsafe_allow_html=True)
     st.markdown(
@@ -519,225 +518,222 @@ st.markdown(
 )
 
 # ===========================================================================
-# METHOD & PARAMETER SETTINGS PANEL (shown above all pages when open)
+# PAGE: METHOD SETTINGS
 # ===========================================================================
-if st.session_state.get("show_method_panel", False):
+if nav == "Method Settings":
     cfg = st.session_state.method_cfg
     st.markdown(
-        "<div style=\"background:white;border:2px solid #FFBF00;border-radius:10px;"
-        "padding:24px;margin-bottom:20px;\">"
-        "<h2 style=\"color:#002147;margin:0 0 4px;\">Method & Parameter Settings</h2>"
-        "<p style=\"color:#888;font-size:0.85rem;margin:0 0 20px;\">Define your dissolution method and analytical conditions. "
-        "These will be included in the Excel report.</p></div>",
+        "<h2 style='color:#002147;margin:0 0 4px;'>Method & Parameter Settings</h2>"
+        "<p style='color:#888;font-size:0.88rem;margin:0 0 20px;'>"
+        "General parameters, dissolution apparatus and medium conditions. "
+        "All settings are saved automatically and included in the Excel report.</p>",
         unsafe_allow_html=True
     )
 
-    tab_gen, tab_diss, tab_anal = st.tabs([
-        "General Parameters", "Dissolution Method", "Analytical Method"
-    ])
+    st.markdown("### General Parameters")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        cfg["time_unit"] = st.selectbox("Time Unit",
+            ["minutes", "hours"], index=["minutes","hours"].index(cfg["time_unit"]))
+    with c2:
+        cfg["conc_unit"] = st.selectbox("Concentration Unit",
+            ["mg/mL", "ug/mL", "mg/L"], index=["mg/mL","ug/mL","mg/L"].index(cfg["conc_unit"]))
+    with c3:
+        cfg["dose_mg"] = st.number_input("Dose (mg)", value=float(cfg["dose_mg"]), min_value=0.1)
 
-    # - TAB 1: General Parameters -
-    with tab_gen:
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            cfg["time_unit"] = st.selectbox("Time Unit",
-                ["minutes", "hours"], index=["minutes","hours"].index(cfg["time_unit"]))
-        with c2:
-            cfg["conc_unit"] = st.selectbox("Concentration Unit",
-                ["mg/mL", "ug/mL", "mg/L"], index=["mg/mL","ug/mL","mg/L"].index(cfg["conc_unit"]))
-        with c3:
-            cfg["dose_mg"] = st.number_input("Dose (mg)", value=float(cfg["dose_mg"]), min_value=0.1)
+    st.markdown("---")
+    st.markdown("### FDA/USP Acceptance Criterion (Q)")
+    c4, c5 = st.columns(2)
+    with c4:
+        cfg["q_time"] = st.number_input(
+            "Q Time Point", value=float(cfg["q_time"]), min_value=0.0,
+            help="Time point for Q criterion evaluation (e.g. 45 min for IR)")
+    with c5:
+        cfg["q_limit"] = st.number_input(
+            "Q Value (%)", value=float(cfg["q_limit"]), min_value=0.0, max_value=100.0,
+            help="Minimum % dissolved at Q-time (default 80% per USP <711>)")
+    ql = cfg['q_limit']; qt = cfg['q_time']; tu = cfg['time_unit']
+    st.markdown(f'<div class="info-banner">NLT <strong>{ql:.0f}%</strong> dissolved at <strong>{qt:.0f} {tu}</strong> &nbsp;|&nbsp; USP &lt;711&gt; / FDA 1997</div>', unsafe_allow_html=True)
 
-        st.markdown("---")
-        st.markdown("**FDA/USP Acceptance Criterion (Q)**")
-        c4, c5 = st.columns(2)
-        with c4:
-            cfg["q_time"] = st.number_input(
-                "Q Time Point", value=float(cfg["q_time"]), min_value=0.0,
-                help="Time point for Q criterion evaluation (e.g. 45 min for IR)")
-        with c5:
-            cfg["q_limit"] = st.number_input(
-                "Q Value (%)", value=float(cfg["q_limit"]), min_value=0.0, max_value=100.0,
-                help="Minimum % dissolved at Q-time (default 80% per USP <711>)")
-        st.markdown(
-            f"<div class=\"info-banner\">NLT <strong>{cfg['q_limit']:.0f}%</strong> dissolved "
-            f"at <strong>{cfg['q_time']:.0f} {cfg['time_unit']}</strong> &nbsp;|&nbsp; "
-            "USP &lt;711&gt; / FDA 1997</div>",
-            unsafe_allow_html=True
-        )
+    st.markdown("---")
+    st.markdown("### Dissolution Apparatus & Medium")
+    c1, c2 = st.columns(2)
+    with c1:
+        apparatus_opts = [
+            "USP I (Basket)", "USP II (Paddle)",
+            "USP III (Reciprocating Cylinder)",
+            "USP IV (Flow-Through Cell)", "Other"
+        ]
+        cur_app = cfg.get("apparatus", "USP II (Paddle)")
+        if cur_app not in apparatus_opts:
+            cur_app = "USP II (Paddle)"
+        cfg["apparatus"] = st.selectbox("Dissolution Apparatus",
+            apparatus_opts, index=apparatus_opts.index(cur_app))
+    with c2:
+        medium_opts = [
+            "0.1N HCl (pH 1.2)", "Acetate Buffer (pH 4.5)",
+            "Phosphate Buffer (pH 6.8)", "Phosphate Buffer (pH 7.4)",
+            "Purified Water", "SGF (Simulated Gastric Fluid)",
+            "SIF (Simulated Intestinal Fluid)", "FaSSIF", "FeSSIF", "Other"
+        ]
+        cur_med = cfg.get("medium", "0.1N HCl (pH 1.2)")
+        if cur_med not in medium_opts:
+            cur_med = "Other"
+        cfg["medium"] = st.selectbox("Dissolution Medium",
+            medium_opts, index=medium_opts.index(cur_med))
 
-    # -- TAB 2: Dissolution Method -------------------------------------------
-    with tab_diss:
-        c1, c2 = st.columns(2)
-        with c1:
-            apparatus_opts = [
-                "USP I (Basket)", "USP II (Paddle)",
-                "USP III (Reciprocating Cylinder)",
-                "USP IV (Flow-Through Cell)", "Other"
-            ]
-            cur_app = cfg.get("apparatus", "USP II (Paddle)")
-            if cur_app not in apparatus_opts:
-                cur_app = "USP II (Paddle)"
-            cfg["apparatus"] = st.selectbox("Dissolution Apparatus",
-                apparatus_opts, index=apparatus_opts.index(cur_app))
+    if cfg["medium"] == "Other":
+        cfg["medium_custom"] = st.text_input(
+            "Specify Medium", value=cfg.get("medium_custom", ""),
+            placeholder="e.g. Phosphate Buffer pH 7.2")
 
-        with c2:
-            medium_opts = [
-                "0.1N HCl (pH 1.2)", "Acetate Buffer (pH 4.5)",
-                "Phosphate Buffer (pH 6.8)", "Phosphate Buffer (pH 7.4)",
-                "Purified Water", "SGF (Simulated Gastric Fluid)",
-                "SIF (Simulated Intestinal Fluid)", "FaSSIF", "FeSSIF", "Other"
-            ]
-            cur_med = cfg.get("medium", "0.1N HCl (pH 1.2)")
-            if cur_med not in medium_opts:
-                cur_med = "Other"
-            cfg["medium"] = st.selectbox("Dissolution Medium",
-                medium_opts, index=medium_opts.index(cur_med))
+    st.markdown("**Additional Dissolution Agent (Surfactant etc.)**")
+    ca1, ca2, ca3 = st.columns(3)
+    with ca1:
+        surfactant_opts = [
+            "None", "SLS (Sodium Lauryl Sulfate)",
+            "Tween 80", "Poloxamer 188", "CTAB", "Other"
+        ]
+        cur_surf = cfg.get("surfactant", "None")
+        if cur_surf not in surfactant_opts:
+            cur_surf = "Other"
+        cfg["surfactant"] = st.selectbox(
+            "Agent", surfactant_opts,
+            index=surfactant_opts.index(cur_surf))
+    with ca2:
+        cfg["surfactant_conc"] = st.number_input(
+            "Concentration (%)", value=float(cfg.get("surfactant_conc", 0.0)),
+            min_value=0.0, max_value=5.0, step=0.05,
+            help="e.g. 0.5% SLS, 1% Tween 80")
+    with ca3:
+        if cfg["surfactant"] == "Other":
+            cfg["surfactant_custom"] = st.text_input(
+                "Specify Agent", value=cfg.get("surfactant_custom", ""))
 
-        if cfg["medium"] == "Other":
-            cfg["medium_custom"] = st.text_input(
-                "Specify Medium", value=cfg.get("medium_custom", ""),
-                placeholder="e.g. Phosphate Buffer pH 7.2")
+    c3, c4, c5 = st.columns(3)
+    with c3:
+        cfg["rpm"] = st.number_input(
+            "Rotation Speed (rpm)", value=int(cfg.get("rpm", 50)),
+            min_value=1, max_value=300, step=5)
+    with c4:
+        cfg["volume_ml"] = st.number_input(
+            "Medium Volume (mL)", value=int(cfg.get("volume_ml", 900)),
+            min_value=100, max_value=4000, step=100)
+    with c5:
+        cfg["temp_c"] = st.number_input(
+            "Temperature (°C)", value=float(cfg.get("temp_c", 37.0)),
+            min_value=20.0, max_value=50.0, step=0.5)
 
-        # Surfactant / additional agent
-        st.markdown("**Additional Dissolution Agent (Surfactant etc.)**")
-        ca1, ca2, ca3 = st.columns(3)
-        with ca1:
-            surfactant_opts = [
-                "None", "SLS (Sodium Lauryl Sulfate)",
-                "Tween 80", "Poloxamer 188", "CTAB", "Other"
-            ]
-            cur_surf = cfg.get("surfactant", "None")
-            if cur_surf not in surfactant_opts:
-                cur_surf = "Other"
-            cfg["surfactant"] = st.selectbox(
-                "Agent", surfactant_opts,
-                index=surfactant_opts.index(cur_surf))
-        with ca2:
-            cfg["surfactant_conc"] = st.number_input(
-                "Concentration (%)", value=float(cfg.get("surfactant_conc", 0.0)),
-                min_value=0.0, max_value=5.0, step=0.05,
-                help="e.g. 0.5% SLS, 1% Tween 80")
-        with ca3:
-            if cfg["surfactant"] == "Other":
-                cfg["surfactant_custom"] = st.text_input(
-                    "Specify Agent", value=cfg.get("surfactant_custom", ""))
+    cfg["notes"] = st.text_area(
+        "Additional Method Notes",
+        value=cfg.get("notes", ""), height=100,
+        placeholder="e.g. Sinker used, sampling times, filter type...")
 
-        c3, c4, c5 = st.columns(3)
-        with c3:
-            cfg["rpm"] = st.number_input(
-                "Rotation Speed (rpm)", value=int(cfg.get("rpm", 50)),
-                min_value=1, max_value=300, step=5)
-        with c4:
-            cfg["volume_ml"] = st.number_input(
-                "Medium Volume (mL)", value=int(cfg.get("volume_ml", 900)),
-                min_value=100, max_value=4000, step=100)
-        with c5:
-            cfg["temp_c"] = st.number_input(
-                "Temperature (degC)", value=float(cfg.get("temp_c", 37.0)),
-                min_value=20.0, max_value=50.0, step=0.5)
-
-        cfg["notes"] = st.text_area(
-            "Additional Method Notes",
-            value=cfg.get("notes", ""), height=80,
-            placeholder="e.g. Sinker used, sampling times, filter type...")
-
-    # -- TAB 3: Analytical Method ---------------------------------------------
-    with tab_anal:
-        anal_opts = ["UV-Vis Spectrophotometry", "HPLC", "UPLC"]
-        cur_anal = cfg.get("analytical", "UV-Vis Spectrophotometry")
-        if cur_anal not in anal_opts:
-            cur_anal = "UV-Vis Spectrophotometry"
-        cfg["analytical"] = st.radio(
-            "Analytical Method", anal_opts,
-            horizontal=True,
-            index=anal_opts.index(cur_anal))
-
-        if cfg["analytical"] == "UV-Vis Spectrophotometry":
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                cfg["lambda_max"] = st.number_input(
-                    "lambda max (nm)",
-                    value=float(cfg.get("lambda_max", 272.0)),
-                    min_value=190.0, max_value=900.0)
-            with c2:
-                cfg["slit_nm"] = st.number_input(
-                    "Slit Width (nm)",
-                    value=float(cfg.get("slit_nm", 2.0)),
-                    min_value=0.1, max_value=10.0)
-            with c3:
-                cfg["ref_wavelength"] = st.text_input(
-                    "Reference Wavelength (nm)",
-                    value=cfg.get("ref_wavelength", ""),
-                    placeholder="e.g. 700 (optional)")
-            st.markdown(
-                f"<div class=\"info-banner\">UV detection at "
-                f"<strong>{cfg['lambda_max']:.1f} nm</strong>, "
-                f"slit {cfg['slit_nm']:.1f} nm</div>",
-                unsafe_allow_html=True)
-
-        else:
-            c1, c2 = st.columns(2)
-            with c1:
-                cfg["hplc_column"] = st.text_input(
-                    "Column", value=cfg.get("hplc_column", ""),
-                    placeholder="e.g. C18 150x4.6mm 5um")
-            with c2:
-                cfg["hplc_col_temp"] = st.number_input(
-                    "Column Temperature (degC)",
-                    value=float(cfg.get("hplc_col_temp", 30.0)),
-                    min_value=20.0, max_value=80.0)
-
-            c3, c4, c5 = st.columns(3)
-            with c3:
-                cfg["hplc_mp_a"] = st.text_input(
-                    "Mobile Phase A", value=cfg.get("hplc_mp_a", ""),
-                    placeholder="e.g. 0.1% Formic acid/water")
-            with c4:
-                cfg["hplc_mp_b"] = st.text_input(
-                    "Mobile Phase B", value=cfg.get("hplc_mp_b", ""),
-                    placeholder="e.g. Acetonitrile")
-            with c5:
-                cfg["hplc_gradient"] = st.text_area(
-                    "Gradient Program",
-                    value=cfg.get("hplc_gradient", ""), height=68,
-                    placeholder="e.g. 0 min 10%B, 5 min 90%B, 8 min 10%B")
-
-            c6, c7, c8 = st.columns(3)
-            with c6:
-                cfg["hplc_flow"] = st.number_input(
-                    "Flow Rate (mL/min)",
-                    value=float(cfg.get("hplc_flow", 1.0)),
-                    min_value=0.1, max_value=5.0, step=0.1)
-            with c7:
-                cfg["hplc_detection"] = st.number_input(
-                    "Detection Wavelength (nm)",
-                    value=float(cfg.get("hplc_detection", 254.0)),
-                    min_value=190.0, max_value=900.0)
-            with c8:
-                cfg["hplc_inj_vol"] = st.number_input(
-                    "Injection Volume (uL)",
-                    value=float(cfg.get("hplc_inj_vol", 20.0)),
-                    min_value=1.0, max_value=100.0)
-
-            cfg["hplc_run_time"] = st.number_input(
-                "Run Time (min)",
-                value=float(cfg.get("hplc_run_time", 10.0)),
-                min_value=1.0, max_value=120.0)
-
-    # Update global vars from cfg after editing
     st.session_state.method_cfg = cfg
     time_unit = cfg["time_unit"]
     conc_unit = cfg["conc_unit"]
     dose_mg   = cfg["dose_mg"]
     q_time    = cfg["q_time"]
     q_limit   = cfg["q_limit"]
+    st.success("Settings saved automatically.")
 
-    if st.button("Save & Close", key="method_close"):
-        st.session_state.show_method_panel = False
-        st.rerun()
+# ===========================================================================
+# PAGE: ANALYTICAL SETTINGS
+# ===========================================================================
+elif nav == "Analytical Settings":
+    cfg = st.session_state.method_cfg
+    st.markdown(
+        "<h2 style='color:#002147;margin:0 0 4px;'>Analytical Method Settings</h2>"
+        "<p style='color:#888;font-size:0.88rem;margin:0 0 20px;'>"
+        "UV-Vis or chromatographic (HPLC/UPLC) method parameters. "
+        "Included in the Excel report automatically.</p>",
+        unsafe_allow_html=True
+    )
+
+    anal_opts = ["UV-Vis Spectrophotometry", "HPLC", "UPLC"]
+    cur_anal = cfg.get("analytical", "UV-Vis Spectrophotometry")
+    if cur_anal not in anal_opts:
+        cur_anal = "UV-Vis Spectrophotometry"
+    cfg["analytical"] = st.radio(
+        "Analytical Method", anal_opts,
+        horizontal=True,
+        index=anal_opts.index(cur_anal))
 
     st.markdown("---")
+
+    if cfg["analytical"] == "UV-Vis Spectrophotometry":
+        st.markdown("### UV-Vis Parameters")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            cfg["lambda_max"] = st.number_input(
+                "λmax (nm)",
+                value=float(cfg.get("lambda_max", 272.0)),
+                min_value=190.0, max_value=900.0)
+        with c2:
+            cfg["slit_nm"] = st.number_input(
+                "Slit Width (nm)",
+                value=float(cfg.get("slit_nm", 2.0)),
+                min_value=0.1, max_value=10.0)
+        with c3:
+            cfg["ref_wavelength"] = st.text_input(
+                "Reference Wavelength (nm)",
+                value=cfg.get("ref_wavelength", ""),
+                placeholder="e.g. 700 (optional)")
+        st.markdown(
+            f'<div class="info-banner">UV detection at <strong>{cfg["lambda_max"]:.1f} nm</strong>, slit {cfg["slit_nm"]:.1f} nm</div>',
+            unsafe_allow_html=True)
+    else:
+        st.markdown(f"### {cfg['analytical']} Parameters")
+        c1, c2 = st.columns(2)
+        with c1:
+            cfg["hplc_column"] = st.text_input(
+                "Column", value=cfg.get("hplc_column", ""),
+                placeholder="e.g. C18 150x4.6mm 5um")
+        with c2:
+            cfg["hplc_col_temp"] = st.number_input(
+                "Column Temperature (°C)",
+                value=float(cfg.get("hplc_col_temp", 30.0)),
+                min_value=20.0, max_value=80.0)
+
+        c3, c4, c5 = st.columns(3)
+        with c3:
+            cfg["hplc_mp_a"] = st.text_input(
+                "Mobile Phase A", value=cfg.get("hplc_mp_a", ""),
+                placeholder="e.g. 0.1% Formic acid/water")
+        with c4:
+            cfg["hplc_mp_b"] = st.text_input(
+                "Mobile Phase B", value=cfg.get("hplc_mp_b", ""),
+                placeholder="e.g. Acetonitrile")
+        with c5:
+            cfg["hplc_gradient"] = st.text_area(
+                "Gradient Program",
+                value=cfg.get("hplc_gradient", ""), height=68,
+                placeholder="e.g. 0 min 10%B, 5 min 90%B, 8 min 10%B")
+
+        c6, c7, c8 = st.columns(3)
+        with c6:
+            cfg["hplc_flow"] = st.number_input(
+                "Flow Rate (mL/min)",
+                value=float(cfg.get("hplc_flow", 1.0)),
+                min_value=0.1, max_value=5.0, step=0.1)
+        with c7:
+            cfg["hplc_detection"] = st.number_input(
+                "Detection Wavelength (nm)",
+                value=float(cfg.get("hplc_detection", 254.0)),
+                min_value=190.0, max_value=900.0)
+        with c8:
+            cfg["hplc_inj_vol"] = st.number_input(
+                "Injection Volume (µL)",
+                value=float(cfg.get("hplc_inj_vol", 20.0)),
+                min_value=1.0, max_value=100.0)
+
+        cfg["hplc_run_time"] = st.number_input(
+            "Run Time (min)",
+            value=float(cfg.get("hplc_run_time", 10.0)),
+            min_value=1.0, max_value=120.0)
+
+    st.session_state.method_cfg = cfg
+    st.success("Settings saved automatically.")
 
 # ===========================================================================
 # PAGE: DATA INPUT
@@ -1497,6 +1493,353 @@ elif nav == "f1 and f2 Similarity":
         "Tt = test cumulative release at time t | "
         "n = number of time points used (reference <= 85%)"
     )
+
+# ===========================================================================
+# PAGE: BOOTSTRAP f2 ANALYSIS
+# ===========================================================================
+elif nav == "Bootstrap f2 Analysis":
+
+    # ---- Bootstrap engine (uses only numpy — no plotly import needed here) --
+    def run_bootstrap_f2(ref_raw, test_raw, iterations=5000, seed=42):
+        """
+        ref_raw / test_raw : 2-D np.array  (n_timepoints  x  n_vessels)
+        Returns: (f2_array, f2_lower_90pct)
+        """
+        rng = np.random.default_rng(seed if seed > 0 else None)
+        n_v_ref  = ref_raw.shape[1]
+        n_v_test = test_raw.shape[1]
+        f2_results = []
+        for _ in range(iterations):
+            ref_sample  = ref_raw[:,  rng.integers(0, n_v_ref,  size=n_v_ref)]
+            test_sample = test_raw[:, rng.integers(0, n_v_test, size=n_v_test)]
+            R_bar = np.mean(ref_sample,  axis=1)
+            T_bar = np.mean(test_sample, axis=1)
+            mask  = R_bar <= 85
+            if np.any(mask):
+                R_f, T_f = R_bar[mask], T_bar[mask]
+                mse = np.mean((R_f - T_f) ** 2)
+                f2  = 50 * np.log10(100 / np.sqrt(1 + mse))
+                f2_results.append(f2)
+        f2_arr = np.array(f2_results)
+        f2_low90 = float(np.percentile(f2_arr, 5))
+        return f2_arr, f2_low90
+
+    # ---- Page header --------------------------------------------------------
+    st.markdown(
+        "<h2 style='color:#002147;margin:0 0 4px;'>Bootstrap f2 Analysis</h2>"
+        "<p style='color:#888;font-size:0.88rem;margin:0 0 12px;'>"
+        "FDA-compliant bootstrap simulation for the f2 similarity factor. "
+        "Reports the <strong>5th percentile</strong> (lower bound of 90% CI) "
+        "as required by FDA. Requires raw vessel data (Excel upload mode).</p>",
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        "<div class='step-box'>"
+        "<strong>FDA Bootstrap Criterion (Shah et al. 1998):</strong><br>"
+        "1. Resample with replacement from each formulation's individual vessel data.<br>"
+        "2. Calculate f2 for each bootstrap iteration.<br>"
+        "3. Report the <strong>5th percentile</strong> of the f2 distribution "
+        "(lower bound of 90% CI).<br>"
+        "4. If this value is <strong>≥ 50</strong>, profiles are considered similar."
+        "</div>",
+        unsafe_allow_html=True
+    )
+
+    # ---- Guard: need ≥2 profiles with raw data ------------------------------
+    if len(st.session_state.profiles) < 2:
+        st.warning(
+            "At least 2 profiles with raw vessel data are required. "
+            "Upload data via 'Excel / CSV Upload (Raw Vessel Data)' in Data Input."
+        )
+        st.stop()
+
+    profiles_with_raw = {
+        nm: d for nm, d in st.session_state.profiles.items()
+        if d.get("raw") and d.get("vessels") and len(d.get("vessels", [])) >= 2
+    }
+    if len(profiles_with_raw) < 2:
+        st.warning(
+            "Bootstrap analysis requires **raw vessel-level data** for at least 2 profiles. "
+            f"Profiles with raw data: **{list(profiles_with_raw.keys()) or 'None'}**. "
+            "Please upload data using 'Excel / CSV Upload (Raw Vessel Data)' mode."
+        )
+        st.stop()
+
+    names_raw = list(profiles_with_raw.keys())
+
+    # ---- Profile selection --------------------------------------------------
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Reference Profile** *(innovator / originator)*")
+        ref_bs = st.selectbox("Reference", names_raw, index=0,
+                              label_visibility="collapsed", key="bs_ref")
+        n_ref = st.session_state.profiles[ref_bs].get("n", 0)
+        st.caption(f"{ref_bs} — {n_ref} vessels")
+    with col2:
+        st.markdown("**Test Profile** *(your formulation)*")
+        test_options = [nm for nm in names_raw if nm != ref_bs]
+        if not test_options:
+            st.error("Need at least 2 profiles with raw data."); st.stop()
+        test_bs = st.selectbox("Test", test_options, index=0,
+                               label_visibility="collapsed", key="bs_test")
+        n_test = st.session_state.profiles[test_bs].get("n", 0)
+        st.caption(f"{test_bs} — {n_test} vessels")
+
+    st.markdown("---")
+
+    # ---- Parameters ---------------------------------------------------------
+    col3, col4, col5 = st.columns(3)
+    with col3:
+        n_iter = st.number_input(
+            "Bootstrap Iterations", min_value=1000, max_value=50000,
+            value=5000, step=500,
+            help="FDA recommends ≥ 2000; 5000 is standard practice."
+        )
+    with col4:
+        lower_pctile = st.selectbox(
+            "CI Lower Bound Percentile",
+            [5.0, 2.5, 0.5],
+            index=0,
+            format_func=lambda x: f"{x}th pctl (→ {int(100-x*2)}% CI)" if x != 5.0 else "5th pctl (→ 90% CI) — FDA",
+            help="FDA standard is 5th percentile (90% CI)."
+        )
+    with col5:
+        seed_val = st.number_input(
+            "Random Seed", min_value=0, max_value=99999, value=42,
+            help="0 = different result each run; any other integer = reproducible."
+        )
+
+    # ---- Run button ---------------------------------------------------------
+    if st.button("▶  Run Bootstrap Simulation", type="primary"):
+
+        d_ref  = st.session_state.profiles[ref_bs]
+        d_test = st.session_state.profiles[test_bs]
+
+        t_ref_arr  = np.array(d_ref["time"],  dtype=float)
+        t_test_arr = np.array(d_test["time"], dtype=float)
+        raw_ref    = np.array(d_ref["raw"],   dtype=float)   # (n_tp_ref,  n_v_ref)
+        raw_test   = np.array(d_test["raw"],  dtype=float)   # (n_tp_test, n_v_test)
+
+        t_common = np.intersect1d(t_ref_arr, t_test_arr)
+        if len(t_common) == 0:
+            st.error("No common time points between the two profiles."); st.stop()
+
+        # Observed f2 (mean profiles)
+        rr_obs = np.array([raw_ref[np.where(t_ref_arr == ti)[0][0], :].mean()
+                           for ti in t_common])
+        rt_obs = np.array([raw_test[np.where(t_test_arr == ti)[0][0], :].mean()
+                           for ti in t_common])
+        mask_obs = rr_obs <= 85
+        if not np.any(mask_obs):
+            st.error("No valid time points where reference release ≤ 85%."); st.stop()
+
+        f2_obs = float(50 * np.log10(
+            100 / np.sqrt(1 + np.mean((rr_obs[mask_obs] - rt_obs[mask_obs]) ** 2))
+        ))
+
+        # Subset raw matrices to common time points
+        ref_idx  = [np.where(t_ref_arr  == ti)[0][0] for ti in t_common]
+        test_idx = [np.where(t_test_arr == ti)[0][0] for ti in t_common]
+        raw_ref_common  = raw_ref[ref_idx,  :]
+        raw_test_common = raw_test[test_idx, :]
+
+        # Run bootstrap
+        prog = st.progress(0, text="Running bootstrap simulation…")
+
+        def _bootstrap_with_progress(ref_raw, test_raw, iterations, seed):
+            rng = np.random.default_rng(seed if seed > 0 else None)
+            n_v_ref  = ref_raw.shape[1]
+            n_v_test = test_raw.shape[1]
+            results = []
+            chunk = max(1, iterations // 100)
+            for i in range(iterations):
+                ref_s  = ref_raw[:,  rng.integers(0, n_v_ref,  size=n_v_ref)]
+                test_s = test_raw[:, rng.integers(0, n_v_test, size=n_v_test)]
+                R_bar  = np.mean(ref_s,  axis=1)
+                T_bar  = np.mean(test_s, axis=1)
+                mask   = R_bar <= 85
+                if np.any(mask):
+                    mse = np.mean((R_bar[mask] - T_bar[mask]) ** 2)
+                    results.append(50 * np.log10(100 / np.sqrt(1 + mse)))
+                if (i + 1) % chunk == 0:
+                    prog.progress((i + 1) / iterations,
+                                  text=f"Iteration {i+1:,} / {iterations:,}…")
+            return np.array(results)
+
+        f2_boot = _bootstrap_with_progress(
+            raw_ref_common, raw_test_common, int(n_iter), int(seed_val)
+        )
+        prog.empty()
+
+        f2_boot    = f2_boot[~np.isnan(f2_boot)]
+        f2_lower   = float(np.percentile(f2_boot, lower_pctile))
+        f2_upper   = float(np.percentile(f2_boot, 100 - lower_pctile))
+        f2_mean    = float(np.mean(f2_boot))
+        f2_med     = float(np.median(f2_boot))
+        f2_sd      = float(np.std(f2_boot, ddof=1))
+        is_similar = f2_lower >= 50
+
+        # ---- Key metric card (big) ------------------------------------------
+        verdict_color = "#c6efce" if is_similar else "#ffc7ce"
+        verdict_icon  = "✅ SIMILAR" if is_similar else "❌ NOT SIMILAR"
+        st.markdown(
+            f"<div style='background:{verdict_color};border-radius:8px;"
+            f"padding:16px 22px;font-size:1.15rem;font-weight:700;margin:14px 0;"
+            f"border-left:6px solid {'#27ae60' if is_similar else '#e74c3c'};'>"
+            f"{verdict_icon} &nbsp;|&nbsp; "
+            f"FDA Decision Point — Lower {lower_pctile:.0f}th Percentile f2 = "
+            f"<span style='font-size:1.4rem;'><strong>{f2_lower:.2f}</strong></span> "
+            f"({'≥' if is_similar else '<'} 50)</div>",
+            unsafe_allow_html=True
+        )
+
+        # ---- Metric row -----------------------------------------------------
+        mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+        mc1.metric("Observed f2",                  f"{f2_obs:.2f}")
+        mc2.metric("Bootstrap Mean f2",             f"{f2_mean:.2f}")
+        mc3.metric("Bootstrap Median f2",           f"{f2_med:.2f}")
+        mc4.metric(f"{lower_pctile:.0f}th Pctl (Lower CI ← FDA)", f"{f2_lower:.2f}")
+        mc5.metric("Bootstrap SD",                  f"{f2_sd:.2f}")
+
+        # ---- Summary table --------------------------------------------------
+        st.markdown("#### Bootstrap Summary Statistics")
+        df_summary = pd.DataFrame({
+            "Statistic": [
+                "Observed f2 (mean profiles)",
+                "Bootstrap Mean f2",
+                "Bootstrap Median f2",
+                "Bootstrap SD",
+                f"Lower {lower_pctile:.0f}th Percentile  ← FDA Decision Point",
+                f"Upper {100-lower_pctile:.0f}th Percentile",
+                "Valid iterations (n)",
+                "FDA Similarity Verdict",
+            ],
+            "Value": [
+                f"{f2_obs:.4f}",
+                f"{f2_mean:.4f}",
+                f"{f2_med:.4f}",
+                f"{f2_sd:.4f}",
+                f"{f2_lower:.4f}",
+                f"{f2_upper:.4f}",
+                f"{len(f2_boot):,}",
+                verdict_icon,
+            ]
+        })
+        st.dataframe(df_summary, use_container_width=True, hide_index=True)
+
+        # ---- Interactive Plotly Distplot (Histogram + KDE) ------------------
+        st.markdown("#### f2 Bootstrap Distribution")
+
+        if _PLOTLY_OK:
+            try:
+                # ff.create_distplot: histogram + KDE overlay
+                fig_dist = ff.create_distplot(
+                    [f2_boot.tolist()],
+                    group_labels=["Bootstrap f2"],
+                    bin_size=max(0.5, (f2_boot.max() - f2_boot.min()) / 60),
+                    colors=[OXFORD],
+                    show_rug=False,
+                )
+
+                # Threshold line at 50
+                fig_dist.add_vline(
+                    x=50, line_width=2.5, line_dash="dash", line_color=AMBER,
+                    annotation_text="f2 = 50 (FDA Threshold)",
+                    annotation_position="top right",
+                    annotation_font_color=AMBER,
+                )
+                # Lower CI line
+                fig_dist.add_vline(
+                    x=f2_lower, line_width=2, line_dash="dot",
+                    line_color="#e74c3c",
+                    annotation_text=f"{lower_pctile:.0f}th Pctl = {f2_lower:.2f}",
+                    annotation_position="top left",
+                    annotation_font_color="#e74c3c",
+                )
+                # Observed f2 line
+                fig_dist.add_vline(
+                    x=f2_obs, line_width=2, line_dash="solid",
+                    line_color="#27ae60",
+                    annotation_text=f"Observed f2 = {f2_obs:.2f}",
+                    annotation_position="top right",
+                    annotation_font_color="#27ae60",
+                    annotation_yshift=30,
+                )
+                # Shade "fail" zone
+                x_min_h = float(f2_boot.min())
+                fig_dist.add_vrect(
+                    x0=x_min_h, x1=min(50.0, float(f2_boot.max())),
+                    fillcolor="#e74c3c", opacity=0.07,
+                    layer="below", line_width=0,
+                )
+
+                fig_dist.update_layout(
+                    title=dict(
+                        text=(
+                            f"Bootstrap f2 Distribution — {ref_bs} vs {test_bs}<br>"
+                            f"<sup>{len(f2_boot):,} iterations | "
+                            f"Lower {lower_pctile:.0f}th Pctl = {f2_lower:.2f} | "
+                            f"{'SIMILAR ✓' if is_similar else 'NOT SIMILAR ✗'}</sup>"
+                        ),
+                        font=dict(color=OXFORD, size=15),
+                    ),
+                    xaxis_title="f2 Value",
+                    yaxis_title="Density / Frequency",
+                    plot_bgcolor="#F8F4EC",
+                    paper_bgcolor="#FDFAF5",
+                    font=dict(family="EB Garamond, Georgia, serif", color=OXFORD),
+                    legend=dict(bgcolor="rgba(255,255,255,0.8)"),
+                    xaxis=dict(gridcolor="#e0dbd0"),
+                    yaxis=dict(gridcolor="#e0dbd0"),
+                    height=460,
+                )
+                st.plotly_chart(fig_dist, use_container_width=True)
+            except Exception as _plot_err:
+                st.warning(f"Plotly distplot could not render ({_plot_err}). "
+                           "Falling back to matplotlib histogram.")
+                _PLOTLY_OK = False   # fall through to matplotlib
+
+        if not _PLOTLY_OK:
+            # Matplotlib fallback
+            fig_fb, ax_fb = plt.subplots(figsize=(10, 4.5))
+            style_ax(fig_fb, ax_fb)
+            ax_fb.hist(f2_boot, bins=60, color=OXFORD, alpha=0.78, edgecolor="white",
+                       lw=0.4, label="Bootstrap f2")
+            ax_fb.axvline(50,        color=AMBER,    lw=2.2, ls="--", label="f2=50 (FDA)")
+            ax_fb.axvline(f2_lower,  color="#e74c3c", lw=1.8, ls=":",
+                          label=f"{lower_pctile:.0f}th Pctl = {f2_lower:.2f}")
+            ax_fb.axvline(f2_obs,    color="#27ae60", lw=1.8, ls="-",
+                          label=f"Observed f2 = {f2_obs:.2f}")
+            ax_fb.set_xlabel("f2 Value"); ax_fb.set_ylabel("Frequency")
+            ax_fb.set_title(f"Bootstrap f2 Distribution — {ref_bs} vs {test_bs}")
+            ax_fb.legend(fontsize=9)
+            st.pyplot(fig_fb); plt.close()
+
+        # ---- Point-by-point table -------------------------------------------
+        st.markdown("#### Point-by-Point Comparison (Mean Values)")
+        df_pts = pd.DataFrame({
+            f"Time ({time_unit})":          t_common,
+            f"Reference Mean % ({ref_bs})": rr_obs.round(2),
+            f"Test Mean % ({test_bs})":     rt_obs.round(2),
+            "|Diff| (%)":                   np.abs(rr_obs - rt_obs).round(2),
+            "Used in f2 (ref ≤ 85%)":      ["Yes" if r <= 85 else "No"
+                                              for r in rr_obs],
+        })
+        st.dataframe(df_pts, use_container_width=True, hide_index=True)
+
+        # ---- Reference citation ---------------------------------------------
+        st.markdown(
+            "<div class='info-banner' style='font-size:0.83rem;'>"
+            "<strong>Reference:</strong> Shah VP, Tsong Y, Sathe P, Liu JP. "
+            "<em>In vitro dissolution profile comparison — statistics and analysis "
+            "of the similarity factor, f2.</em> Pharm Res. 1998;15(6):889-896."
+            " &nbsp;|&nbsp; FDA Guidance for Industry: Dissolution Testing of "
+            "Immediate Release Solid Oral Dosage Forms (1997)."
+            "</div>",
+            unsafe_allow_html=True
+        )
+
+
 
 # ===========================================================================
 # PAGE: IVIVC
