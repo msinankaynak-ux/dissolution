@@ -22,11 +22,11 @@ authenticator = None
 
 # --- Google OAuth ile giris (Streamlit 1.42+) ---
 try:
-    user = st.user
-    if user and user.is_logged_in:
+    user_info = st.experimental_user
+    if user_info and getattr(user_info, "email", None):
         st.session_state["authentication_status"] = True
-        st.session_state["name"] = user.name or user.email
-        st.session_state["email"] = user.email
+        st.session_state["name"] = getattr(user_info, "name", None) or getattr(user_info, "email", "")
+        st.session_state["email"] = getattr(user_info, "email", "")
 except Exception:
     pass
 
@@ -42,39 +42,41 @@ if not st.session_state.get("authentication_status"):
         config['cookie']['expiry_days'],
     )
 
-    col_login, col_google = st.columns([2, 1])
-    with col_login:
+    # Tek sutun, Login usttte - OR ortada - Google altta
+    login_col, = st.columns([1])
+    with login_col:
         authenticator.login(location='main')
-    with col_google:
-        st.markdown("**or**")
-        st.markdown("""
-        <style>
-        .google-btn {
-            display: flex; align-items: center; justify-content: center;
-            gap: 10px; background: white; border: 1px solid #dadce0;
-            border-radius: 4px; padding: 10px 16px; cursor: pointer;
-            font-size: 14px; font-weight: 500; color: #3c4043;
-            width: 100%; box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-        }
-        .google-btn:hover { background: #f8f9fa; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
-        </style>
-        """, unsafe_allow_html=True)
-        if st.button("", key="google_btn", use_container_width=True):
-            st.login("google")
-        st.markdown("""
-        <div class="google-btn" style="margin-top:-38px;pointer-events:none;">
-            <svg width="18" height="18" viewBox="0 0 48 48">
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
-            Sign in with Google
-        </div>
-        """, unsafe_allow_html=True)
+
+    st.markdown(
+        "<div style='display:flex;align-items:center;gap:12px;margin:12px 0;'>"
+        "<hr style='flex:1;border:none;border-top:1px solid #ddd;'>"
+        "<span style='color:#888;font-size:0.9rem;white-space:nowrap;'>or</span>"
+        "<hr style='flex:1;border:none;border-top:1px solid #ddd;'>"
+        "</div>",
+        unsafe_allow_html=True
+    )
+
+    # Google butonu - Login kutusuyla ayni genislikte
+    if st.button("", key="google_btn", use_container_width=True):
+        st.login("google")
+    st.markdown("""
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;
+         background:white;border:1px solid #dadce0;border-radius:4px;
+         padding:10px 16px;font-size:14px;font-weight:500;color:#3c4043;
+         width:100%;box-shadow:0 1px 3px rgba(0,0,0,0.12);margin-top:-42px;
+         pointer-events:none;">
+        <svg width="18" height="18" viewBox="0 0 48 48">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Sign in with Google
+    </div>
+    """, unsafe_allow_html=True)
 
     if st.session_state.get('authentication_status') is False:
-        st.error('Kullanici adi veya sifre hatali.')
+        st.error('Username or password is incorrect.')
         st.stop()
     elif st.session_state.get('authentication_status') is None:
         st.info('Please log in to continue.')
