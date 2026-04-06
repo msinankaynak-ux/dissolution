@@ -485,30 +485,221 @@ def fit_model(t, y, name):
                 "reference":MODEL_DEFS[name][4],"error":str(e)}
 
 # ===========================================================================
-# HEADER
+# HEADER - Proposal 1: Data-Driven Evolution
 # ===========================================================================
-st.markdown(
-    '<h1 style="margin:0;font-size:2.4rem;color:#002147;">' +
-    'DissolvA<sup style="font-size:1rem;">(TM)</sup> ' +
-    '<span style="font-size:1rem;color:#888;font-style:italic;font-weight:400;">' +
-    '- Predictive Dissolution Suite</span></h1>' +
-    '<div style="color:#5a6480;font-size:0.9rem;margin-top:4px;">' +
-    'FDA-Compliant - 48 Kinetic Models - Statistical Profiling - IVIVC' +
-    '&nbsp;&nbsp;<span style="background:#002147;color:#FFBF00;padding:2px 10px;' +
-    'border-radius:12px;font-size:0.76rem;font-weight:700;">POWERED BY AI</span></div>',
-    unsafe_allow_html=True
-)
-st.markdown('<hr style="border:1px solid #FFBF00;margin:10px 0 4px 0;">', unsafe_allow_html=True)
-st.markdown(
-    "<div style='font-size:0.76rem;color:#8aadcc;padding:3px 0 14px 0;'>"
-    "<strong style='color:#5a8ab0;'>M. Sinan KAYNAK, PhD</strong>"
-    " &nbsp;&bull;&nbsp; Anadolu University, Faculty of Pharmacy"
-    " &nbsp;&bull;&nbsp; "
-    "<a href='mailto:msinankaynak@gmail.com' style='color:#7a9dbf;text-decoration:none;'>"
-    "msinankaynak@gmail.com</a>"
-    "</div>",
-    unsafe_allow_html=True
-)
+
+# Sadece nav aktif olduğunda landing page göster, diğer sayfalar normal header
+if nav == "Data Input":
+    # Full landing page header
+    st.markdown(f"""
+    <style>
+    /* Hide default streamlit padding for landing */
+    .block-container {{ padding-top: 1rem !important; }}
+    </style>
+
+    <!-- TOP NAV BAR -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+         padding:12px 0;border-bottom:1px solid rgba(255,191,0,0.2);margin-bottom:32px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:38px;height:38px;background:#FFBF00;border-radius:50%;
+             display:flex;align-items:center;justify-content:center;
+             font-weight:700;font-size:18px;color:#001a3d;">D</div>
+        <div>
+          <div style="font-size:1.05rem;font-weight:700;color:#FFBF00;letter-spacing:1px;">DissolvA™</div>
+          <div style="font-size:0.6rem;color:#8aadcc;letter-spacing:2px;text-transform:uppercase;">Predictive Dissolution Suite</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:24px;align-items:center;">
+        <span style="font-size:0.75rem;color:#8aadcc;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Methodology</span>
+        <span style="font-size:0.75rem;color:#8aadcc;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Sciences</span>
+        <span style="font-size:0.75rem;color:#8aadcc;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">f1/f2</span>
+        <span style="font-size:0.75rem;color:#8aadcc;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">IVIVC</span>
+      </div>
+      <div style="background:#FFBF00;color:#001a3d;padding:8px 20px;border-radius:3px;
+           font-size:0.78rem;font-weight:700;letter-spacing:1px;cursor:pointer;">Launch Analysis</div>
+    </div>
+
+    <!-- HERO: 2 column -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;margin-bottom:32px;">
+
+      <!-- LEFT: Title + Metrics + CTA -->
+      <div>
+        <div style="font-size:0.62rem;letter-spacing:3px;text-transform:uppercase;
+             color:#FFBF00;margin-bottom:14px;">FDA-Compliant · AI-Powered · Peer-Reviewed</div>
+        <h1 style="font-family:'EB Garamond',Georgia,serif;font-size:2.8rem;line-height:1.12;
+             color:#fff;margin-bottom:16px;font-weight:400;">
+          Pharmaceutical<br>analysis at<br>
+          <span style="color:#FFBF00;font-weight:700;">FDA grade.</span>
+        </h1>
+        <p style="font-size:0.88rem;color:#8aadcc;line-height:1.8;margin-bottom:24px;max-width:380px;">
+          48 kinetic models, bootstrap f2, IVIVC — all in one predictive
+          dissolution platform built for academic and industrial research.
+        </p>
+        <!-- Mini metrics -->
+        <div style="display:flex;gap:24px;margin-bottom:24px;">
+          <div style="border-left:2px solid #FFBF00;padding-left:12px;">
+            <div style="font-size:1.5rem;font-weight:700;color:#FFBF00;">48</div>
+            <div style="font-size:0.6rem;color:#8aadcc;letter-spacing:1px;text-transform:uppercase;">Kinetic Models</div>
+          </div>
+          <div style="border-left:2px solid #FFBF00;padding-left:12px;">
+            <div style="font-size:1.5rem;font-weight:700;color:#FFBF00;">5K</div>
+            <div style="font-size:0.6rem;color:#8aadcc;letter-spacing:1px;text-transform:uppercase;">Bootstrap Iter.</div>
+          </div>
+          <div style="border-left:2px solid #FFBF00;padding-left:12px;">
+            <div style="font-size:1.5rem;font-weight:700;color:#FFBF00;">FDA</div>
+            <div style="font-size:0.6rem;color:#8aadcc;letter-spacing:1px;text-transform:uppercase;">Compliant</div>
+          </div>
+        </div>
+        <div style="font-size:0.75rem;color:#8aadcc;">
+          ↑ Use the sidebar to navigate between modules
+        </div>
+      </div>
+
+      <!-- RIGHT: Plotly-style dissolution chart SVG -->
+      <div style="background:rgba(0,21,47,0.7);border:1px solid rgba(255,191,0,0.25);
+           border-radius:8px;padding:18px;position:relative;">
+        <div style="font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;
+             color:#FFBF00;margin-bottom:12px;">Live Dissolution Profile · f2 Analysis</div>
+        <svg viewBox="0 0 380 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;">
+          <defs>
+            <filter id="glow2"><feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <!-- Grid -->
+          <line x1="40" y1="10" x2="40" y2="190" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+          <line x1="40" y1="190" x2="370" y2="190" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+          <line x1="40" y1="150" x2="370" y2="150" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="4,4"/>
+          <line x1="40" y1="110" x2="370" y2="110" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="4,4"/>
+          <line x1="40" y1="70" x2="370" y2="70" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="4,4"/>
+          <line x1="40" y1="30" x2="370" y2="30" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="4,4"/>
+          <!-- 80% line -->
+          <line x1="40" y1="46" x2="370" y2="46" stroke="#FFBF00" stroke-width="1" stroke-dasharray="6,3" opacity="0.5"/>
+          <text x="342" y="42" fill="#FFBF00" font-size="8" opacity="0.7">80%</text>
+          <!-- Reference curve - glowing amber -->
+          <path d="M40,185 C80,160 110,110 150,72 C185,40 220,32 260,30 C300,28 330,28 370,28"
+                fill="none" stroke="#FFBF00" stroke-width="2.5" filter="url(#glow2)" opacity="0.6"/>
+          <path d="M40,185 C80,160 110,110 150,72 C185,40 220,32 260,30 C300,28 330,28 370,28"
+                fill="none" stroke="#FFBF00" stroke-width="1.8"/>
+          <!-- Test curve - blue -->
+          <path d="M40,185 C85,165 115,120 155,88 C190,58 225,45 265,40 C305,35 335,32 370,32"
+                fill="none" stroke="#4285F4" stroke-width="1.6" opacity="0.85"/>
+          <!-- Data points Reference -->
+          <circle cx="40" cy="185" r="3.5" fill="#FFBF00"/>
+          <circle cx="90" cy="155" r="3.5" fill="#FFBF00"/>
+          <line x1="90" y1="149" x2="90" y2="161" stroke="#FFBF00" stroke-width="1.2" opacity="0.5"/>
+          <circle cx="150" cy="72" r="3.5" fill="#FFBF00"/>
+          <line x1="150" y1="65" x2="150" y2="79" stroke="#FFBF00" stroke-width="1.2" opacity="0.5"/>
+          <circle cx="210" cy="35" r="3.5" fill="#FFBF00"/>
+          <line x1="210" y1="28" x2="210" y2="42" stroke="#FFBF00" stroke-width="1.2" opacity="0.5"/>
+          <circle cx="270" cy="29" r="3.5" fill="#FFBF00"/>
+          <circle cx="330" cy="28" r="3.5" fill="#FFBF00"/>
+          <!-- Data points Test -->
+          <circle cx="90" cy="163" r="3" fill="#4285F4"/>
+          <circle cx="150" cy="86" r="3" fill="#4285F4"/>
+          <circle cx="210" cy="44" r="3" fill="#4285F4"/>
+          <circle cx="270" cy="39" r="3" fill="#4285F4"/>
+          <!-- Axis labels -->
+          <text x="40" y="205" fill="#8aadcc" font-size="8" text-anchor="middle">0</text>
+          <text x="90" y="205" fill="#8aadcc" font-size="8" text-anchor="middle">30</text>
+          <text x="150" y="205" fill="#8aadcc" font-size="8" text-anchor="middle">60</text>
+          <text x="210" y="205" fill="#8aadcc" font-size="8" text-anchor="middle">90</text>
+          <text x="270" y="205" fill="#8aadcc" font-size="8" text-anchor="middle">120</text>
+          <text x="330" y="205" fill="#8aadcc" font-size="8" text-anchor="middle">180</text>
+          <text x="213" y="210" fill="#5a6480" font-size="7.5">Time (min)</text>
+          <text x="28" y="192" fill="#8aadcc" font-size="7.5" text-anchor="middle">0</text>
+          <text x="24" y="152" fill="#8aadcc" font-size="7.5" text-anchor="middle">25</text>
+          <text x="24" y="112" fill="#8aadcc" font-size="7.5" text-anchor="middle">50</text>
+          <text x="24" y="72" fill="#8aadcc" font-size="7.5" text-anchor="middle">75</text>
+          <text x="20" y="32" fill="#8aadcc" font-size="7.5" text-anchor="middle">100</text>
+          <!-- Legend -->
+          <rect x="46" y="12" width="12" height="3" fill="#FFBF00" rx="1"/>
+          <text x="62" y="17" fill="#e8e0d0" font-size="7.5">Reference (n=6)</text>
+          <rect x="130" y="12" width="12" height="3" fill="#4285F4" rx="1"/>
+          <text x="146" y="17" fill="#e8e0d0" font-size="7.5">Test (n=6)</text>
+        </svg>
+        <!-- f2 badge -->
+        <div style="position:absolute;top:14px;right:14px;background:rgba(255,191,0,0.12);
+             border:1px solid rgba(255,191,0,0.5);border-radius:4px;padding:6px 12px;text-align:center;">
+          <div style="font-size:1.1rem;font-weight:700;color:#FFBF00;">72.4</div>
+          <div style="font-size:0.58rem;color:#8aadcc;letter-spacing:1px;">f2 SIMILAR</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- METRICS STRIP -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+         background:rgba(255,191,0,0.1);border-radius:6px;overflow:hidden;margin-bottom:28px;">
+      <div style="background:#002147;padding:16px 20px;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:700;color:#FFBF00;">48</div>
+        <div style="font-size:0.6rem;color:#8aadcc;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Kinetic Models</div>
+      </div>
+      <div style="background:#002147;padding:16px 20px;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:700;color:#FFBF00;">5,000</div>
+        <div style="font-size:0.6rem;color:#8aadcc;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Bootstrap Iterations</div>
+      </div>
+      <div style="background:#002147;padding:16px 20px;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:700;color:#FFBF00;">Shah 1998</div>
+        <div style="font-size:0.6rem;color:#8aadcc;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">FDA Reference</div>
+      </div>
+      <div style="background:#002147;padding:16px 20px;text-align:center;">
+        <div style="font-size:1.5rem;font-weight:700;color:#FFBF00;">USP &lt;711&gt;</div>
+        <div style="font-size:0.6rem;color:#8aadcc;text-transform:uppercase;letter-spacing:1px;margin-top:2px;">Compliant</div>
+      </div>
+    </div>
+
+    <!-- MODULE CARDS -->
+    <div style="font-size:0.62rem;letter-spacing:3px;text-transform:uppercase;
+         color:#FFBF00;margin-bottom:16px;">Analysis Modules</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:32px;">
+      <div style="background:rgba(0,33,71,0.5);border:1px solid rgba(255,191,0,0.15);
+           border-radius:6px;padding:16px;">
+        <div style="font-size:0.85rem;color:#e8e0d0;font-weight:600;margin-bottom:5px;">ð Kinetic Model Fitting</div>
+        <div style="font-size:0.7rem;color:#8aadcc;line-height:1.5;">48 models · R² · AIC · MSC ranking</div>
+      </div>
+      <div style="background:rgba(0,33,71,0.5);border:1px solid rgba(255,191,0,0.15);
+           border-radius:6px;padding:16px;">
+        <div style="font-size:0.85rem;color:#e8e0d0;font-weight:600;margin-bottom:5px;">⚖️ f1/f2 Similarity</div>
+        <div style="font-size:0.7rem;color:#8aadcc;line-height:1.5;">FDA-compliant · 85% cutoff · auto-applied</div>
+      </div>
+      <div style="background:rgba(0,33,71,0.5);border:1px solid rgba(255,191,0,0.15);
+           border-radius:6px;padding:16px;">
+        <div style="font-size:0.85rem;color:#e8e0d0;font-weight:600;margin-bottom:5px;">ð Bootstrap f2</div>
+        <div style="font-size:0.7rem;color:#8aadcc;line-height:1.5;">5,000 iterations · 90% CI · Shah 1998</div>
+      </div>
+      <div style="background:rgba(0,33,71,0.5);border:1px solid rgba(255,191,0,0.15);
+           border-radius:6px;padding:16px;">
+        <div style="font-size:0.85rem;color:#e8e0d0;font-weight:600;margin-bottom:5px;">ð§¬ IVIVC Analysis</div>
+        <div style="font-size:0.7rem;color:#8aadcc;line-height:1.5;">Wagner-Nelson · Level A correlation</div>
+      </div>
+      <div style="background:rgba(0,33,71,0.5);border:1px solid rgba(255,191,0,0.15);
+           border-radius:6px;padding:16px;">
+        <div style="font-size:0.85rem;color:#e8e0d0;font-weight:600;margin-bottom:5px;">ð Statistical Analysis</div>
+        <div style="font-size:0.7rem;color:#8aadcc;line-height:1.5;">MDT · DE · RSD · pooled statistics</div>
+      </div>
+      <div style="background:rgba(0,33,71,0.5);border:1px solid rgba(255,191,0,0.15);
+           border-radius:6px;padding:16px;">
+        <div style="font-size:0.85rem;color:#e8e0d0;font-weight:600;margin-bottom:5px;">ð Excel Report</div>
+        <div style="font-size:0.7rem;color:#8aadcc;line-height:1.5;">Professional FDA-grade export</div>
+      </div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid rgba(255,191,0,0.15);margin-bottom:20px;">
+    <div style="font-size:0.72rem;color:#8aadcc;">
+      <strong style="color:#5a8ab0;">M. Sinan KAYNAK, PhD</strong>
+      &nbsp;·&nbsp; Anadolu University, Faculty of Pharmacy
+      &nbsp;·&nbsp; <a href="mailto:msinankaynak@gmail.com" style="color:#7a9dbf;text-decoration:none;">msinankaynak@gmail.com</a>
+    </div>
+    """, unsafe_allow_html=True)
+
+else:
+    # Diğer sayfalar için minimal header
+    st.markdown(
+        '<h2 style="margin:0 0 4px;font-size:1.6rem;color:#002147;">' +
+        'DissolvA™ <span style="font-size:0.9rem;color:#888;font-weight:400;font-style:italic;">- Predictive Dissolution Suite</span></h2>' +
+        '<hr style="border:1px solid #FFBF00;margin:8px 0 16px 0;">',
+        unsafe_allow_html=True
+    )
+
 
 # ===========================================================================
 # PAGE: METHOD SETTINGS
@@ -1886,75 +2077,4 @@ elif nav == "Excel Report":
         st.success("Report ready!")
         st.download_button("Download Excel Report", data=buf.getvalue(),
                            file_name="DissolvA_Report.xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")# --- Kullanici adi / sifre ile giris ---
-if not st.session_state.get("authentication_status"):
-    with open('config.yaml') as file:
-        config = yaml.load(file, Loader=SafeLoader)
-
-    authenticator = stauth.Authenticate(
-        config['credentials'],
-        config['cookie']['name'],
-        config['cookie']['key'],
-        config['cookie']['expiry_days'],
-    )
-
-    authenticator.login(location='main')
-
-    st.markdown(
-        "<div style='display:flex;align-items:center;gap:12px;margin:16px 0 12px 0;'>"
-        "<hr style='flex:1;border:none;border-top:1px solid #ddd;'>"
-        "<span style='color:#888;font-size:0.9rem;'>or</span>"
-        "<hr style='flex:1;border:none;border-top:1px solid #ddd;'>"
-        "</div>",
-        unsafe_allow_html=True
-    )
-
-    # Streamlit 1.42+ icon parametresi ile Google butonu
-    # icon parametresi desteklemiyorsa fallback
-    try:
-        clicked = st.button(
-            "  Sign in with Google",
-            key="google_btn",
-            use_container_width=True,
-        )
-    except Exception:
-        clicked = st.button("Sign in with Google", key="google_btn", use_container_width=True)
-
-    # Google SVG logosu butonu overlay et
-    st.markdown('''
-    <style>
-    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"]:last-of-type {
-        background: white !important;
-        border: 1px solid #dadce0 !important;
-        color: #3c4043 !important;
-        font-weight: 500 !important;
-        font-size: 14px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
-    }
-    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"]:last-of-type:hover {
-        background: #f8f9fa !important;
-    }
-    .google-icon-wrap { position:relative; margin-top:-40px; height:40px; display:flex;
-        align-items:center; justify-content:center; gap:10px; pointer-events:none; }
-    </style>
-    <div class="google-icon-wrap">
-        <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0">
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        </svg>
-        <span style="font-size:14px;font-weight:500;color:#3c4043;">Sign in with Google</span>
-    </div>
-    ''', unsafe_allow_html=True)
-
-    if clicked:
-        st.login("google")
-
-    if st.session_state.get('authentication_status') is False:
-        st.error('Username or password is incorrect.')
-        st.stop()
-    elif st.session_state.get('authentication_status') is None:
-        st.info('Please log in to continue.')
-        st.stop()
-
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
