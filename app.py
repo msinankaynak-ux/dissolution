@@ -5,86 +5,6 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings("ignore")
 
-try:
-    import plotly.figure_factory as ff
-    _PLOTLY_OK = True
-except ImportError:
-    _PLOTLY_OK = False
-
-# ===========================================================================
-# AUTHENTICATION
-# ===========================================================================
-import streamlit_authenticator as stauth
-import yaml
-from yaml.loader import SafeLoader
-
-authenticator = None
-
-# --- Google OAuth ile giris (Streamlit 1.42+) ---
-try:
-    user = st.user
-    if user and user.is_logged_in:
-        st.session_state["authentication_status"] = True
-        st.session_state["name"] = user.name or user.email
-        st.session_state["email"] = user.email
-except Exception:
-    pass
-
-# --- Kullanici adi / sifre ile giris ---
-if not st.session_state.get("authentication_status"):
-    with open('config.yaml') as file:
-        config = yaml.load(file, Loader=SafeLoader)
-
-    authenticator = stauth.Authenticate(
-        config['credentials'],
-        config['cookie']['name'],
-        config['cookie']['key'],
-        config['cookie']['expiry_days'],
-    )
-
-    # Tek sutun, Login usttte - OR ortada - Google altta
-    login_col, = st.columns([1])
-    with login_col:
-        authenticator.login(location='main')
-
-    st.markdown(
-        "<div style='display:flex;align-items:center;gap:12px;margin:12px 0;'>"
-        "<hr style='flex:1;border:none;border-top:1px solid #ddd;'>"
-        "<span style='color:#888;font-size:0.9rem;white-space:nowrap;'>or</span>"
-        "<hr style='flex:1;border:none;border-top:1px solid #ddd;'>"
-        "</div>",
-        unsafe_allow_html=True
-    )
-
-    # Google butonu - Login kutusuyla ayni genislikte
-    col_g = st.columns([1])[0]
-    with col_g:
-        if st.button("　　　　　　Sign in with Google　　　　　　", key="google_btn", use_container_width=True):
-            st.login("google")
-    st.markdown("""
-    <div style="display:flex;align-items:center;justify-content:center;gap:10px;
-         background:white;border:1px solid #dadce0;border-radius:4px;
-         padding:10px 16px;font-size:14px;font-weight:500;color:#3c4043;
-         width:100%;box-shadow:0 1px 3px rgba(0,0,0,0.12);margin-top:-42px;
-         pointer-events:none;">
-        <svg width="18" height="18" viewBox="0 0 48 48">
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        </svg>
-        Sign in with Google
-    </div>
-    """, unsafe_allow_html=True)
-
-    if st.session_state.get('authentication_status') is False:
-        st.error('Username or password is incorrect.')
-        st.stop()
-    elif st.session_state.get('authentication_status') is None:
-        st.info('Please log in to continue.')
-        st.stop()
-
-# ===========================================================================
 from scipy.optimize import curve_fit, root
 from scipy.stats import norm as sp_norm
 from scipy.integrate import trapezoid
@@ -335,19 +255,6 @@ for key in ["profiles", "fit_results"]:
 
 # --- Sidebar ---
 with st.sidebar:
-    _uname = st.session_state.get('name', st.session_state.get('username', ''))
-    st.markdown(
-        "<div style='padding:8px 12px;background:rgba(255,191,0,0.1);"
-        "border-radius:6px;border:1px solid rgba(255,191,0,0.3);margin-bottom:8px;'>"
-        "<strong style='color:#FFBF00;'>" + _uname + "</strong>"
-        "</div>",
-        unsafe_allow_html=True
-    )
-    if authenticator:
-        authenticator.logout('Cikis Yap')
-    else:
-        if st.button('Cikis Yap'):
-            st.logout()
     st.markdown(
         f'''<div style="border-radius:8px;overflow:hidden;margin-bottom:20px;
                     box-shadow:0 4px 18px rgba(0,0,0,0.5);">
@@ -381,8 +288,8 @@ with st.sidebar:
 
     nav = st.radio("", [
         "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
-        "f1 and f2 Similarity", "Bootstrap f2 Analysis", "IVIVC Analysis",
-        "Excel Report", "Method Settings", "Analytical Settings",
+        "f1 and f2 Similarity", "IVIVC Analysis", "Excel Report",
+        "Method Settings", "Analytical Settings",
     ], label_visibility="hidden")
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.25);margin:14px 0;">', unsafe_allow_html=True)
@@ -1581,176 +1488,6 @@ elif nav == "f1 and f2 Similarity":
     )
 
 # ===========================================================================
-# PAGE: BOOTSTRAP f2 ANALYSIS
-# ===========================================================================
-elif nav == "Bootstrap f2 Analysis":
-
-    st.markdown(
-        "<h2 style='color:#002147;margin:0 0 4px;'>Bootstrap f2 Analysis</h2>"
-        "<p style='color:#888;font-size:0.88rem;margin:0 0 12px;'>"
-        "FDA-compliant bootstrap simulation. Reports the <strong>5th percentile</strong> "
-        "(lower bound of 90% CI) as required by FDA. Requires raw vessel data.</p>",
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        "<div class='step-box'>"
-        "<strong>FDA Bootstrap Criterion (Shah et al. 1998):</strong><br>"
-        "1. Resample with replacement from each formulation vessel data.<br>"
-        "2. Calculate f2 for each iteration.<br>"
-        "3. Report the <strong>5th percentile</strong> (lower bound of 90% CI).<br>"
-        "4. If >= 50, profiles are considered similar."
-        "</div>", unsafe_allow_html=True
-    )
-
-    if len(st.session_state.profiles) < 2:
-        st.warning("At least 2 profiles required. Upload data in Data Input first.")
-        st.stop()
-
-    profiles_with_raw = {
-        nm: d for nm, d in st.session_state.profiles.items()
-        if d.get("raw") and d.get("vessels") and len(d.get("vessels", [])) >= 2
-    }
-    if len(profiles_with_raw) < 2:
-        available = list(profiles_with_raw.keys()) or ["None"]
-        st.warning("Bootstrap requires raw vessel data for at least 2 profiles. Available: " + str(available))
-        st.stop()
-
-    names_raw = list(profiles_with_raw.keys())
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Reference Profile**")
-        ref_bs = st.selectbox("Reference", names_raw, index=0, label_visibility="collapsed", key="bs_ref")
-        st.caption(ref_bs + " — " + str(st.session_state.profiles[ref_bs].get("n", 0)) + " vessels")
-    with col2:
-        st.markdown("**Test Profile**")
-        test_opts = [nm for nm in names_raw if nm != ref_bs]
-        if not test_opts:
-            st.error("Need at least 2 profiles with raw data."); st.stop()
-        test_bs = st.selectbox("Test", test_opts, index=0, label_visibility="collapsed", key="bs_test")
-        st.caption(test_bs + " — " + str(st.session_state.profiles[test_bs].get("n", 0)) + " vessels")
-
-    st.markdown("---")
-    col3, col4, col5 = st.columns(3)
-    with col3:
-        n_iter = st.number_input("Bootstrap Iterations", min_value=1000, max_value=50000, value=5000, step=500)
-    with col4:
-        lower_pctile = st.selectbox("CI Lower Bound", [5.0, 2.5, 0.5], index=0,
-            format_func=lambda x: ("5th pctl — 90% CI (FDA)") if x == 5.0 else (str(x) + "th pctl — " + str(int(100-x*2)) + "% CI"))
-    with col5:
-        seed_val = st.number_input("Random Seed", min_value=0, max_value=99999, value=42)
-
-    if st.button("Run Bootstrap Simulation", type="primary"):
-        d_ref = st.session_state.profiles[ref_bs]
-        d_test = st.session_state.profiles[test_bs]
-        t_ref_arr = np.array(d_ref["time"], dtype=float)
-        t_test_arr = np.array(d_test["time"], dtype=float)
-        raw_ref = np.array(d_ref["raw"], dtype=float)
-        raw_test = np.array(d_test["raw"], dtype=float)
-
-        t_common = np.intersect1d(t_ref_arr, t_test_arr)
-        if len(t_common) == 0:
-            st.error("No common time points."); st.stop()
-
-        rr_obs = np.array([raw_ref[np.where(t_ref_arr == ti)[0][0], :].mean() for ti in t_common])
-        rt_obs = np.array([raw_test[np.where(t_test_arr == ti)[0][0], :].mean() for ti in t_common])
-        mask_obs = rr_obs <= 85
-        if not np.any(mask_obs):
-            st.error("No valid time points where reference <= 85%."); st.stop()
-
-        f2_obs = float(50 * np.log10(100 / np.sqrt(1 + np.mean((rr_obs[mask_obs] - rt_obs[mask_obs]) ** 2))))
-
-        ref_idx = [np.where(t_ref_arr == ti)[0][0] for ti in t_common]
-        test_idx = [np.where(t_test_arr == ti)[0][0] for ti in t_common]
-        raw_ref_c = raw_ref[ref_idx, :]
-        raw_test_c = raw_test[test_idx, :]
-
-        prog = st.progress(0, text="Running bootstrap simulation...")
-        rng = np.random.default_rng(int(seed_val) if seed_val > 0 else None)
-        n_v_ref = raw_ref.shape[1]
-        n_v_test = raw_test.shape[1]
-        results = []
-        chunk = max(1, int(n_iter) // 100)
-        for i in range(int(n_iter)):
-            rs = raw_ref_c[:, rng.integers(0, n_v_ref, size=n_v_ref)]
-            ts = raw_test_c[:, rng.integers(0, n_v_test, size=n_v_test)]
-            R = np.mean(rs, axis=1)
-            T = np.mean(ts, axis=1)
-            m = R <= 85
-            if np.any(m):
-                results.append(50 * np.log10(100 / np.sqrt(1 + np.mean((R[m] - T[m]) ** 2))))
-            if (i + 1) % chunk == 0:
-                prog.progress((i + 1) / int(n_iter), text="Iteration " + str(i + 1) + "/" + str(int(n_iter)))
-        prog.empty()
-
-        f2_boot = np.array(results)
-        f2_boot = f2_boot[~np.isnan(f2_boot)]
-        f2_lower = float(np.percentile(f2_boot, lower_pctile))
-        f2_upper = float(np.percentile(f2_boot, 100 - lower_pctile))
-        f2_mean = float(np.mean(f2_boot))
-        f2_med = float(np.median(f2_boot))
-        f2_sd = float(np.std(f2_boot, ddof=1))
-        is_sim = f2_lower >= 50
-
-        vc = "#c6efce" if is_sim else "#ffc7ce"
-        vi = "SIMILAR" if is_sim else "NOT SIMILAR"
-        bc = "#27ae60" if is_sim else "#e74c3c"
-        cs = ">=" if is_sim else "<"
-        st.markdown(
-            "<div style='background:" + vc + ";border-radius:8px;padding:16px 22px;"
-            "font-size:1.15rem;font-weight:700;margin:14px 0;border-left:6px solid " + bc + ";'>"
-            + vi + " | FDA Decision: " + str(lower_pctile) + "th Percentile f2 = "
-            "<strong>" + str(round(f2_lower, 2)) + "</strong> (" + cs + " 50)</div>",
-            unsafe_allow_html=True
-        )
-
-        mc1, mc2, mc3, mc4, mc5 = st.columns(5)
-        mc1.metric("Observed f2", f"{f2_obs:.2f}")
-        mc2.metric("Bootstrap Mean", f"{f2_mean:.2f}")
-        mc3.metric("Bootstrap Median", f"{f2_med:.2f}")
-        mc4.metric(str(lower_pctile) + "th Pctl (FDA)", f"{f2_lower:.2f}")
-        mc5.metric("Bootstrap SD", f"{f2_sd:.2f}")
-
-        st.markdown("#### Bootstrap Summary")
-        df_sum = pd.DataFrame({
-            "Statistic": [
-                "Observed f2", "Bootstrap Mean f2", "Bootstrap Median", "Bootstrap SD",
-                str(lower_pctile) + "th Percentile (FDA)", str(100 - lower_pctile) + "th Percentile",
-                "Valid iterations", "FDA Verdict"
-            ],
-            "Value": [
-                f"{f2_obs:.4f}", f"{f2_mean:.4f}", f"{f2_med:.4f}", f"{f2_sd:.4f}",
-                f"{f2_lower:.4f}", f"{f2_upper:.4f}", f"{len(f2_boot):,}", vi
-            ]
-        })
-        st.dataframe(df_sum, use_container_width=True, hide_index=True)
-
-        st.markdown("#### f2 Bootstrap Distribution")
-        fig_fb, ax_fb = plt.subplots(figsize=(10, 4.5))
-        style_ax(fig_fb, ax_fb)
-        ax_fb.hist(f2_boot, bins=60, color=OXFORD, alpha=0.78, edgecolor="white", lw=0.4, label="Bootstrap f2")
-        ax_fb.axvline(50, color=AMBER, lw=2.2, ls="--", label="f2=50 (FDA)")
-        ax_fb.axvline(f2_lower, color="#e74c3c", lw=1.8, ls=":", label=str(lower_pctile) + "th Pctl=" + str(round(f2_lower, 2)))
-        ax_fb.axvline(f2_obs, color="#27ae60", lw=1.8, ls="-", label="Observed f2=" + str(round(f2_obs, 2)))
-        ax_fb.set_xlabel("f2 Value")
-        ax_fb.set_ylabel("Frequency")
-        ax_fb.set_title("Bootstrap f2 — " + ref_bs + " vs " + test_bs)
-        ax_fb.legend(fontsize=9)
-        st.pyplot(fig_fb)
-        plt.close()
-
-        st.markdown("#### Point-by-Point Comparison")
-        df_pts = pd.DataFrame({
-            "Time (" + time_unit + ")": t_common,
-            "Reference Mean % (" + ref_bs + ")": rr_obs.round(2),
-            "Test Mean % (" + test_bs + ")": rt_obs.round(2),
-            "|Diff| (%)": np.abs(rr_obs - rt_obs).round(2),
-            "Used in f2 (ref<=85%)": ["Yes" if r <= 85 else "No" for r in rr_obs],
-        })
-        st.dataframe(df_pts, use_container_width=True, hide_index=True)
-        st.caption("Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997")
-
-
-# ===========================================================================
 # PAGE: IVIVC
 # ===========================================================================
 elif nav == "IVIVC Analysis":
@@ -2149,4 +1886,75 @@ elif nav == "Excel Report":
         st.success("Report ready!")
         st.download_button("Download Excel Report", data=buf.getvalue(),
                            file_name="DissolvA_Report.xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")# --- Kullanici adi / sifre ile giris ---
+if not st.session_state.get("authentication_status"):
+    with open('config.yaml') as file:
+        config = yaml.load(file, Loader=SafeLoader)
+
+    authenticator = stauth.Authenticate(
+        config['credentials'],
+        config['cookie']['name'],
+        config['cookie']['key'],
+        config['cookie']['expiry_days'],
+    )
+
+    authenticator.login(location='main')
+
+    st.markdown(
+        "<div style='display:flex;align-items:center;gap:12px;margin:16px 0 12px 0;'>"
+        "<hr style='flex:1;border:none;border-top:1px solid #ddd;'>"
+        "<span style='color:#888;font-size:0.9rem;'>or</span>"
+        "<hr style='flex:1;border:none;border-top:1px solid #ddd;'>"
+        "</div>",
+        unsafe_allow_html=True
+    )
+
+    # Streamlit 1.42+ icon parametresi ile Google butonu
+    # icon parametresi desteklemiyorsa fallback
+    try:
+        clicked = st.button(
+            "  Sign in with Google",
+            key="google_btn",
+            use_container_width=True,
+        )
+    except Exception:
+        clicked = st.button("Sign in with Google", key="google_btn", use_container_width=True)
+
+    # Google SVG logosu butonu overlay et
+    st.markdown('''
+    <style>
+    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"]:last-of-type {
+        background: white !important;
+        border: 1px solid #dadce0 !important;
+        color: #3c4043 !important;
+        font-weight: 500 !important;
+        font-size: 14px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
+    }
+    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"]:last-of-type:hover {
+        background: #f8f9fa !important;
+    }
+    .google-icon-wrap { position:relative; margin-top:-40px; height:40px; display:flex;
+        align-items:center; justify-content:center; gap:10px; pointer-events:none; }
+    </style>
+    <div class="google-icon-wrap">
+        <svg width="18" height="18" viewBox="0 0 48 48" style="flex-shrink:0">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        <span style="font-size:14px;font-weight:500;color:#3c4043;">Sign in with Google</span>
+    </div>
+    ''', unsafe_allow_html=True)
+
+    if clicked:
+        st.login("google")
+
+    if st.session_state.get('authentication_status') is False:
+        st.error('Username or password is incorrect.')
+        st.stop()
+    elif st.session_state.get('authentication_status') is None:
+        st.info('Please log in to continue.')
+        st.stop()
+
