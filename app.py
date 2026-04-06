@@ -57,8 +57,10 @@ if not st.session_state.get("authentication_status"):
     )
 
     # Google butonu - Login kutusuyla ayni genislikte
-    if st.button("", key="google_btn", use_container_width=True):
-        st.login("google")
+    col_g = st.columns([1])[0]
+    with col_g:
+        if st.button("　　　　　　Sign in with Google　　　　　　", key="google_btn", use_container_width=True):
+            st.login("google")
     st.markdown("""
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;
          background:white;border:1px solid #dadce0;border-radius:4px;
