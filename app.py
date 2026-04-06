@@ -27,7 +27,6 @@ try:
         st.session_state["authentication_status"] = True
         st.session_state["name"] = user.name or user.email
         st.session_state["email"] = user.email
-        st.rerun()
 except Exception:
     pass
 
