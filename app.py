@@ -326,10 +326,68 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-# --- Session state ---
-for key in ["profiles", "fit_results"]:
-    if key not in st.session_state:
-        st.session_state[key] = {}
+# ── Global Session State Initialization ──────────────────────────────────────
+_SS_DEFAULTS = {
+    "profiles":           {},
+    "fit_results":        {},
+    "selected_ref_id":    None,
+    "selected_test_id":   None,
+    "bootstrap_results":  None,
+    "project_metadata": {
+        "name":        "Untitled Project",
+        "description": "",
+        "created":     "",
+        "analyst":     "",
+    },
+}
+for _k, _v in _SS_DEFAULTS.items():
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
+
+def _safe_profile_names():
+    """Güncel profil isimlerini döndür."""
+    return list(st.session_state.profiles.keys())
+
+def _get_index(lst, val, default=0):
+    """session_state değerinin listedeki index'ini güvenli bul."""
+    try:
+        return lst.index(val) if val in lst else default
+    except Exception:
+        return default
+
+def _rename_profile(old_name: str, new_name: str):
+    """Profili yeniden adlandır, tüm session_state'i senkronize et."""
+    if old_name == new_name or new_name.strip() == "" or old_name not in st.session_state.profiles:
+        return False
+    if new_name in st.session_state.profiles:
+        return False  # çakışma
+    # Profiles dict güncelle (sıra korunarak)
+    new_profiles = {}
+    for k, v in st.session_state.profiles.items():
+        new_profiles[new_name if k == old_name else k] = v
+    st.session_state.profiles = new_profiles
+    # fit_results güncelle
+    if old_name in st.session_state.fit_results:
+        st.session_state.fit_results[new_name] = st.session_state.fit_results.pop(old_name)
+    # sticky selections güncelle
+    if st.session_state.selected_ref_id == old_name:
+        st.session_state.selected_ref_id = new_name
+    if st.session_state.selected_test_id == old_name:
+        st.session_state.selected_test_id = new_name
+    return True
+
+def _clear_all():
+    """Tüm proje verisini sıfırla."""
+    st.session_state.profiles          = {}
+    st.session_state.fit_results       = {}
+    st.session_state.selected_ref_id   = None
+    st.session_state.selected_test_id  = None
+    st.session_state.bootstrap_results = None
+    st.session_state.project_metadata  = {
+        "name": "Untitled Project", "description": "",
+        "created": "", "analyst": "",
+    }
+
 
 # --- Sidebar ---
 with st.sidebar:
@@ -371,10 +429,49 @@ with st.sidebar:
         "ð All References",
     ], label_visibility="hidden")
 
-    st.markdown('<hr style="border:1px solid rgba(255,191,0,0.25);margin:14px 0;">', unsafe_allow_html=True)
+    st.markdown('<hr style="border:1px solid rgba(255,191,0,0.15);margin:10px 0 6px 0;">', unsafe_allow_html=True)
+
+    # Proje adı göster
+    proj_name = st.session_state.project_metadata.get("name", "Untitled Project")
     st.markdown(
-        '<div style="text-align:center;padding:4px 0 8px 0;">'
-        '<div style="font-size:0.65rem;color:#4a5a70;">DissolvA v2.0 &nbsp;|&nbsp; 2025</div>'
+        f'<div style="padding:4px 12px;font-size:0.72rem;color:rgba(232,224,208,0.6);">'
+        f'ð <em>{proj_name}</em></div>',
+        unsafe_allow_html=True
+    )
+
+    # New Project butonu
+    if st.button("ð️ New Project", use_container_width=True,
+                 help="Clear all profiles, results and start fresh."):
+        st.session_state["_confirm_new"] = True
+        st.rerun()
+
+    if st.session_state.get("_confirm_new"):
+        st.warning("All data will be lost!", icon="⚠️")
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            if st.button("✅ Confirm", use_container_width=True):
+                _clear_all()
+                st.session_state["_confirm_new"] = False
+                st.rerun()
+        with cc2:
+            if st.button("❌ Cancel", use_container_width=True):
+                st.session_state["_confirm_new"] = False
+                st.rerun()
+
+    # Feedback linki
+    st.markdown(
+        '''<div style="padding:6px 12px;margin-top:4px;">
+        <a href="mailto:msinankaynak@gmail.com?subject=DissolvA%20Feedback"
+           style="display:flex;align-items:center;gap:8px;text-decoration:none;
+                  color:rgba(232,224,208,0.5);font-size:0.78rem;"
+           onmouseover="this.style.color='#FFBF00'" onmouseout="this.style.color='rgba(232,224,208,0.5)'">
+          <span>✉️</span><span>Feedback / Bug Report</span>
+        </a></div>''',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        '<div style="text-align:center;padding:8px 0 4px 0;">'
+        '<div style="font-size:0.6rem;color:#4a5a70;">DissolvA v2.0 &nbsp;|&nbsp; 2025</div>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -998,6 +1095,31 @@ elif nav == "Analytical Settings":
 if nav == "Data Input":
     st.header("Data Input")
 
+    # ── Proje Metadata Paneli ─────────────────────────────────────────────────
+    with st.expander("ð Project Setup", expanded=not bool(st.session_state.profiles)):
+        pm = st.session_state.project_metadata
+        pc1, pc2 = st.columns([1, 1])
+        with pc1:
+            new_proj_name = st.text_input("Project Name", value=pm.get("name","Untitled Project"),
+                                          key="proj_name_input")
+            new_analyst   = st.text_input("Analyst / Author", value=pm.get("analyst",""),
+                                          key="proj_analyst_input",
+                                          placeholder="e.g. M. Sinan KAYNAK, PhD")
+        with pc2:
+            new_desc = st.text_area("Project Description", value=pm.get("description",""),
+                                    key="proj_desc_input", height=88,
+                                    placeholder="e.g. Bioequivalence study of ibuprofen 400mg tablets...")
+        if st.button("ð¾ Save Project Info", key="save_proj_meta"):
+            import datetime as _dt
+            st.session_state.project_metadata.update({
+                "name":        new_proj_name,
+                "analyst":     new_analyst,
+                "description": new_desc,
+                "created":     st.session_state.project_metadata.get("created") or
+                               _dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            })
+            st.success(f"Project '{new_proj_name}' saved.")
+
     st.markdown(
         "<div class='info-banner'>"
         "<strong>How it works:</strong> Upload a single Excel file with one or more sheets. "
@@ -1355,7 +1477,29 @@ if nav == "Data Input":
         st.markdown("---")
         st.subheader("Loaded Dissolution Profiles")
 
-        # -- Summary cards -----------------------------------------------------
+        # -- Profil Yeniden Adlandırma ─────────────────────────────────────────
+        with st.expander("✏️ Edit / Rename Profiles", expanded=False):
+            st.markdown("Rename a profile — all analysis results will be synchronized automatically.")
+            for nm in list(st.session_state.profiles.keys()):
+                r_col1, r_col2, r_col3 = st.columns([2, 2, 1])
+                with r_col1:
+                    st.markdown(f"**Current:** `{nm}`")
+                with r_col2:
+                    new_nm = st.text_input(
+                        "New name", value=nm,
+                        key=f"rename_{nm}",
+                        label_visibility="collapsed"
+                    )
+                with r_col3:
+                    if st.button("Rename", key=f"btn_rename_{nm}"):
+                        if new_nm.strip() and new_nm != nm:
+                            if _rename_profile(nm, new_nm.strip()):
+                                st.success(f"'{nm}' → '{new_nm.strip()}'")
+                                st.rerun()
+                            else:
+                                st.error("Name already exists or invalid.")
+
+        # -- Summary cards ──────────────────────────────────────────────────────
         n_profiles = len(st.session_state.profiles)
         card_cols = st.columns(min(n_profiles, 4))
         for i, (nm, d) in enumerate(st.session_state.profiles.items()):
@@ -1578,9 +1722,13 @@ if nav == "Data Input":
                     st.markdown("**Raw vessel data:**")
                     st.dataframe(raw_df.style.format(precision=2), use_container_width=True)
 
-        if st.button("Clear All Profiles"):
+        if st.button("ð️ Remove All Profiles", key="clear_profiles_btn",
+                     help="Remove profiles but keep project metadata and settings."):
             st.session_state.profiles = {}
             st.session_state.fit_results = {}
+            st.session_state.selected_ref_id = None
+            st.session_state.selected_test_id = None
+            st.session_state.bootstrap_results = None
             st.rerun()
 
     show_literature("Data Input")
@@ -1594,7 +1742,9 @@ elif nav == "Kinetic Model Fitting":
         st.warning("Please load at least one dissolution profile in Data Input first.")
         st.stop()
 
-    pname = st.selectbox("Select Profile", list(st.session_state.profiles.keys()))
+    _km_names = list(st.session_state.profiles.keys())
+    pname = st.selectbox("Select Profile", _km_names,
+        index=_get_index(_km_names, st.session_state.selected_ref_id, 0))
     d = st.session_state.profiles[pname]
     t_arr = np.array(d["time"], dtype=float)
     r_arr = np.array(d["release"], dtype=float)
@@ -1785,14 +1935,34 @@ elif nav == "f1 and f2 Similarity":
 
     names = list(st.session_state.profiles.keys())
 
+    def _on_ref_change_f2():
+        st.session_state.selected_ref_id = st.session_state._f2_ref_sel
+    def _on_test_change_f2():
+        st.session_state.selected_test_id = st.session_state._f2_test_sel
+
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**Reference Profile** *(innovator / originator)*")
-        ref_nm = st.selectbox("Reference", names, index=0, label_visibility="collapsed")
+        ref_nm = st.selectbox(
+            "Reference", names,
+            index=_get_index(names, st.session_state.selected_ref_id, 0),
+            key="_f2_ref_sel",
+            on_change=_on_ref_change_f2,
+            label_visibility="collapsed"
+        )
+        st.session_state.selected_ref_id = ref_nm
         st.caption(f"This is the product you compare AGAINST: {ref_nm}")
     with col2:
         st.markdown("**Test Profile** *(your formulation)*)")
-        test_nm = st.selectbox("Test", names, index=min(1,len(names)-1), label_visibility="collapsed")
+        test_options_f2 = [n for n in names if n != ref_nm]
+        test_nm = st.selectbox(
+            "Test", names,
+            index=_get_index(names, st.session_state.selected_test_id, min(1,len(names)-1)),
+            key="_f2_test_sel",
+            on_change=_on_test_change_f2,
+            label_visibility="collapsed"
+        )
+        st.session_state.selected_test_id = test_nm
         st.caption(f"This is the product you want to COMPARE: {test_nm}")
 
     if ref_nm == test_nm:
@@ -2007,8 +2177,13 @@ elif nav == "Bootstrap f2 Analysis":
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**Reference Profile** *(innovator / originator)*")
-        ref_bs = st.selectbox("Reference", names_raw, index=0,
-                              label_visibility="collapsed", key="bs_ref")
+        def _on_ref_bs(): st.session_state.selected_ref_id = st.session_state._bs_ref_sel
+        def _on_test_bs(): st.session_state.selected_test_id = st.session_state._bs_test_sel
+
+        ref_bs = st.selectbox("Reference", names_raw,
+            index=_get_index(names_raw, st.session_state.selected_ref_id, 0),
+            key="_bs_ref_sel", on_change=_on_ref_bs,
+            label_visibility="collapsed")
         n_ref = st.session_state.profiles[ref_bs].get("n", 0)
         st.caption(f"{ref_bs} — {n_ref} vessels")
     with col2:
@@ -2016,8 +2191,10 @@ elif nav == "Bootstrap f2 Analysis":
         test_options = [nm for nm in names_raw if nm != ref_bs]
         if not test_options:
             st.error("Need at least 2 profiles with raw data."); st.stop()
-        test_bs = st.selectbox("Test", test_options, index=0,
-                               label_visibility="collapsed", key="bs_test")
+        test_bs = st.selectbox("Test", test_options,
+            index=_get_index(test_options, st.session_state.selected_test_id, 0),
+            key="_bs_test_sel", on_change=_on_test_bs,
+            label_visibility="collapsed")
         n_test = st.session_state.profiles[test_bs].get("n", 0)
         st.caption(f"{test_bs} — {n_test} vessels")
 
@@ -2320,7 +2497,9 @@ elif nav == "IVIVC Analysis":
     if not st.session_state.profiles:
         st.warning("No profiles loaded."); st.stop()
 
-    pname=st.selectbox("Profile",list(st.session_state.profiles.keys()))
+    _ivivc_names = list(st.session_state.profiles.keys())
+    pname = st.selectbox("Profile", _ivivc_names,
+        index=_get_index(_ivivc_names, st.session_state.selected_ref_id, 0))
     kel=st.number_input("Elimination rate constant k_el",value=0.1,format="%.4f",min_value=1e-4)
 
     d=st.session_state.profiles[pname]
@@ -2379,12 +2558,19 @@ elif nav == "Excel Report":
         st.stop()
 
     # ── Kişiselleştirme ───────────────────────────────────────────────────────
+    # Proje metadata'dan varsayılanları al
+    _pm = st.session_state.project_metadata
+    _default_title  = f"DissolvA — {_pm.get('name','Dissolution Analysis Report')}"
+    _default_author = _pm.get("analyst","M. Sinan KAYNAK, PhD | Anadolu University, Faculty of Pharmacy")
+
     with st.expander("ð¨ Report Customization", expanded=True):
         rc1, rc2 = st.columns([1.2, 0.8])
         with rc1:
-            report_title  = st.text_input("Report Title", "DissolvA - Dissolution Analysis Report")
-            report_author = st.text_input("Author / Institution", "M. Sinan KAYNAK, PhD | Anadolu University, Faculty of Pharmacy")
+            report_title  = st.text_input("Report Title", _default_title)
+            report_author = st.text_input("Author / Institution", _default_author)
             report_email  = st.text_input("Contact E-mail", "msinankaynak@gmail.com")
+            if _pm.get("description"):
+                st.caption(f"Project: {_pm['description'][:80]}")
         with rc2:
             st.markdown("**ð Logo Upload** *(optional)*")
             st.markdown(
@@ -2628,8 +2814,12 @@ elif nav == "Excel Report":
             ws6.write("A1","f1 and f2 Similarity Analysis",fmt_t)
             ws6.write("A2","FDA Guidance: Dissolution Testing of Immediate Release Solid Oral Dosage Forms, 1997",fmt_n)
             profile_names = list(st.session_state.profiles.keys())
-            if len(profile_names) >= 2:
-                ref_xl = profile_names[0]; test_xl = profile_names[1]
+            # Session state'ten aktif seçimleri kullan (f2 sayfasında seçilen profiller)
+            _ss_ref  = st.session_state.get("selected_ref_id")
+            _ss_test = st.session_state.get("selected_test_id")
+            ref_xl  = _ss_ref  if _ss_ref  in profile_names else (profile_names[0] if profile_names else None)
+            test_xl = _ss_test if _ss_test in profile_names else (profile_names[1] if len(profile_names) > 1 else None)
+            if ref_xl and test_xl and ref_xl != test_xl:
                 t_rx = np.array(st.session_state.profiles[ref_xl]["time"])
                 r_rx = np.array(st.session_state.profiles[ref_xl]["release"])
                 t_tx = np.array(st.session_state.profiles[test_xl]["time"])
