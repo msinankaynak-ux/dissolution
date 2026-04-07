@@ -211,31 +211,88 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
   color: #FFBF00 !important;
   font-weight: 600 !important;
 }
+.nav-section-label {
+  font-size: 0.58rem !important;
+  letter-spacing: 2px !important;
+  text-transform: uppercase !important;
+  color: rgba(255,191,0,0.55) !important;
+  padding: 10px 12px 2px 12px !important;
+  display: block !important;
+}
+.nav-divider {
+  border: none !important;
+  border-top: 1px solid rgba(255,191,0,0.15) !important;
+  margin: 6px 0 !important;
+}
 </style>
 
 <script>
 (function() {
-  function markActive() {
-    var labels = document.querySelectorAll(
-      '[data-testid="stSidebar"] .stRadio label'
-    );
+  // Sidebar gruplandırma - Analysis Modules / Settings & Report
+  var ANALYSIS = ["Data Input","Kinetic Model Fitting","Statistical Analysis",
+                  "f1 and f2 Similarity","Bootstrap f2 Analysis","IVIVC Analysis ⓑ"];
+  var SETTINGS = ["Excel Report","Method Settings","Analytical Settings"];
+
+  function injectGroupLabels() {
+    var labels = document.querySelectorAll('[data-testid="stSidebar"] .stRadio label');
+    if (!labels.length) return;
     labels.forEach(function(lbl) {
-      lbl.classList.remove('nav-active');
+      var txt = lbl.innerText.trim();
+      // IVIVC'ye beta badge ekle
+      if (txt.startsWith("IVIVC Analysis")) {
+        var mdSpan = lbl.querySelector('[data-testid="stMarkdownContainer"] p');
+        if (mdSpan && !lbl.querySelector('.beta-badge')) {
+          var badge = document.createElement('span');
+          badge.className = 'beta-badge';
+          badge.textContent = 'β';
+          badge.style.cssText = 'background:#FFBF00;color:#002147;font-size:0.55rem;' +
+            'font-weight:700;padding:1px 5px;border-radius:3px;margin-left:6px;vertical-align:middle;';
+          mdSpan.appendChild(badge);
+        }
+      }
     });
-    var inputs = document.querySelectorAll(
-      '[data-testid="stSidebar"] .stRadio input[type="radio"]'
-    );
+
+    // Grup başlıklarını ve çizgiyi ekle (bir kez)
+    if (document.querySelector('.nav-section-label')) return;
+    var radioDiv = document.querySelector('[data-testid="stSidebar"] .stRadio > div');
+    if (!radioDiv) return;
+    var children = Array.from(radioDiv.children);
+
+    // İlk öğenin önüne "Analysis Modules" etiketi
+    var lbl1 = document.createElement('div');
+    lbl1.className = 'nav-section-label';
+    lbl1.innerHTML = '📊 Analysis Modules';
+    radioDiv.insertBefore(lbl1, children[0]);
+
+    // "Excel Report" öğesinin önüne bölüm çizgisi + "Settings & Report"
+    var excelIdx = children.findIndex(function(c) {
+      return c.innerText && c.innerText.trim().startsWith("Excel Report");
+    });
+    if (excelIdx > -1) {
+      var hr = document.createElement('hr');
+      hr.className = 'nav-divider';
+      var lbl2 = document.createElement('div');
+      lbl2.className = 'nav-section-label';
+      lbl2.innerHTML = '⚙️ Settings & Report';
+      radioDiv.insertBefore(lbl2, children[excelIdx]);
+      radioDiv.insertBefore(hr, lbl2);
+    }
+  }
+
+  function markActive() {
+    var labels = document.querySelectorAll('[data-testid="stSidebar"] .stRadio label');
+    labels.forEach(function(lbl) { lbl.classList.remove('nav-active'); });
+    var inputs = document.querySelectorAll('[data-testid="stSidebar"] .stRadio input[type="radio"]');
     inputs.forEach(function(inp) {
       if (inp.checked) {
         var lbl = document.querySelector(
-          '[data-testid="stSidebar"] .stRadio label[for="' + inp.id + '"]' 
+          '[data-testid="stSidebar"] .stRadio label[for="' + inp.id + '"]'
         );
-        if (!lbl) {
-          lbl = inp.closest('label') || inp.parentElement.querySelector('label');
-        }
+        if (!lbl) lbl = inp.closest('label') || inp.parentElement.querySelector('label');
         if (lbl) lbl.classList.add('nav-active');
       }
     });
+    injectGroupLabels();
   }
 
   function init() {
@@ -254,6 +311,19 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
 })();
 </script>
 """, unsafe_allow_html=True)
+
+# Feedback butonu sidebar'ın altına
+with st.sidebar:
+    st.markdown(
+        '''<div style="padding:6px 12px;margin-top:4px;">
+        <a href="mailto:msinankaynak@gmail.com?subject=DissolvA%20Feedback"
+           style="display:flex;align-items:center;gap:8px;text-decoration:none;
+                  color:rgba(232,224,208,0.5);font-size:0.78rem;"
+           onmouseover="this.style.color='#FFBF00'" onmouseout="this.style.color='rgba(232,224,208,0.5)'">
+          <span>✉️</span><span>Feedback / Bug Report</span>
+        </a></div>''',
+        unsafe_allow_html=True
+    )
 
 # --- Session state ---
 for key in ["profiles", "fit_results"]:
@@ -293,66 +363,16 @@ with st.sidebar:
     q_time    = cfg["q_time"]
     q_limit   = cfg["q_limit"]
 
-    # ── Analiz Modülleri ──────────────────────────────────────────────────────
-    st.markdown(
-        '<div style="font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;'
-        'color:rgba(255,191,0,0.6);padding:4px 12px 2px 12px;">📊 Analysis Modules</div>',
-        unsafe_allow_html=True
-    )
     nav = st.radio("", [
-        "Data Input",
-        "Kinetic Model Fitting",
-        "Statistical Analysis",
-        "f1 and f2 Similarity",
-        "Bootstrap f2 Analysis",
-        "IVIVC Analysis ⓑ",
+        "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
+        "f1 and f2 Similarity", "Bootstrap f2 Analysis", "IVIVC Analysis",
+        "Excel Report", "Method Settings", "Analytical Settings",
     ], label_visibility="hidden")
 
-    # IVIVC beta etiketi için gerçek nav değerini normalize et
-    if nav == "IVIVC Analysis ⓑ":
-        nav_real = "IVIVC Analysis"
-    else:
-        nav_real = nav
-
-    # ── Ayarlar & Rapor ───────────────────────────────────────────────────────
+    st.markdown('<hr style="border:1px solid rgba(255,191,0,0.25);margin:14px 0;">', unsafe_allow_html=True)
     st.markdown(
-        '<hr style="border:none;border-top:1px solid rgba(255,191,0,0.15);margin:8px 0 4px 0;">',
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        '<div style="font-size:0.6rem;letter-spacing:2px;text-transform:uppercase;'
-        'color:rgba(255,191,0,0.6);padding:4px 12px 2px 12px;">⚙️ Settings & Report</div>',
-        unsafe_allow_html=True
-    )
-    nav2 = st.radio("", [
-        "Excel Report",
-        "Method Settings",
-        "Analytical Settings",
-    ], label_visibility="hidden", key="nav2")
-
-    # Aktif nav birleştir
-    if nav2 in ["Excel Report", "Method Settings", "Analytical Settings"]:
-        nav_real = nav2
-
-    st.markdown('<hr style="border:1px solid rgba(255,191,0,0.15);margin:10px 0 6px 0;">', unsafe_allow_html=True)
-
-    # ── İletişim ikonu ────────────────────────────────────────────────────────
-    st.markdown(
-        '''<div style="padding:6px 12px;">
-        <a href="mailto:msinankaynak@gmail.com?subject=DissolvA%20Feedback"
-           style="display:flex;align-items:center;gap:8px;text-decoration:none;
-                  color:rgba(232,224,208,0.55);font-size:0.78rem;transition:color 0.2s;"
-           onmouseover="this.style.color='#FFBF00'" onmouseout="this.style.color='rgba(232,224,208,0.55)'">
-          <span style="font-size:1rem;">✉️</span>
-          <span>Feedback / Bug Report</span>
-        </a>
-        </div>''',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div style="text-align:center;padding:8px 0 4px 0;">'
-        '<div style="font-size:0.6rem;color:#4a5a70;">DissolvA v2.0 &nbsp;|&nbsp; 2025</div>'
+        '<div style="text-align:center;padding:4px 0 8px 0;">'
+        '<div style="font-size:0.65rem;color:#4a5a70;">DissolvA v2.0 &nbsp;|&nbsp; 2025</div>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -376,14 +396,18 @@ def style_ax(fig, ax):
     ax.xaxis.label.set_color(OXFORD); ax.yaxis.label.set_color(OXFORD)
     ax.title.set_color(OXFORD)
 
-# ── Literatür referans fonksiyonu ─────────────────────────────────────────────
+# ── Literatür referansları ────────────────────────────────────────────────────
 LITERATURE = {
+    "Data Input": [
+        "United States Pharmacopeia. (2023). <711> Dissolution. *USP 46–NF 41*.",
+        "U.S. Food and Drug Administration. (1997). Guidance for industry: Dissolution testing of immediate release solid oral dosage forms. FDA.",
+    ],
     "Kinetic Model Fitting": [
         "Wagner, J. G. (1969). Interpretation of percent dissolved-time plots derived from in vitro testing of conventional tablets and capsules. *Journal of Pharmaceutical Sciences*, 58(10), 1253–1257.",
         "Higuchi, T. (1961). Rate of release of medicaments from ointment bases containing drugs in suspension. *Journal of Pharmaceutical Sciences*, 50(10), 874–875.",
         "Korsmeyer, R. W., Gurny, R., Doelker, E., Buri, P., & Peppas, N. A. (1983). Mechanisms of solute release from porous hydrophilic polymers. *International Journal of Pharmaceutics*, 15(1), 25–35.",
         "Weibull, W. (1951). A statistical distribution function of wide applicability. *Journal of Applied Mechanics*, 18(3), 293–297.",
-        "Peppas, N. A., & Sahlin, J. J. (1989). A simple equation for the description of solute release. III. Coupling of diffusion and relaxation. *International Journal of Pharmaceutics*, 57(2), 169–172.",
+        "Peppas, N. A., & Sahlin, J. J. (1989). A simple equation for the description of solute release. III. *International Journal of Pharmaceutics*, 57(2), 169–172.",
     ],
     "Statistical Analysis": [
         "Moore, J. W., & Flanner, H. H. (1996). Mathematical comparison of dissolution profiles. *Pharmaceutical Technology*, 20(6), 64–74.",
@@ -396,35 +420,24 @@ LITERATURE = {
     ],
     "Bootstrap f2 Analysis": [
         "Shah, V. P., Tsong, Y., Sathe, P., & Liu, J. P. (1998). In vitro dissolution profile comparison — statistics and analysis of the similarity factor, f2. *Pharmaceutical Research*, 15(6), 889–896.",
-        "Mendyk, A., Jachowicz, R., Fijorek, K., Dorozynski, P., Kulinowski, P., & Polak, S. (2012). KinetDS: An open source software for dissolution test data analysis. *Dissolution Technologies*, 19(1), 6–11.",
+        "Mendyk, A., et al. (2012). KinetDS: An open source software for dissolution test data analysis. *Dissolution Technologies*, 19(1), 6–11.",
     ],
     "IVIVC Analysis": [
         "Wagner, J. G., & Nelson, E. (1964). Kinetic analysis of blood levels and urinary excretion in the absorptive phase after single doses of drug. *Journal of Pharmaceutical Sciences*, 53(11), 1392–1403.",
         "U.S. Food and Drug Administration. (1997). Guidance for industry: Extended release oral dosage forms — development, evaluation, and application of in vitro/in vivo correlations. FDA.",
-        "Emami, J. (2006). In vitro – in vivo correlation: From theory to applications. *Journal of Pharmacy & Pharmaceutical Sciences*, 9(2), 169–189.",
-    ],
-    "Data Input": [
-        "United States Pharmacopeia. (2023). <711> Dissolution. USP 46–NF 41.",
-        "U.S. Food and Drug Administration. (1997). Guidance for industry: Dissolution testing of immediate release solid oral dosage forms. FDA.",
+        "Emami, J. (2006). In vitro–in vivo correlation: From theory to applications. *Journal of Pharmacy & Pharmaceutical Sciences*, 9(2), 169–189.",
     ],
 }
 
-def show_literature(page_key: str):
+def show_literature(page_key):
     refs = LITERATURE.get(page_key, [])
     if not refs:
         return
     with st.expander("📚 Literature References (APA Format)", expanded=False):
-        st.markdown(
-            '<div style="font-size:0.82rem;color:#555;line-height:1.8;">',
-            unsafe_allow_html=True
-        )
         for i, ref in enumerate(refs, 1):
             st.markdown(f"**{i}.** {ref}")
-        st.markdown('</div>', unsafe_allow_html=True)
 
 
-# ===========================================================================
-# MODEL LIBRARY - 48 models
 # ===========================================================================
 def _nz(x): return np.where(x > 0, x, 1e-9)
 
@@ -617,7 +630,7 @@ st.markdown(
 # ===========================================================================
 # PAGE: METHOD SETTINGS
 # ===========================================================================
-if nav_real == "Method Settings":
+if nav == "Method Settings":
     cfg = st.session_state.method_cfg
     st.markdown(
         "<h2 style='color:#002147;margin:0 0 4px;'>Method & Parameter Settings</h2>"
@@ -737,7 +750,7 @@ if nav_real == "Method Settings":
 # ===========================================================================
 # PAGE: ANALYTICAL SETTINGS
 # ===========================================================================
-elif nav_real == "Analytical Settings":
+elif nav == "Analytical Settings":
     cfg = st.session_state.method_cfg
     st.markdown(
         "<h2 style='color:#002147;margin:0 0 4px;'>Analytical Method Settings</h2>"
@@ -835,7 +848,7 @@ elif nav_real == "Analytical Settings":
 # ===========================================================================
 # PAGE: DATA INPUT
 # ===========================================================================
-if nav_real == "Data Input":
+if nav == "Data Input":
     st.header("Data Input")
 
     st.markdown(
@@ -1317,7 +1330,7 @@ if nav_real == "Data Input":
 # ===========================================================================
 # PAGE: KINETIC MODEL FITTING
 # ===========================================================================
-elif nav_real == "Kinetic Model Fitting":
+elif nav == "Kinetic Model Fitting":
     st.header("Kinetic Model Fitting")
     if not st.session_state.profiles:
         st.warning("Please load at least one dissolution profile in Data Input first.")
@@ -1409,7 +1422,7 @@ elif nav_real == "Kinetic Model Fitting":
 # ===========================================================================
 # PAGE: STATISTICAL ANALYSIS
 # ===========================================================================
-elif nav_real == "Statistical Analysis":
+elif nav == "Statistical Analysis":
     st.header("Statistical Analysis")
     if not st.session_state.profiles:
         st.warning("No profiles loaded."); st.stop()
@@ -1466,7 +1479,7 @@ elif nav_real == "Statistical Analysis":
 # ===========================================================================
 # PAGE: f1 & f2
 # ===========================================================================
-elif nav_real == "f1 and f2 Similarity":
+elif nav == "f1 and f2 Similarity":
     st.header("f1 and f2 Similarity Factor Analysis")
 
     st.markdown("""
@@ -1600,7 +1613,7 @@ elif nav_real == "f1 and f2 Similarity":
 # ===========================================================================
 # PAGE: BOOTSTRAP f2 ANALYSIS
 # ===========================================================================
-elif nav_real == "Bootstrap f2 Analysis":
+elif nav == "Bootstrap f2 Analysis":
 
     # ---- Bootstrap engine (uses only numpy — no plotly import needed here) --
     def run_bootstrap_f2(ref_raw, test_raw, iterations=5000, seed=42):
@@ -1941,29 +1954,27 @@ elif nav_real == "Bootstrap f2 Analysis":
             "</div>",
             unsafe_allow_html=True
         )
-    show_literature("Bootstrap f2 Analysis")
 
 
 
 # ===========================================================================
 # PAGE: IVIVC
 # ===========================================================================
-elif nav_real == "IVIVC Analysis":
+elif nav == "IVIVC Analysis":
     st.markdown(
-        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">'
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">'
         '<h2 style="margin:0;color:#002147;">IVIVC Analysis</h2>'
-        '<span style="background:#FFBF00;color:#002147;font-size:0.65rem;font-weight:700;'
-        'letter-spacing:1.5px;text-transform:uppercase;padding:3px 8px;border-radius:3px;'
-        'vertical-align:middle;">β BETA VERSION</span>'
+        '<span style="background:#FFBF00;color:#002147;font-size:0.62rem;font-weight:700;'
+        'letter-spacing:1.5px;text-transform:uppercase;padding:3px 8px;border-radius:3px;">β BETA VERSION</span>'
         '</div>',
         unsafe_allow_html=True
     )
     st.markdown(
-        '<div style="background:rgba(255,191,0,0.08);border:1px solid rgba(255,191,0,0.3);'
+        '<div style="background:rgba(255,191,0,0.08);border:1px solid rgba(255,191,0,0.35);'
         'border-left:4px solid #FFBF00;border-radius:4px;padding:10px 14px;margin-bottom:12px;">'
         '⚠️ <strong>Beta Feature:</strong> This module is under active development. '
-        'Results should be interpreted with caution and validated against established IVIVC software. '
-        'Full Level A/B/C correlation and deconvolution methods coming soon.'
+        'Results should be validated against established IVIVC software. '
+        'Full Level A/B/C correlation methods coming soon.'
         '</div>',
         unsafe_allow_html=True
     )
@@ -2015,59 +2026,67 @@ elif nav_real == "IVIVC Analysis":
 # ===========================================================================
 # PAGE: EXCEL REPORT
 # ===========================================================================
-elif nav_real == "Excel Report":
+
+# ===========================================================================
+# PAGE: EXCEL REPORT
+# ===========================================================================
+elif nav == "Excel Report":
+    import datetime
     st.markdown(
         '<h2 style="color:#002147;margin:0 0 4px;">Excel Report</h2>'
-        '<p style="color:#888;font-size:0.88rem;margin:0 0 20px;">Customizable professional dissolution report. '
-        'Select sheets, add your logo, and download a publication-ready Excel file.</p>',
+        '<p style="color:#888;font-size:0.88rem;margin:0 0 20px;">'
+        'Customize your report, add your logo, select sheets, and download a professional Excel file.</p>',
         unsafe_allow_html=True
     )
     if not st.session_state.profiles:
-        st.warning("No profiles loaded. Go to Data Input first."); st.stop()
+        st.warning("No profiles loaded. Please go to Data Input first.")
+        st.stop()
 
-    # ── Kişiselleştirme Paneli ────────────────────────────────────────────────
+    # ── Kişiselleştirme ───────────────────────────────────────────────────────
     with st.expander("🎨 Report Customization", expanded=True):
-        rc1, rc2 = st.columns([1, 1])
+        rc1, rc2 = st.columns([1.2, 0.8])
         with rc1:
-            report_title = st.text_input("Report Title", "DissolvA - Dissolution Analysis Report")
-            report_author = st.text_input("Author / Institution", "M. Sinan KAYNAK, PhD | Anadolu University")
-            report_email  = st.text_input("Contact", "msinankaynak@gmail.com")
+            report_title  = st.text_input("Report Title", "DissolvA - Dissolution Analysis Report")
+            report_author = st.text_input("Author / Institution", "M. Sinan KAYNAK, PhD | Anadolu University, Faculty of Pharmacy")
+            report_email  = st.text_input("Contact E-mail", "msinankaynak@gmail.com")
         with rc2:
-            st.markdown("**Logo Upload** *(optional)*")
+            st.markdown("**📎 Logo Upload** *(optional)*")
             st.markdown(
                 '<div style="background:#f0ece0;border:1px solid #ddd;border-radius:4px;'
-                'padding:8px 12px;font-size:0.8rem;color:#555;margin-bottom:8px;">'
-                '📌 <strong>Logo requirements:</strong> PNG or JPG, recommended size <strong>300×100 px</strong> '
-                '(landscape, max 2 MB). Transparent background preferred. '
-                'The logo will appear in the top-left of the Cover sheet.</div>',
+                'padding:8px 12px;font-size:0.78rem;color:#666;margin-bottom:8px;">'
+                '<b>Requirements:</b><br>'
+                '• Format: PNG or JPG<br>'
+                '• Recommended size: <b>300 × 100 px</b> (landscape)<br>'
+                '• Max file size: 2 MB<br>'
+                '• Transparent background preferred<br>'
+                '• Will appear top-left of Cover sheet'
+                '</div>',
                 unsafe_allow_html=True
             )
-            logo_file = st.file_uploader("Upload logo (PNG/JPG)", type=["png","jpg","jpeg"], key="report_logo")
+            logo_file = st.file_uploader("Upload logo", type=["png","jpg","jpeg"], key="report_logo", label_visibility="collapsed")
 
-        st.markdown("**Select Sheets to Include:**")
+        st.markdown("**📋 Select Sheets to Include:**")
         sc1, sc2, sc3, sc4 = st.columns(4)
         with sc1:
-            inc_cover   = st.checkbox("📄 Cover Page",         value=True)
-            inc_method  = st.checkbox("⚗️ Method Report",      value=True)
+            inc_cover    = st.checkbox("📄 Cover Page",           value=True)
+            inc_method   = st.checkbox("⚗️ Method Report",        value=True)
         with sc2:
-            inc_profiles = st.checkbox("📈 Dissolution Profiles", value=True)
-            inc_stats    = st.checkbox("📊 Statistics",           value=True)
+            inc_profiles = st.checkbox("📈 Dissolution Profiles",  value=True)
+            inc_stats    = st.checkbox("📊 Statistics",            value=True)
         with sc3:
-            inc_fitting  = st.checkbox("🔢 Model Fitting",        value=True)
-            inc_chart    = st.checkbox("📉 Dissolution Chart",    value=True)
+            inc_fitting  = st.checkbox("🔢 Model Fitting",         value=True)
+            inc_chart    = st.checkbox("📉 Dissolution Chart",     value=True)
         with sc4:
-            inc_f2       = st.checkbox("⚖️ Similarity (f1/f2)",  value=True)
-            inc_bootstrap= st.checkbox("🔁 Bootstrap f2",         value=bool(st.session_state.get("bootstrap_results")))
+            inc_f2       = st.checkbox("⚖️ Similarity (f1/f2)",   value=True)
+            inc_bootstrap= st.checkbox("🔁 Bootstrap f2",          value=bool(st.session_state.get("bootstrap_results")))
 
-    import datetime
     report_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
     if st.button("⬇️ Generate & Download Excel Report", type="primary"):
-        import xlsxwriter, base64
+        import xlsxwriter
         buf = io.BytesIO()
         wb  = xlsxwriter.Workbook(buf, {"in_memory": True})
 
-        # ── Formatlar ─────────────────────────────────────────────────────────
         fmt_t  = wb.add_format({"bold":True,"font_size":14,"font_color":"#002147","bottom":2,"bottom_color":"#FFBF00"})
         fmt_h  = wb.add_format({"bold":True,"bg_color":"#002147","font_color":"#FFBF00","border":1,"align":"center"})
         fmt_d  = wb.add_format({"border":1,"num_format":"0.0000","align":"center"})
@@ -2082,49 +2101,25 @@ elif nav_real == "Excel Report":
         fmt_pass = wb.add_format({"bold":True,"bg_color":"#c6efce","border":1,"align":"center"})
         fmt_fail = wb.add_format({"bold":True,"bg_color":"#ffc7ce","border":1,"align":"center"})
 
-        # ── 1. Cover Sheet ────────────────────────────────────────────────────
+        # 1. COVER
         if inc_cover:
             ws = wb.add_worksheet("Cover")
-            ws.set_column("A:A", 55)
-            ws.set_column("B:B", 30)
-            ws.set_row(0, 60)
-
-            # Logo
+            ws.set_column("A:A", 55); ws.set_column("B:B", 30)
             if logo_file is not None:
-                logo_bytes = logo_file.read()
-                logo_io = io.BytesIO(logo_bytes)
-                ext = logo_file.name.split(".")[-1].lower()
-                img_type = "png" if ext == "png" else "jpeg"
                 try:
-                    ws.insert_image("B1", "logo", {
-                        "image_data": logo_io,
-                        "x_scale": 0.5, "y_scale": 0.5,
-                        "x_offset": 5, "y_offset": 5,
-                        "object_position": 1,
-                    })
+                    logo_io = io.BytesIO(logo_file.read())
+                    ws.insert_image("B1", "logo", {"image_data": logo_io, "x_scale":0.5, "y_scale":0.5, "x_offset":5, "y_offset":5, "object_position":1})
                 except Exception:
-                    pass  # Logo eklenemezse devam et
-
+                    pass
             ws.write("A1", report_title, wb.add_format({"bold":True,"font_size":16,"font_color":"#002147","bottom":2,"bottom_color":"#FFBF00"}))
             ws.write("A2", "Professional Dissolution Analysis Report", fmt_s)
             ws.write("A3", f"Generated: {report_date}", fmt_n)
             ws.write("A4", f"Author: {report_author}", fmt_n)
             ws.write("A5", f"Contact: {report_email}", fmt_n)
-            ws.write("A6", f"Profiles analyzed: {len(st.session_state.profiles)}", fmt_p)
+            ws.write("A6", f"Profiles: {len(st.session_state.profiles)}", fmt_p)
             ws.write("A7", "Generated by DissolvA v2.0 | Powered by AI | 2025", fmt_n)
-            ws.write("A9", "Contents", fmt_t)
-            sheet_list = []
-            if inc_method:   sheet_list.append("Method Report")
-            if inc_profiles: sheet_list.append("Dissolution Profiles")
-            if inc_stats:    sheet_list.append("Statistics")
-            if inc_fitting:  sheet_list.append("Model Fitting")
-            if inc_chart:    sheet_list.append("Dissolution Chart")
-            if inc_f2:       sheet_list.append("Similarity Report")
-            if inc_bootstrap:sheet_list.append("Bootstrap f2")
-            for i, s in enumerate(sheet_list):
-                ws.write(10+i, 0, f"  {i+1}. {s}", fmt_p)
 
-        # ── 2. Method Report ──────────────────────────────────────────────────
+        # 2. METHOD REPORT
         if inc_method:
             cfg_r = st.session_state.get("method_cfg", {})
             wsM = wb.add_worksheet("Method Report")
@@ -2145,7 +2140,7 @@ elif nav_real == "Excel Report":
                 ("Concentration Unit", cfg_r.get("conc_unit","mg/mL")),
                 ("Dose (mg)", cfg_r.get("dose_mg",100.0)),
                 ("Q Time Point", f"{cfg_r.get('q_time',45.0)} {cfg_r.get('time_unit','min')}"),
-                ("Q Value", f"NLT {cfg_r.get('q_limit',80.0):.0f}%"),
+                ("Q Value (USP)", f"NLT {cfg_r.get('q_limit',80.0):.0f}%"),
                 ("Regulatory Reference", "USP <711> / FDA Guidance 1997"),
             ])
             medium_str = cfg_r.get("medium","")
@@ -2161,34 +2156,33 @@ elif nav_real == "Excel Report":
                 ("Surfactant", surf_str),
                 ("Rotation Speed (rpm)", cfg_r.get("rpm","")),
                 ("Medium Volume (mL)", cfg_r.get("volume_ml","")),
-                ("Temperature (°C)", cfg_r.get("temp_c","")),
+                ("Temperature (degC)", cfg_r.get("temp_c","")),
                 ("Notes", cfg_r.get("notes","")),
             ])
             analytical = cfg_r.get("analytical","UV-Vis Spectrophotometry")
             if analytical == "UV-Vis Spectrophotometry":
                 write_section("Analytical Method", [
                     ("Method", "UV-Vis Spectrophotometry"),
-                    ("λmax (nm)", cfg_r.get("lambda_max","")),
+                    ("Lambda max (nm)", cfg_r.get("lambda_max","")),
                     ("Slit Width (nm)", cfg_r.get("slit_nm","")),
-                    ("Reference Wavelength (nm)", cfg_r.get("ref_wavelength","N/A")),
+                    ("Reference Wavelength", cfg_r.get("ref_wavelength","N/A")),
                 ])
             else:
                 write_section(f"Analytical Method - {analytical}", [
                     ("Method", analytical),
                     ("Column", cfg_r.get("hplc_column","")),
-                    ("Column Temp (°C)", cfg_r.get("hplc_col_temp","")),
+                    ("Column Temp (degC)", cfg_r.get("hplc_col_temp","")),
                     ("Mobile Phase A", cfg_r.get("hplc_mp_a","")),
                     ("Mobile Phase B", cfg_r.get("hplc_mp_b","")),
                     ("Flow Rate (mL/min)", cfg_r.get("hplc_flow","")),
                     ("Detection (nm)", cfg_r.get("hplc_detection","")),
-                    ("Injection Volume (µL)", cfg_r.get("hplc_inj_vol","")),
+                    ("Injection Volume (uL)", cfg_r.get("hplc_inj_vol","")),
                     ("Run Time (min)", cfg_r.get("hplc_run_time","")),
                 ])
 
-        # ── 3. Dissolution Profiles ───────────────────────────────────────────
+        # 3. DISSOLUTION PROFILES
         if inc_profiles:
-            ws2 = wb.add_worksheet("Dissolution Profiles")
-            col = 0
+            ws2 = wb.add_worksheet("Dissolution Profiles"); col = 0
             for nm, dd in st.session_state.profiles.items():
                 ws2.write(0, col, nm, fmt_s)
                 ws2.write(1, col, f"Time ({time_unit})", fmt_h)
@@ -2199,13 +2193,13 @@ elif nav_real == "Excel Report":
                 sd_a  = dd.get("sd")  or [0.0]*len(dd["time"])
                 rsd_a = dd.get("rsd") or [0.0]*len(dd["time"])
                 for ri, (ti, rv) in enumerate(zip(dd["time"], dd["release"])):
-                    ws2.write(ri+2, col,   ti,              fmt_d)
-                    ws2.write(ri+2, col+1, round(rv,3),     fmt_d)
-                    ws2.write(ri+2, col+2, round(sd_a[ri],4),  fmt_d)
+                    ws2.write(ri+2, col, ti, fmt_d)
+                    ws2.write(ri+2, col+1, round(rv,3), fmt_d)
+                    ws2.write(ri+2, col+2, round(sd_a[ri],4), fmt_d)
                     ws2.write(ri+2, col+3, round(rsd_a[ri],2), fmt_d)
                 col += 5
 
-        # ── 4. Statistics ─────────────────────────────────────────────────────
+        # 4. STATISTICS
         if inc_stats:
             ws3 = wb.add_worksheet("Statistics")
             ws3.write(0, 0, "Statistical Summary", fmt_t)
@@ -2214,95 +2208,89 @@ elif nav_real == "Excel Report":
             for ci, h in enumerate(hdrs): ws3.write(3, ci, h, fmt_h); ws3.set_column(ci, ci, 16)
             ri2 = 4
             for nm, dd in st.session_state.profiles.items():
-                ta  = np.array(dd["time"]); ra = np.array(dd["release"])
+                ta = np.array(dd["time"]); ra = np.array(dd["release"])
                 sd_a  = np.array(dd.get("sd")  or [0.0]*len(ta))
                 rsd_a = np.array(dd.get("rsd") or [0.0]*len(ta))
                 mdt = compute_mdt(ta, ra); de = compute_de(ta, ra)
                 for i in range(len(ta)):
-                    ws3.write(ri2, 0, ta[i],                  fmt_d)
-                    ws3.write(ri2, 1, nm,                     fmt_p)
-                    ws3.write(ri2, 2, round(ra[i],3),         fmt_d)
-                    ws3.write(ri2, 3, round(sd_a[i],4),       fmt_d)
-                    ws3.write(ri2, 4, round(rsd_a[i],2),      fmt_d)
-                    ws3.write(ri2, 5, round(rsd_a[i],2),      fmt_d)
-                    ws3.write(ri2, 6, round(mdt,3) if not np.isnan(mdt) else "N/A", fmt_p)
-                    ws3.write(ri2, 7, round(de,3),            fmt_d)
+                    ws3.write(ri2,0,ta[i],fmt_d); ws3.write(ri2,1,nm,fmt_p)
+                    ws3.write(ri2,2,round(ra[i],3),fmt_d)
+                    ws3.write(ri2,3,round(sd_a[i],4),fmt_d)
+                    ws3.write(ri2,4,round(rsd_a[i],2),fmt_d)
+                    ws3.write(ri2,5,round(rsd_a[i],2),fmt_d)
+                    ws3.write(ri2,6,round(mdt,3) if not np.isnan(mdt) else "N/A",fmt_p)
+                    ws3.write(ri2,7,round(de,3),fmt_d)
                     ri2 += 1
 
-        # ── 5. Model Fitting ──────────────────────────────────────────────────
+        # 5. MODEL FITTING
         if inc_fitting:
             ws4 = wb.add_worksheet("Model Fitting")
-            ws4.write(0, 0, "Kinetic Model Fitting Results", fmt_t)
-            ws4.write(1, 0, f"Generated: {report_date}", fmt_n)
-            fh = ["Model","Category","R²","R²adj","AIC","MSC","Params","Parameters","Reference"]
-            for ci, h in enumerate(fh): ws4.write(3, ci, h, fmt_h)
+            ws4.write(0,0,"Kinetic Model Fitting Results",fmt_t)
+            ws4.write(1,0,f"Generated: {report_date}",fmt_n)
+            fh = ["Model","Category","R2","R2adj","AIC","MSC","Params","Parameters","Reference"]
+            for ci,h in enumerate(fh): ws4.write(3,ci,h,fmt_h)
             ws4.set_column(0,0,26); ws4.set_column(1,1,14); ws4.set_column(7,7,45); ws4.set_column(8,8,30)
             if st.session_state.fit_results:
-                sorted_r = sorted(
-                    [(k,v) for k,v in st.session_state.fit_results.items() if v["success"]],
-                    key=lambda x: x[1]["r2adj"], reverse=True
-                )
-                for ri3, (mn, v) in enumerate(sorted_r):
+                sorted_r = sorted([(k,v) for k,v in st.session_state.fit_results.items() if v["success"]],
+                                  key=lambda x: x[1]["r2adj"], reverse=True)
+                for ri3,(mn,v) in enumerate(sorted_r):
                     row = ri3+4; adj = v["r2adj"]
                     ws4.write(row,0,mn,fmt_p); ws4.write(row,1,v["category"],fmt_p)
                     ws4.write(row,2,round(v["r2"],4),fmt_d)
-                    ws4.write(row,3,round(adj,4), fmt_g if adj>=0.9 else fmt_b)
-                    ws4.write(row,4,round(v["aic"],3),fmt_d)
-                    ws4.write(row,5,round(v["msc"],3),fmt_d)
+                    ws4.write(row,3,round(adj,4),fmt_g if adj>=0.9 else fmt_b)
+                    ws4.write(row,4,round(v["aic"],3),fmt_d); ws4.write(row,5,round(v["msc"],3),fmt_d)
                     ws4.write(row,6,v["n_params"],fmt_p)
                     pstr = "; ".join(f"{k}={pv:.4g}" for k,pv in v["params"].items())
                     ws4.write(row,7,pstr,fmt_p); ws4.write(row,8,v["reference"],fmt_p)
             else:
-                ws4.write(4, 0, "No fitting results. Run Kinetic Model Fitting first.", fmt_n)
+                ws4.write(4,0,"No fitting results. Run Kinetic Model Fitting first.",fmt_n)
 
-        # ── 6. Dissolution Chart ──────────────────────────────────────────────
+        # 6. DISSOLUTION CHART
         if inc_chart:
             ws5 = wb.add_worksheet("Dissolution Chart")
-            ws5.write("A1", "Dissolution Profile Chart", fmt_t)
-            ws5.write("A2", f"Mean cumulative release (%) vs Time | {report_date}", fmt_n)
-            chart_data_row = 4
-            ws5.write(chart_data_row, 0, f"Time ({time_unit})", fmt_h)
-            for ci, nm in enumerate(st.session_state.profiles.keys()):
-                ws5.write(chart_data_row, ci+1, nm, fmt_h)
-                ws5.set_column(ci+1, ci+1, 14)
-            ws5.set_column(0, 0, 14)
+            ws5.write("A1","Dissolution Profile Chart",fmt_t)
+            ws5.write("A2",f"Mean cumulative release (%) vs Time | {report_date}",fmt_n)
+            cdr = 4
+            ws5.write(cdr,0,f"Time ({time_unit})",fmt_h)
+            for ci,nm in enumerate(st.session_state.profiles.keys()):
+                ws5.write(cdr,ci+1,nm,fmt_h); ws5.set_column(ci+1,ci+1,14)
+            ws5.set_column(0,0,14)
             all_times = sorted(set(t for d in st.session_state.profiles.values() for t in d["time"]))
-            for ri, ti in enumerate(all_times):
-                ws5.write(chart_data_row+1+ri, 0, ti, fmt_d)
-                for ci, (nm, dd) in enumerate(st.session_state.profiles.items()):
+            for ri,ti in enumerate(all_times):
+                ws5.write(cdr+1+ri,0,ti,fmt_d)
+                for ci,(nm,dd) in enumerate(st.session_state.profiles.items()):
                     if ti in dd["time"]:
                         idx = dd["time"].index(ti)
-                        ws5.write(chart_data_row+1+ri, ci+1, round(dd["release"][idx],3), fmt_d)
+                        ws5.write(cdr+1+ri,ci+1,round(dd["release"][idx],3),fmt_d)
             chart = wb.add_chart({"type":"scatter","subtype":"straight_with_markers"})
             colors  = ["#002147","#e6194B","#3cb44b","#4363d8","#f58231","#911eb4"]
-            markers = ["circle","square","diamond","triangle","x","star"]
+            markers_list = ["circle","square","diamond","triangle","x","star"]
             n_rows = len(all_times)
-            for ci, nm in enumerate(st.session_state.profiles.keys()):
+            for ci,nm in enumerate(st.session_state.profiles.keys()):
                 chart.add_series({
-                    "name": nm,
-                    "categories": ["Dissolution Chart", chart_data_row+1, 0, chart_data_row+n_rows, 0],
-                    "values":     ["Dissolution Chart", chart_data_row+1, ci+1, chart_data_row+n_rows, ci+1],
-                    "line":   {"color": colors[ci%len(colors)], "width": 2},
-                    "marker": {"type": markers[ci%len(markers)], "size": 7,
-                               "fill": {"color": colors[ci%len(colors)]},
-                               "border": {"color": colors[ci%len(colors)]}},
+                    "name":nm,
+                    "categories":["Dissolution Chart",cdr+1,0,cdr+n_rows,0],
+                    "values":    ["Dissolution Chart",cdr+1,ci+1,cdr+n_rows,ci+1],
+                    "line":  {"color":colors[ci%len(colors)],"width":2},
+                    "marker":{"type":markers_list[ci%len(markers_list)],"size":7,
+                              "fill":{"color":colors[ci%len(colors)]},"border":{"color":colors[ci%len(colors)]}},
                 })
-            chart.set_title({"name": "Mean Dissolution Profiles"})
-            chart.set_x_axis({"name": f"Time ({time_unit})", "min": 0, "major_gridlines": {"visible": False}})
-            chart.set_y_axis({"name": "Cumulative Release (%)", "min": 0, "max": 105,
-                              "major_gridlines": {"visible": True, "line": {"color":"#dddddd","dash_type":"dash"}}})
-            chart.set_legend({"position": "bottom"})
-            chart.set_size({"width": 620, "height": 400})
-            chart.set_chartarea({"border": {"color":"#002147"}, "fill": {"color":"#FDFAF5"}})
-            chart.set_plotarea({"fill": {"color":"#F8F4EC"}})
-            ws5.insert_chart("A10", chart)
+            chart.set_title({"name":"Mean Dissolution Profiles"})
+            chart.set_x_axis({"name":f"Time ({time_unit})","min":0,"major_gridlines":{"visible":False}})
+            chart.set_y_axis({"name":"Cumulative Release (%)","min":0,"max":105,
+                             "major_gridlines":{"visible":True,"line":{"color":"#dddddd","dash_type":"dash"}}})
+            chart.set_legend({"position":"bottom"})
+            chart.set_size({"width":620,"height":400})
+            chart.set_chartarea({"border":{"color":"#002147"},"fill":{"color":"#FDFAF5"}})
+            chart.set_plotarea({"fill":{"color":"#F8F4EC"}})
+            ws5.insert_chart("A10",chart)
 
-        # ── 7. Similarity Report ──────────────────────────────────────────────
+        # 7. SIMILARITY REPORT
         if inc_f2:
             ws6 = wb.add_worksheet("Similarity Report")
-            ws6.set_column("A:A", 28); ws6.set_column("B:H", 16)
-            ws6.write("A1", "f1 and f2 Similarity Analysis", fmt_t)
-            ws6.write("A2", "FDA Guidance: Dissolution Testing of Immediate Release Solid Oral Dosage Forms, 1997", fmt_n)
+            ws6.set_column("A:A",28); ws6.set_column("B:H",16)
+            ws6.write("A1","f1 and f2 Similarity Analysis",fmt_t)
+            ws6.write("A2","FDA Guidance: Dissolution Testing of Immediate Release Solid Oral Dosage Forms, 1997",fmt_n)
             profile_names = list(st.session_state.profiles.keys())
             if len(profile_names) >= 2:
                 ref_xl = profile_names[0]; test_xl = profile_names[1]
@@ -2314,34 +2302,33 @@ elif nav_real == "Excel Report":
                 if len(cm_xl) > 0:
                     rr_xl = np.array([r_rx[np.where(t_rx==ti)[0][0]] for ti in cm_xl])
                     rt_xl = np.array([r_tx[np.where(t_tx==ti)[0][0]] for ti in cm_xl])
-                    msk = rr_xl <= 85; rrf = rr_xl[msk]; rtf = rt_xl[msk]
-                    if len(rrf) > 0:
-                        f1_xl = float(np.sum(np.abs(rrf-rtf))/np.sum(rrf)*100)
-                        f2_xl = float(50*np.log10(100/np.sqrt(1+np.mean((rrf-rtf)**2))))
+                    msk_xl = rr_xl <= 85; rrf_xl = rr_xl[msk_xl]; rtf_xl = rt_xl[msk_xl]
+                    if len(rrf_xl) > 0:
+                        f1_xl = float(np.sum(np.abs(rrf_xl-rtf_xl))/np.sum(rrf_xl)*100)
+                        f2_xl = float(50*np.log10(100/np.sqrt(1+np.mean((rrf_xl-rtf_xl)**2))))
                         ws6.write("A4","Reference Profile",fmt_h); ws6.write("B4",ref_xl,fmt_p)
                         ws6.write("A5","Test Profile",fmt_h); ws6.write("B5",test_xl,fmt_p)
                         ws6.write("A6","Common Time Points",fmt_h); ws6.write("B6",len(cm_xl),fmt_p)
-                        ws6.write("A7","Points Used in f2 (ref≤85%)",fmt_h); ws6.write("B7",len(rrf),fmt_p)
+                        ws6.write("A7","Points Used (ref<=85%)",fmt_h); ws6.write("B7",len(rrf_xl),fmt_p)
                         ws6.write("A9","f1 (Difference Factor)",fmt_h)
                         ws6.write("B9",round(f1_xl,3),fmt_pass if f1_xl<=15 else fmt_fail)
-                        ws6.write("C9","PASS (≤15)" if f1_xl<=15 else "FAIL (>15)",fmt_pass if f1_xl<=15 else fmt_fail)
+                        ws6.write("C9","PASS (<=15)" if f1_xl<=15 else "FAIL (>15)",fmt_pass if f1_xl<=15 else fmt_fail)
                         ws6.write("A10","f2 (Similarity Factor)",fmt_h)
                         ws6.write("B10",round(f2_xl,3),fmt_pass if f2_xl>=50 else fmt_fail)
-                        ws6.write("C10","SIMILAR (≥50)" if f2_xl>=50 else "DISSIMILAR (<50)",fmt_pass if f2_xl>=50 else fmt_fail)
-                        ws6.write("A11","Max |ΔR| (%)",fmt_h); ws6.write("B11",round(float(np.max(np.abs(rrf-rtf))),3),fmt_p)
+                        ws6.write("C10","SIMILAR (>=50)" if f2_xl>=50 else "DISSIMILAR (<50)",fmt_pass if f2_xl>=50 else fmt_fail)
+                        ws6.write("A11","Max |Delta R| (%)",fmt_h); ws6.write("B11",round(float(np.max(np.abs(rrf_xl-rtf_xl))),3),fmt_p)
                         ws6.write("A13","Formulas",fmt_t)
-                        ws6.write("A14","f1 = [Σ|Rt-Tt| / Σ(Rt)] × 100",fmt_n)
-                        ws6.write("A15","f2 = 50 × log10(100 / √(1 + (1/n)×Σ(Rt-Tt)²))",fmt_n)
+                        ws6.write("A14","f1 = [SUM|Rt-Tt| / SUM(Rt)] x 100",fmt_n)
+                        ws6.write("A15","f2 = 50 x log10(100 / sqrt(1 + (1/n) x SUM(Rt-Tt)^2))",fmt_n)
                         ws6.write("A17","Point-by-Point Comparison",fmt_t)
-                        for ci,h in enumerate([f"Time ({time_unit})","Reference (%)","Test (%)","│Diff│ (%)","Used in f2"]):
-                            ws6.write(17, ci, h, fmt_h)
-                        for ri, ti in enumerate(cm_xl):
-                            rval = rr_xl[ri]; tval = rt_xl[ri]
+                        for ci,h in enumerate([f"Time ({time_unit})","Reference (%)","Test (%)","Diff (%)","Used in f2"]):
+                            ws6.write(17,ci,h,fmt_h)
+                        for ri,ti in enumerate(cm_xl):
+                            rval=rr_xl[ri]; tval=rt_xl[ri]
                             ws6.write(18+ri,0,ti,fmt_d); ws6.write(18+ri,1,round(rval,3),fmt_d)
                             ws6.write(18+ri,2,round(tval,3),fmt_d)
                             ws6.write(18+ri,3,round(abs(rval-tval),3),fmt_d)
                             ws6.write(18+ri,4,"Yes" if rval<=85 else "No",fmt_p)
-                        # Chart
                         n_pts = len(cm_xl)
                         chart_s = wb.add_chart({"type":"scatter","subtype":"straight_with_markers"})
                         chart_s.add_series({"name":ref_xl,
@@ -2361,15 +2348,15 @@ elif nav_real == "Excel Report":
                         chart_s.set_legend({"position":"bottom"})
                         chart_s.set_size({"width":600,"height":380})
                         chart_s.set_chartarea({"border":{"color":"#002147"},"fill":{"color":"#FDFAF5"}})
-                        ws6.insert_chart("G4", chart_s)
+                        ws6.insert_chart("G4",chart_s)
             else:
-                ws6.write("A4", "Load at least 2 profiles to generate similarity report.", fmt_n)
+                ws6.write("A4","Load at least 2 profiles to generate similarity report.",fmt_n)
 
-        # ── 8. Bootstrap f2 ───────────────────────────────────────────────────
+        # 8. BOOTSTRAP f2
         if inc_bootstrap and st.session_state.get("bootstrap_results"):
             ws7 = wb.add_worksheet("Bootstrap f2")
-            ws7.write("A1", "Bootstrap f2 Analysis", fmt_t)
-            ws7.write("A2", "Shah et al. 1998 | 5000 iterations", fmt_n)
+            ws7.write("A1","Bootstrap f2 Analysis",fmt_t)
+            ws7.write("A2","Shah et al. 1998 | 5000 iterations",fmt_n)
             br = st.session_state["bootstrap_results"]
             ws7.write("A4","f2 (observed)",fmt_h); ws7.write("B4",round(br.get("f2_obs",0),3),fmt_p)
             ws7.write("A5","Mean Bootstrap f2",fmt_h); ws7.write("B5",round(br.get("f2_mean",0),3),fmt_p)
