@@ -204,6 +204,13 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
   color: #FFBF00 !important;
   font-weight: 600 !important;
 }
+
+/* ── Google Auth: üstteki text-only "Sign in with Google" butonunu gizle ── */
+/* streamlit-authenticator Google OAuth linkini (ikonsuzu) gizler,
+   alttaki ikonlu gerçek Google butonu görünür kalır                         */
+[data-testid="stLinkButton"] {
+  display: none !important;
+}
 </style>
 
 <script>
