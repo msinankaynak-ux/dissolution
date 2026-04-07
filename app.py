@@ -244,9 +244,10 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
         if (mdSpan && !lbl.querySelector('.beta-badge')) {
           var badge = document.createElement('span');
           badge.className = 'beta-badge';
-          badge.textContent = 'β';
-          badge.style.cssText = 'background:#FFBF00;color:#002147;font-size:0.55rem;' +
-            'font-weight:700;padding:1px 5px;border-radius:3px;margin-left:6px;vertical-align:middle;';
+          badge.textContent = 'β BETA';
+          badge.style.cssText = 'background:#c0392b;color:#fff;font-size:0.5rem;' +
+            'font-weight:700;padding:2px 5px;border-radius:3px;margin-left:6px;' +
+            'vertical-align:middle;letter-spacing:0.5px;';
           mdSpan.appendChild(badge);
         }
       }
@@ -1421,11 +1422,11 @@ if nav == "Data Input":
                        label="80% line (FDA/USP Q criterion)")
 
         ax.set_xlabel(f"Time ({time_unit})")
-        ax.set_ylabel("Cumulative Release (%)")
-        ax.set_title("Mean Dissolution Profiles  (Mean +/- SD)")
+        ax.set_ylabel("Cumulative Drug Released (%)")
+        ax.set_title("Mean Dissolution Profiles  (Mean ± SD)")
         t_all = np.concatenate([np.array(d["time"]) for d in st.session_state.profiles.values()])
         ax.set_xlim(left=0, right=t_all.max() * 1.05)
-        ax.set_ylim(bottom=0, top=108)
+        ax.set_ylim(bottom=0, top=112)
         ax.legend(fontsize=8.5)
         st.pyplot(fig)
         plt.close()
@@ -1540,6 +1541,7 @@ elif nav == "Kinetic Model Fitting":
         st.subheader("Dissolution Curves with Model Fits")
         fig,ax=plt.subplots(figsize=(10,5.5)); style_ax(fig,ax)
         ax.scatter(t_arr,r_arr,color=OXFORD,s=65,zorder=5,edgecolors="white",lw=0.8,label="Experimental")
+        ax.set_xlim(left=0); ax.set_ylim(bottom=0)
         t_sm=np.linspace(t_arr.min(),t_arr.max(),400)
         for i,(mn,v) in enumerate(res_ok.items()):
             func=MODEL_DEFS[mn][0]; popt=list(v["params"].values())
@@ -1548,8 +1550,10 @@ elif nav == "Kinetic Model Fitting":
                 ax.plot(t_sm,ys,color=PALETTE[i%len(PALETTE)],lw=1.6,alpha=0.85,
                         label=f"{mn} (R2adj={v['r2adj']:.3f})")
             except: pass
-        ax.set_xlabel(f"Time ({time_unit})"); ax.set_ylabel("Cumulative Release (%)")
-        ax.set_title(f"Kinetic Model Fitting - {pname}"); ax.set_ylim(0,112)
+        ax.set_xlabel(f"Time ({time_unit})")
+        ax.set_ylabel("Cumulative Drug Released (%)")
+        ax.set_xlim(left=0)
+        ax.set_title(f"Kinetic Model Fitting — {pname}"); ax.set_ylim(0,112)
         ax.legend(fontsize=6.5,ncol=2,loc="lower right")
         st.pyplot(fig); plt.close()
 
@@ -1608,16 +1612,41 @@ elif nav == "Statistical Analysis":
         st.dataframe(pd.DataFrame(rows2),use_container_width=True)
 
     st.subheader("Individual Profile Plots")
+    # Görsel seçenekler
+    sp_c1, sp_c2, sp_c3 = st.columns(3)
+    with sp_c1:
+        show_q_line  = st.radio("Q Value Line", ["Show","Hide"], horizontal=True, key="stat_qline") == "Show"
+    with sp_c2:
+        show_qt_line = st.radio("Q Time Marker", ["Show","Hide"], horizontal=True, key="stat_qtline") == "Show"
+    with sp_c3:
+        show_eb      = st.radio("Error Bars (SD)", ["Show","Hide"], horizontal=True, key="stat_eb") == "Show"
+
     ncols=min(2,len(names)); cols=st.columns(ncols)
     for i,nm in enumerate(names):
-        ta=np.array(st.session_state.profiles[nm]["time"])
-        ra=np.array(st.session_state.profiles[nm]["release"])
-        fig,ax=plt.subplots(figsize=(5.5,3.5)); style_ax(fig,ax)
-        ax.fill_between(ta,ra,alpha=0.12,color=OXFORD)
-        ax.plot(ta,ra,"o-",color=OXFORD,lw=2,ms=6)
-        ax.axhline(80,color=AMBER,lw=1.2,ls="--",alpha=0.8)
-        ax.set_title(nm,fontsize=11); ax.set_xlabel(f"Time ({time_unit})")
-        ax.set_ylabel("Release (%)"); ax.set_ylim(0,110)
+        ta  = np.array(st.session_state.profiles[nm]["time"])
+        ra  = np.array(st.session_state.profiles[nm]["release"])
+        sda = np.array(st.session_state.profiles[nm].get("sd") or [0.0]*len(ta))
+        has_sd = not np.all(sda == 0)
+        fig,ax=plt.subplots(figsize=(5.5,3.8)); style_ax(fig,ax)
+        ax.fill_between(ta, np.clip(ra-sda,0,None), ra+sda, alpha=0.10, color=PALETTE[i%len(PALETTE)])
+        if has_sd and show_eb:
+            ax.errorbar(ta, ra, yerr=sda, fmt="o-", color=PALETTE[i%len(PALETTE)],
+                        lw=2, ms=6, capsize=4, capthick=1.5, elinewidth=1.2)
+        else:
+            ax.plot(ta, ra, "o-", color=PALETTE[i%len(PALETTE)], lw=2, ms=6)
+        if show_q_line:
+            ax.axhline(q_limit, color=AMBER, lw=1.3, ls="--", alpha=0.85,
+                       label=f"Q = {q_limit:.0f}%")
+        if show_qt_line:
+            ax.axvline(q_time, color="#e74c3c", lw=1.2, ls=":", alpha=0.75,
+                       label=f"Q-time = {q_time:.0f} {time_unit}")
+        ax.set_title(nm, fontsize=11)
+        ax.set_xlabel(f"Time ({time_unit})")
+        ax.set_ylabel("Cumulative Drug Released (%)")
+        ax.set_xlim(left=0, right=ta.max()*1.05)
+        ax.set_ylim(bottom=0, top=112)
+        if show_q_line or show_qt_line:
+            ax.legend(fontsize=7.5)
         cols[i%ncols].pyplot(fig); plt.close()
 
     show_literature("Statistical Analysis")
@@ -1701,18 +1730,30 @@ elif nav == "f1 and f2 Similarity":
     st.dataframe(df_cmp,use_container_width=True)
 
     # -- Plot options
-    opt_c1, opt_c2 = st.columns(2)
+    opt_c1, opt_c2, opt_c3, opt_c4 = st.columns(4)
     with opt_c1:
         show_cutoff = st.radio(
             "85% Cutoff Line (FDA)",
             ["Show", "Hide"], horizontal=True, key="f2_cutoff",
-            help="Only time points where reference <= 85% are used in f2 calculation."
+            help="Only time points where reference ≤ 85% are used in f2 calculation."
         ) == "Show"
     with opt_c2:
         show_diff_area = st.radio(
             "Difference Area",
             ["Show", "Hide"], horizontal=True, key="f2_area",
             help="Shaded area between reference and test profiles."
+        ) == "Show"
+    with opt_c3:
+        show_q_f2 = st.radio(
+            f"Q Value Line ({q_limit:.0f}%)",
+            ["Show", "Hide"], horizontal=True, key="f2_qline",
+            help=f"FDA/USP acceptance criterion: Q = {q_limit:.0f}%"
+        ) == "Show"
+    with opt_c4:
+        show_qt_f2 = st.radio(
+            f"Q Time ({q_time:.0f} {time_unit})",
+            ["Show", "Hide"], horizontal=True, key="f2_qtline",
+            help=f"Q time point: {q_time:.0f} {time_unit}"
         ) == "Show"
 
     fig, ax = plt.subplots(figsize=(10, 5)); style_ax(fig, ax)
@@ -1728,14 +1769,20 @@ elif nav == "f1 and f2 Similarity":
     if show_diff_area:
         ax.fill_between(common, rr, rt, alpha=0.12, color="#c0392b",
                         label="Difference area")
+    if show_q_f2:
+        ax.axhline(q_limit, color=AMBER, lw=1.3, ls="--", alpha=0.85,
+                   label=f"Q = {q_limit:.0f}% (USP/FDA)")
+    if show_qt_f2:
+        ax.axvline(q_time, color="#27ae60", lw=1.2, ls=":", alpha=0.8,
+                   label=f"Q-time = {q_time:.0f} {time_unit}")
 
     # Force origin (0,0)
     t_all_f2 = np.concatenate([t_ref, t_tst])
     ax.set_xlim(left=0, right=t_all_f2.max() * 1.05)
-    ax.set_ylim(bottom=0, top=108)
+    ax.set_ylim(bottom=0, top=112)
 
     ax.set_xlabel(f"Time ({time_unit})", fontsize=11)
-    ax.set_ylabel("Cumulative Release (%)", fontsize=11)
+    ax.set_ylabel("Cumulative Drug Released (%)", fontsize=11)
     ax.set_title(
         f"f1 = {f1:.2f}  |  f2 = {f2:.2f}  |  {ref_nm} vs {test_nm}",
         fontsize=12, color=OXFORD, pad=12
@@ -1745,7 +1792,6 @@ elif nav == "f1 and f2 Similarity":
     plt.close()
 
     # -- Equations in proper format
-    st.markdown("**Formulas:**", unsafe_allow_html=False)
     st.markdown("**Formulas:**")
     st.latex(r"f_1 = \frac{\sum |R_t - T_t|}{\sum R_t} \times 100")
     st.latex(r"f_2 = 50 \cdot \log_{10}\left(\frac{100}{\sqrt{1 + \frac{1}{n}\sum(R_t-T_t)^2}}\right)")
@@ -2089,6 +2135,20 @@ elif nav == "Bootstrap f2 Analysis":
         })
         st.dataframe(df_pts, use_container_width=True, hide_index=True)
 
+        # Bootstrap sonuçlarını session_state'e kaydet (Excel raporu için)
+        st.session_state["bootstrap_results"] = {
+            "f2_obs":   f2_obs,
+            "f2_mean":  f2_mean,
+            "f2_median":f2_med,
+            "f2_sd":    f2_sd,
+            "ci_lower": f2_lower,
+            "ci_upper": f2_upper,
+            "n_iter":   len(f2_boot),
+            "ref":      ref_bs,
+            "test":     test_bs,
+            "verdict":  verdict_icon,
+        }
+
         # ---- Reference citation ---------------------------------------------
         st.markdown(
             "<div class='info-banner' style='font-size:0.83rem;'>"
@@ -2116,8 +2176,8 @@ elif nav == "IVIVC Analysis":
         unsafe_allow_html=True
     )
     st.markdown(
-        '<div style="background:rgba(255,191,0,0.08);border:1px solid rgba(255,191,0,0.35);'
-        'border-left:4px solid #FFBF00;border-radius:4px;padding:10px 14px;margin-bottom:12px;">'
+        '<div style="background:#c0392b;border:1px solid #a93226;'
+        'border-left:4px solid #922b21;border-radius:4px;padding:10px 14px;margin-bottom:12px;color:white;">'
         '⚠️ <strong>Beta Feature:</strong> This module is under active development. '
         'Results should be validated against established IVIVC software. '
         'Full Level A/B/C correlation methods coming soon.'
@@ -2158,8 +2218,10 @@ elif nav == "IVIVC Analysis":
     for ax in axes: style_ax(fig,ax)
     axes[0].plot(t,f_pct,"o-",color=OXFORD,lw=2,ms=5,label="In Vitro Release")
     axes[0].plot(t,Fa,"s--",color="#c0392b",lw=2,ms=5,label="Fraction Absorbed")
-    axes[0].set_xlabel(f"Time ({time_unit})"); axes[0].set_ylabel("(%)")
-    axes[0].set_title("In Vitro vs Fa"); axes[0].legend(fontsize=8); axes[0].set_ylim(0,110)
+    axes[0].set_xlabel(f"Time ({time_unit})")
+    axes[0].set_ylabel("Cumulative Drug Released / Absorbed (%)")
+    axes[0].set_xlim(left=0); axes[0].set_ylim(bottom=0, top=112)
+    axes[0].set_title("In Vitro Release vs Fraction Absorbed"); axes[0].legend(fontsize=8)
     axes[1].scatter(f_pct,Fa,color=OXFORD,s=60,edgecolors=AMBER,lw=1,zorder=5)
     m,b=np.polyfit(f_pct,Fa,1)
     xl=np.linspace(f_pct.min(),f_pct.max(),100)
