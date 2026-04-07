@@ -20,17 +20,19 @@ st.set_page_config(
 # ── Streamlit built-in Google Auth ──────────────────────────────────────────
 st.markdown("""
 <style>
-/* Login sayfasındaki üstteki text-only "Sign in with Google" linkini gizle.
-   Alttaki ikonlu gerçek Google butonu görünür kalır. */
 [data-testid="stLinkButton"] {
     display: none !important;
 }
 </style>
+<script>
+const observer = new MutationObserver(() => {
+    document.querySelectorAll('[data-testid="stLinkButton"]').forEach(el => {
+        el.style.display = 'none';
+    });
+});
+observer.observe(document.body, {childList: true, subtree: true});
+</script>
 """, unsafe_allow_html=True)
-
-if not st.user.is_logged_in:
-    st.login()
-    st.stop()
 # ────────────────────────────────────────────────────────────────────────────
 
 
