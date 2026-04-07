@@ -244,10 +244,10 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
         if (mdSpan && !lbl.querySelector('.beta-badge')) {
           var badge = document.createElement('span');
           badge.className = 'beta-badge';
-          badge.textContent = 'β BETA';
-          badge.style.cssText = 'background:#c0392b;color:#fff;font-size:0.5rem;' +
-            'font-weight:700;padding:2px 5px;border-radius:3px;margin-left:6px;' +
-            'vertical-align:middle;letter-spacing:0.5px;';
+          badge.textContent = 'B BETA VERSION';
+          badge.style.cssText = 'background:#FFBF00;color:#002147;font-size:0.48rem;' +
+            'font-weight:800;padding:2px 6px;border-radius:3px;margin-left:6px;' +
+            'vertical-align:middle;letter-spacing:0.5px;white-space:nowrap;display:inline-block;';
           mdSpan.appendChild(badge);
         }
       }
@@ -1376,20 +1376,26 @@ if nav == "Data Input":
         # -- Mean profiles plot with error bars -------------------------------
         st.markdown("#### Mean Dissolution Profiles")
 
-        opt_col1, opt_col2, opt_col3 = st.columns(3)
+        opt_col1, opt_col2, opt_col3, opt_col4 = st.columns(4)
         with opt_col1:
             show_80 = st.radio(
-                "80% Reference Line",
+                f"Q Value ({q_limit:.0f}%)",
                 ["Show", "Hide"], horizontal=True, key="opt_80line",
-                help="FDA/USP dissolution acceptance criterion: Q=80% at specified time."
+                help=f"FDA/USP Q criterion: NLT {q_limit:.0f}% dissolved at {q_time:.0f} {time_unit}."
             ) == "Show"
         with opt_col2:
-            show_band = st.radio(
-                "SD Confidence Band",
-                ["Show", "Hide"], horizontal=True, key="opt_sdband",
-                help="Shaded area around mean = Mean +/- SD (one standard deviation)."
+            show_qt = st.radio(
+                f"Q Time ({q_time:.0f} {time_unit})",
+                ["Show", "Hide"], horizontal=True, key="opt_qtline",
+                help=f"Vertical marker at Q time point ({q_time:.0f} {time_unit})."
             ) == "Show"
         with opt_col3:
+            show_band = st.radio(
+                "SD Band",
+                ["Show", "Hide"], horizontal=True, key="opt_sdband",
+                help="Shaded area around mean = Mean ± SD."
+            ) == "Show"
+        with opt_col4:
             show_errbar = st.radio(
                 "Error Bars (SD)",
                 ["Show", "Hide"], horizontal=True, key="opt_errbar",
@@ -1418,8 +1424,11 @@ if nav == "Data Input":
                 ax.fill_between(t, r - sd, r + sd, color=col, alpha=0.10)
 
         if show_80:
-            ax.axhline(80, color=AMBER, lw=1.3, ls="--", alpha=0.85,
-                       label="80% line (FDA/USP Q criterion)")
+            ax.axhline(q_limit, color=AMBER, lw=1.5, ls="--", alpha=0.9,
+                       label=f"Q = {q_limit:.0f}% (FDA/USP)")
+        if show_qt:
+            ax.axvline(q_time, color="#27ae60", lw=1.4, ls=":", alpha=0.85,
+                       label=f"Q-time = {q_time:.0f} {time_unit}")
 
         ax.set_xlabel(f"Time ({time_unit})")
         ax.set_ylabel("Cumulative Drug Released (%)")
@@ -1431,11 +1440,11 @@ if nav == "Data Input":
         st.pyplot(fig)
         plt.close()
 
-        if show_80:
+        if show_80 or show_qt:
             st.caption(
-                "80% reference line source: FDA Guidance for Industry - Dissolution Testing of "
-                "Immediate Release Solid Oral Dosage Forms (1997); USP <711> Dissolution, "
-                "Acceptance Table 1 (Q = 80% at specified time point)."
+                f"Q = {q_limit:.0f}% at {q_time:.0f} {time_unit} | "
+                "FDA Guidance for Industry: Dissolution Testing of Immediate Release "
+                "Solid Oral Dosage Forms (1997); USP <711> Dissolution."
             )
 
         # -- Per-profile statistics tables -------------------------------------
@@ -1758,10 +1767,27 @@ elif nav == "f1 and f2 Similarity":
 
     fig, ax = plt.subplots(figsize=(10, 5)); style_ax(fig, ax)
 
-    ax.plot(t_ref, r_ref, "o-",  color=OXFORD,    lw=2.5, ms=7,
-            label=f"Reference: {ref_nm}")
-    ax.plot(t_tst, r_tst, "s--", color="#c0392b",  lw=2.5, ms=7,
-            label=f"Test: {test_nm}")
+    # Reference error bars
+    sd_ref = np.array(st.session_state.profiles[ref_nm].get("sd") or [0.0]*len(t_ref))
+    sd_tst = np.array(st.session_state.profiles[test_nm].get("sd") or [0.0]*len(t_tst))
+    has_sd_ref = not np.all(sd_ref == 0)
+    has_sd_tst = not np.all(sd_tst == 0)
+
+    if has_sd_ref:
+        ax.errorbar(t_ref, r_ref, yerr=sd_ref, fmt="o-", color=OXFORD, lw=2.5,
+                    ms=7, capsize=4, capthick=1.5, elinewidth=1.2, alpha=0.9,
+                    label=f"Reference: {ref_nm}")
+    else:
+        ax.plot(t_ref, r_ref, "o-", color=OXFORD, lw=2.5, ms=7,
+                label=f"Reference: {ref_nm}")
+
+    if has_sd_tst:
+        ax.errorbar(t_tst, r_tst, yerr=sd_tst, fmt="s--", color="#c0392b", lw=2.5,
+                    ms=7, capsize=4, capthick=1.5, elinewidth=1.2, alpha=0.9,
+                    label=f"Test: {test_nm}")
+    else:
+        ax.plot(t_tst, r_tst, "s--", color="#c0392b", lw=2.5, ms=7,
+                label=f"Test: {test_nm}")
 
     if show_cutoff:
         ax.axhline(85, color=AMBER, lw=1.2, ls=":", alpha=0.85,
