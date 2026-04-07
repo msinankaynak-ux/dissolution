@@ -367,6 +367,7 @@ with st.sidebar:
         "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
         "f1 and f2 Similarity", "Bootstrap f2 Analysis", "IVIVC Analysis",
         "Excel Report", "Method Settings", "Analytical Settings",
+        "📚 All References",
     ], label_visibility="hidden")
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.25);margin:14px 0;">', unsafe_allow_html=True)
@@ -436,6 +437,77 @@ def show_literature(page_key):
     with st.expander("📚 Literature References (APA Format)", expanded=False):
         for i, ref in enumerate(refs, 1):
             st.markdown(f"**{i}.** {ref}")
+
+# ── Tüm Program Referans Listesi ─────────────────────────────────────────────
+ALL_REFERENCES = [
+    # === DISSOLUTION TESTING & REGULATORY ===
+    ("Dissolution Testing & Regulatory", [
+        "U.S. Food and Drug Administration. (1997). *Guidance for industry: Dissolution testing of immediate release solid oral dosage forms*. FDA, CDER.",
+        "United States Pharmacopeia. (2023). <711> Dissolution. *USP 46–NF 41*. USP Convention.",
+        "European Medicines Agency. (2010). *Guideline on the investigation of bioequivalence*. CPMP/EWP/QWP/1401/98 Rev. 1. EMA.",
+        "U.S. Food and Drug Administration. (1997). *Guidance for industry: Extended release oral dosage forms — development, evaluation, and application of in vitro/in vivo correlations*. FDA, CDER.",
+    ]),
+    # === KINETIC MODELS ===
+    ("Kinetic Model References", [
+        "Wagner, J. G. (1969). Interpretation of percent dissolved-time plots derived from in vitro testing of conventional tablets and capsules. *Journal of Pharmaceutical Sciences*, 58(10), 1253–1257.",
+        "Higuchi, T. (1961). Rate of release of medicaments from ointment bases containing drugs in suspension. *Journal of Pharmaceutical Sciences*, 50(10), 874–875.",
+        "Higuchi, T. (1963). Mechanism of sustained-action medication. *Journal of Pharmaceutical Sciences*, 52(12), 1145–1149.",
+        "Korsmeyer, R. W., Gurny, R., Doelker, E., Buri, P., & Peppas, N. A. (1983). Mechanisms of solute release from porous hydrophilic polymers. *International Journal of Pharmaceutics*, 15(1), 25–35.",
+        "Peppas, N. A. (1985). Analysis of Fickian and non-Fickian drug release from polymers. *Pharmaceutica Acta Helvetiae*, 60(4), 110–111.",
+        "Peppas, N. A., & Sahlin, J. J. (1989). A simple equation for the description of solute release. III. Coupling of diffusion and relaxation. *International Journal of Pharmaceutics*, 57(2), 169–172.",
+        "Weibull, W. (1951). A statistical distribution function of wide applicability. *Journal of Applied Mechanics*, 18(3), 293–297.",
+        "Hixson, A. W., & Crowell, J. H. (1931). Dependence of reaction velocity upon surface and agitation. *Industrial & Engineering Chemistry*, 23(8), 923–931.",
+        "Hopfenberg, H. B. (1976). *Controlled release polymeric formulations* (ACS Symposium Series, Vol. 33). American Chemical Society.",
+        "Baker, R. W., & Lonsdale, H. S. (1974). *Controlled release of biologically active agents*. Plenum Press.",
+        "Makoid, M. C., Dufour, A., & Banakar, U. V. (1993). Modelling of dissolution behaviour of controlled release systems. *STP Pharma*, 3(1), 49–58.",
+        "Ritger, P. L., & Peppas, N. A. (1987). A simple equation for description of solute release I. Fickian and non-Fickian release from nonswellable devices. *Journal of Controlled Release*, 5(1), 23–36.",
+        "Langenbucher, F. (1972). Linearization of dissolution rate curves by the Weibull distribution. *Journal of Pharmacy and Pharmacology*, 24(12), 979–981.",
+        "Gompertz, B. (1825). On the nature of the function expressive of the law of human mortality. *Philosophical Transactions of the Royal Society*, 115, 513–583.",
+        "Richards, F. J. (1959). A flexible growth function for empirical use. *Journal of Experimental Botany*, 10(2), 290–301.",
+        "Macheras, P., & Dokoumetzidis, A. (2000). On the heterogeneity of drug dissolution and release. *Pharmaceutical Research*, 17(2), 108–112.",
+    ]),
+    # === SIMILARITY & STATISTICS ===
+    ("f1/f2 & Statistical Methods", [
+        "Moore, J. W., & Flanner, H. H. (1996). Mathematical comparison of dissolution profiles. *Pharmaceutical Technology*, 20(6), 64–74.",
+        "Shah, V. P., Tsong, Y., Sathe, P., & Liu, J. P. (1998). In vitro dissolution profile comparison — statistics and analysis of the similarity factor, f2. *Pharmaceutical Research*, 15(6), 889–896.",
+        "Costa, P., & Lobo, J. M. S. (2001). Modeling and comparison of dissolution profiles. *European Journal of Pharmaceutical Sciences*, 13(2), 123–133.",
+        "Tsong, Y., Hammerstrom, T., Sathe, P., & Shah, V. P. (1996). Statistical assessment of mean differences between two dissolution data sets. *Drug Information Journal*, 30(4), 1105–1112.",
+        "Polli, J. E., Rekhi, G. S., Augsburger, L. L., & Shah, V. P. (1997). Methods to compare dissolution profiles and a rationale for wide dissolution specifications for metoprolol tartrate tablets. *Journal of Pharmaceutical Sciences*, 86(6), 690–700.",
+        "Anderson, N. H., Bauer, M., Boussac, N., Khan-Malek, R., Munden, P., & Sardaro, M. (1998). An evaluation of fit factors and dissolution efficiency for the comparison of in vitro dissolution profiles. *Journal of Pharmaceutical and Biomedical Analysis*, 17(4–5), 811–822.",
+        "Khan, K. A. (1975). The concept of dissolution efficiency. *Journal of Pharmacy and Pharmacology*, 27(1), 48–49.",
+    ]),
+    # === SOFTWARE & TOOLS ===
+    ("Dissolution Analysis Software", [
+        "Zhang, Y., Huo, M., Zhou, J., Zou, A., Li, W., Yao, C., & Xie, S. (2010). DDSolver: An add-in program for modeling and comparison of drug dissolution profiles. *The AAPS Journal*, 12(3), 263–271. https://doi.org/10.1208/s12248-010-9185-1",
+        "Zuo, J., Gao, Y., Bou-Chacra, N., & Löbenberg, R. (2014). Evaluation of the DDSolver software applications. *BioMed Research International*, 2014, Article 204925. https://doi.org/10.1155/2014/204925",
+        "Mendyk, A., Jachowicz, R., Fijorek, K., Dorożyński, P., Kulinowski, P., & Polak, S. (2012). KinetDS: An open source software for dissolution test data analysis. *Dissolution Technologies*, 19(1), 6–11. https://doi.org/10.14227/DT190112P6",
+        "O'Hara, T., Dunne, A., Butler, J., & Devane, J. (1998). A review of methods used to compare dissolution profile data. *Pharmaceutical Science & Technology Today*, 1(5), 214–223.",
+    ]),
+    # === IVIVC ===
+    ("IVIVC References", [
+        "Wagner, J. G., & Nelson, E. (1964). Kinetic analysis of blood levels and urinary excretion in the absorptive phase after single doses of drug. *Journal of Pharmaceutical Sciences*, 53(11), 1392–1403.",
+        "Emami, J. (2006). In vitro–in vivo correlation: From theory to applications. *Journal of Pharmacy & Pharmaceutical Sciences*, 9(2), 169–189.",
+        "Siepmann, J., & Siepmann, F. (2008). Mathematical modeling of drug delivery. *International Journal of Pharmaceutics*, 364(2), 328–343.",
+    ]),
+]
+
+def show_all_references():
+    """Tüm program referanslarını göster - sidebar ikonu için."""
+    st.markdown("## 📚 DissolvA — Complete Reference List")
+    st.markdown(
+        '<div class="info-banner">All scientific sources, regulatory guidelines, and software references '
+        'used in DissolvA v2.0. Please cite these works in your publications.</div>',
+        unsafe_allow_html=True
+    )
+    for section_title, refs in ALL_REFERENCES:
+        st.markdown(f"### {section_title}")
+        for i, ref in enumerate(refs, 1):
+            st.markdown(f"**{i}.** {ref}")
+        st.markdown("---")
+    st.caption(
+        "DissolvA v2.0 — Developed by M. Sinan KAYNAK, PhD | "
+        "Anadolu University, Faculty of Pharmacy | msinankaynak@gmail.com"
+    )
 
 
 # ===========================================================================
@@ -508,6 +580,64 @@ def m_fractal_fo(t, k, alpha): return 100.0*(1-np.exp(-k*t**alpha))
 def m_stretched_exp(t, A, beta, tau): return A*(1-np.exp(-((t/tau)**beta)))
 def m_weibull_sig(t, A, k, t50, b): return A/(1+np.exp(-k*(t-t50)))*(1-np.exp(-(t/b)**2))
 
+# ── DDSolver / KinetDS'den eklenen yeni modeller ──────────────────────────────
+# Zero-order with F0 (burst release): F = F0 + k0*t
+def m_zero_order_f0(t, k0, F0): return F0 + k0 * t
+
+# First-order with Fmax: F = Fmax*(1-exp(-k1*t))
+def m_first_order_fmax(t, k1, Fmax): return Fmax*(1-np.exp(-k1*t))
+
+# First-order with Tlag and Fmax: F = Fmax*(1-exp(-k1*(t-Tlag)))
+def m_first_order_tlag_fmax(t, k1, tlag, Fmax):
+    return Fmax*(1-np.exp(-k1*np.clip(t-tlag,0,None)))
+
+# Higuchi with F0 (burst): F = F0 + kH*sqrt(t)
+def m_higuchi_f0(t, kH, F0): return F0 + kH*np.sqrt(np.abs(t))
+
+# Korsmeyer-Peppas with F0: F = F0 + kKP*t^n
+def m_kp_f0(t, k, n, F0): return F0 + k*np.abs(t)**n
+
+# Peppas-Sahlin 2: F = k1*t^0.5 + k2*t
+def m_peppas_sahlin2(t, k1, k2): return k1*np.sqrt(np.abs(t)) + k2*t
+
+# Second-order: F = k*t^2
+def m_second_order(t, k): return k * t**2
+
+# Third-order: F = k*t^3
+def m_third_order(t, k): return k * t**3
+
+# Michaelis-Menten: F = Qmax*t/(k+t)  [same as hyperbolic, explicit reference]
+def m_michaelis_menten(t, Qmax, km): return Qmax*t/(km+t)
+
+# Hixson-Crowell with Tlag
+def m_hixson_tlag(t, ks, tlag):
+    tc = np.clip(t-tlag,0,None)
+    inner = 1.0 - ks*tc/3.0
+    return np.clip(100.0*(1-np.sign(inner)*np.abs(inner)**3), 0, 100)
+
+# Logistic 1 (DDSolver #332): F = 100*exp(a+b*log(t))/(1+exp(a+b*log(t)))
+def m_logistic1_dds(t, alpha, beta):
+    x = alpha + beta*np.log(_nz(t))
+    return 100.0*np.exp(x)/(1+np.exp(x))
+
+# Logistic 2 (DDSolver #333): F = Fmax*exp(a+b*log(t))/(1+exp(a+b*log(t)))
+def m_logistic2_dds(t, alpha, beta, Fmax):
+    x = alpha + beta*np.log(_nz(t))
+    return Fmax*np.exp(x)/(1+np.exp(x))
+
+# Gompertz 1 (DDSolver #335): F = 100*exp(-exp(a-b*log(t)))
+def m_gompertz1_dds(t, alpha, beta):
+    return 100.0*np.exp(-np.exp(alpha - beta*np.log(_nz(t))))
+
+# Gompertz 2 (DDSolver #336): F = Fmax*exp(-exp(a-b*log(t)))
+def m_gompertz2_dds(t, alpha, beta, Fmax):
+    return Fmax*np.exp(-np.exp(alpha - beta*np.log(_nz(t))))
+
+# Probit 1 (DDSolver #339): F = 100*Phi(a + b*log(t))
+def m_probit1_dds(t, alpha, beta):
+    return 100.0*sp_norm.cdf(alpha + beta*np.log10(_nz(t)))
+
+
 MODEL_DEFS = {
     "Zero Order":            (m_zero_order,       [1.0],                      ["k0"],                   "F=k0*t",                         "Wagner 1969",          "Basic"),
     "First Order":           (m_first_order,      [0.05],                     ["k1"],                   "F=100*(1-exp(-k1*t))",           "Wagner 1969",          "Basic"),
@@ -556,9 +686,25 @@ MODEL_DEFS = {
     "KP Modified":           (m_kpmod,            [10.0, 0.5, 0.01],          ["k","n","b"],            "F=k*t^n/(1+b*t)",                 "Modified KP",          "Empirical"),
     "Makoid-Banakar Mod.":   (m_mb_mod,           [10.0,0.5,0.01,0.0],        ["k","n","b","c"],        "F=k*t^n*exp(-b*t)+c",             "Extended MB",          "Empirical"),
     "Weibull-Sigmoid":       (m_weibull_sig,      [100.0,0.1,30.0,60.0],      ["A","k","t50","b"],      "Weibull x Logistic hybrid",       "Hybrid",               "Empirical"),
+    # ── DDSolver / KinetDS modelleri ─────────────────────────────────────────
+    "Zero Order + F0":       (m_zero_order_f0,    [1.0, 5.0],                 ["k0","F0"],              "F=F0+k0*t (burst+linear)",        "DDSolver #303",        "Burst Release"),
+    "First Order + Fmax":    (m_first_order_fmax, [0.05, 100.0],              ["k1","Fmax"],            "F=Fmax*(1-exp(-k1*t))",           "DDSolver #306",        "Burst Release"),
+    "First Order + Tlag + Fmax": (m_first_order_tlag_fmax, [0.05,5.0,100.0], ["k1","tlag","Fmax"],     "F=Fmax*(1-exp(-k1*(t-tlag)))",    "DDSolver #307",        "Burst Release"),
+    "Higuchi + F0":          (m_higuchi_f0,       [10.0, 5.0],                ["kH","F0"],              "F=F0+kH*sqrt(t)",                 "DDSolver #310",        "Burst Release"),
+    "KP + F0":               (m_kp_f0,            [10.0, 0.5, 5.0],           ["k","n","F0"],           "F=F0+k*t^n",                      "DDSolver #313",        "Burst Release"),
+    "Peppas-Sahlin 2":       (m_peppas_sahlin2,   [5.0, 1.0],                 ["k1","k2"],              "F=k1*sqrt(t)+k2*t",               "Peppas & Sahlin 1989", "Basic"),
+    "Second Order":          (m_second_order,     [0.1],                      ["k"],                    "F=k*t^2",                         "DDSolver #302",        "Basic"),
+    "Third Order":           (m_third_order,      [0.01],                     ["k"],                    "F=k*t^3",                         "DDSolver",             "Basic"),
+    "Michaelis-Menten":      (m_michaelis_menten, [100.0, 20.0],              ["Qmax","km"],            "F=Qmax*t/(km+t)",                 "KinetDS 2012",         "Basic"),
+    "Hixson-Crowell + Lag":  (m_hixson_tlag,      [0.05, 5.0],                ["ks","tlag"],            "M0^(1/3)-M^(1/3)=ks*(t-tlag)",   "DDSolver #315",        "Lag-Time"),
+    "Logistic 1 (DDSolver)": (m_logistic1_dds,    [1.0, 1.0],                 ["alpha","beta"],         "F=100*exp(a+b*log(t))/(1+...)",   "DDSolver #332",        "Sigmoid"),
+    "Logistic 2 (DDSolver)": (m_logistic2_dds,    [1.0, 1.0, 100.0],          ["alpha","beta","Fmax"],  "F=Fmax*exp(a+b*log(t))/(1+...)",  "DDSolver #333",        "Sigmoid"),
+    "Gompertz 1 (DDSolver)": (m_gompertz1_dds,    [2.0, 1.0],                 ["alpha","beta"],         "F=100*exp(-exp(a-b*log(t)))",     "DDSolver #335",        "Sigmoid"),
+    "Gompertz 2 (DDSolver)": (m_gompertz2_dds,    [2.0, 1.0, 100.0],          ["alpha","beta","Fmax"],  "F=Fmax*exp(-exp(a-b*log(t)))",    "DDSolver #336",        "Sigmoid"),
+    "Probit 1 (DDSolver)":   (m_probit1_dds,      [1.5, 0.5],                 ["alpha","beta"],         "F=100*Phi(a+b*log10(t))",         "DDSolver #339",        "Sigmoid"),
 }
 
-CATEGORIES = ["Basic","Lag-Time","Multi-Phase","Sigmoid","Fractal","Empirical"]
+CATEGORIES = ["Basic","Lag-Time","Burst Release","Multi-Phase","Sigmoid","Fractal","Empirical"]
 
 # --- Stat helpers ---
 def r2s(y,yp):
@@ -2373,3 +2519,8 @@ elif nav == "Excel Report":
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
+# ===========================================================================
+# PAGE: ALL REFERENCES
+# ===========================================================================
+elif nav == "📚 All References":
+    show_all_references()
