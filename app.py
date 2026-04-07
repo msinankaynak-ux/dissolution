@@ -262,7 +262,7 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
     // İlk öğenin önüne "Analysis Modules" etiketi
     var lbl1 = document.createElement('div');
     lbl1.className = 'nav-section-label';
-    lbl1.innerHTML = '📊 Analysis Modules';
+    lbl1.innerHTML = 'ð Analysis Modules';
     radioDiv.insertBefore(lbl1, children[0]);
 
     // "Excel Report" öğesinin önüne bölüm çizgisi + "Settings & Report"
@@ -368,7 +368,7 @@ with st.sidebar:
         "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
         "f1 and f2 Similarity", "Bootstrap f2 Analysis", "IVIVC Analysis",
         "Excel Report", "Method Settings", "Analytical Settings",
-        "📚 All References",
+        "ð All References",
     ], label_visibility="hidden")
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.25);margin:14px 0;">', unsafe_allow_html=True)
@@ -435,7 +435,7 @@ def show_literature(page_key):
     refs = LITERATURE.get(page_key, [])
     if not refs:
         return
-    with st.expander("📚 Literature References (APA Format)", expanded=False):
+    with st.expander("ð Literature References (APA Format)", expanded=False):
         for i, ref in enumerate(refs, 1):
             st.markdown(f"**{i}.** {ref}")
 
@@ -494,7 +494,7 @@ ALL_REFERENCES = [
 
 def show_all_references():
     """Tüm program referanslarını göster - sidebar ikonu için."""
-    st.markdown("## 📚 DissolvA — Complete Reference List")
+    st.markdown("## ð DissolvA — Complete Reference List")
     st.markdown(
         '<div class="info-banner">All scientific sources, regulatory guidelines, and software references '
         'used in DissolvA v2.0. Please cite these works in your publications.</div>',
@@ -1402,6 +1402,51 @@ if nav == "Data Input":
                 help="Vertical error bars at each time point showing SD."
             ) == "Show"
 
+        # ── Compliance Engine: OOS hesapla ────────────────────────────────────
+        def compute_compliance(t_arr, r_arr, q_t, q_lim):
+            """Q-time anındaki salımı interpole ederek hesapla."""
+            t_arr = np.array(t_arr, dtype=float)
+            r_arr = np.array(r_arr, dtype=float)
+            if q_t <= t_arr.min():
+                return float(r_arr[0]), r_arr[0] >= q_lim
+            if q_t >= t_arr.max():
+                return float(r_arr[-1]), r_arr[-1] >= q_lim
+            rel_at_qt = float(np.interp(q_t, t_arr, r_arr))
+            return rel_at_qt, rel_at_qt >= q_lim
+
+        compliance_results = {}
+        for nm, d in st.session_state.profiles.items():
+            ta = np.array(d["time"]); ra = np.array(d["release"])
+            rel_actual, passed = compute_compliance(ta, ra, q_time, q_limit)
+            compliance_results[nm] = {"rel": rel_actual, "passed": passed}
+
+        # ── Compliance Badge satırı ───────────────────────────────────────────
+        st.markdown("##### ð️ Monograph Compliance Status")
+        badge_cols = st.columns(len(compliance_results) or 1)
+        for i, (nm, res) in enumerate(compliance_results.items()):
+            with badge_cols[i % len(badge_cols)]:
+                if res["passed"]:
+                    st.markdown(
+                        f'<div style="background:#c6efce;border:2px solid #27ae60;'
+                        f'border-radius:6px;padding:10px 14px;text-align:center;">'
+                        f'<div style="font-size:1.1rem;font-weight:700;color:#1a5c2e;">✅ COMPLIANT</div>'
+                        f'<div style="font-size:0.8rem;color:#1a5c2e;">{nm}</div>'
+                        f'<div style="font-size:0.75rem;color:#2d7d46;">@ {q_time:.0f} {time_unit}: '
+                        f'<strong>{res["rel"]:.1f}%</strong> ≥ Q={q_limit:.0f}%</div>'
+                        f'</div>', unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f'<div style="background:#ffc7ce;border:2px solid #e74c3c;'
+                        f'border-radius:6px;padding:10px 14px;text-align:center;">'
+                        f'<div style="font-size:1.1rem;font-weight:700;color:#7b1a1a;">⚠️ OOS</div>'
+                        f'<div style="font-size:0.8rem;color:#7b1a1a;">{nm}</div>'
+                        f'<div style="font-size:0.75rem;color:#a93226;">@ {q_time:.0f} {time_unit}: '
+                        f'<strong>{res["rel"]:.1f}%</strong> < Q={q_limit:.0f}%</div>'
+                        f'</div>', unsafe_allow_html=True
+                    )
+        st.markdown("")  # spacer
+
         fig, ax = plt.subplots(figsize=(10, 5))
         style_ax(fig, ax)
 
@@ -1423,12 +1468,38 @@ if nav == "Data Input":
             if has_sd and show_band:
                 ax.fill_between(t, r - sd, r + sd, color=col, alpha=0.10)
 
+        # OOS durumunda kritik bölgeyi kırmızı gölge ile işaretle
+        any_fail = any(not v["passed"] for v in compliance_results.values())
+        if any_fail and show_80 and show_qt:
+            # Q-time çizgisinin solunda, Q-limit'in altındaki bölge = kritik hedef bölgesi
+            ax.axvspan(0, q_time, ymin=0, ymax=q_limit/112,
+                       alpha=0.07, color="#e74c3c", zorder=0)
+            ax.text(q_time * 0.5, q_limit * 0.5,
+                    "⚠️ CRITICAL\nTARGET ZONE",
+                    ha='center', va='center', fontsize=7.5,
+                    color='#c0392b', alpha=0.65,
+                    fontweight='bold', style='italic')
+
         if show_80:
             ax.axhline(q_limit, color=AMBER, lw=1.5, ls="--", alpha=0.9,
                        label=f"Q = {q_limit:.0f}% (FDA/USP)")
         if show_qt:
             ax.axvline(q_time, color="#27ae60", lw=1.4, ls=":", alpha=0.85,
                        label=f"Q-time = {q_time:.0f} {time_unit}")
+
+        # OOS/COMPLIANT annotation grafik köşesine
+        if any_fail:
+            ax.text(0.98, 0.97, "⚠️ OOS / NON-COMPLIANT",
+                    transform=ax.transAxes, ha='right', va='top',
+                    fontsize=10, fontweight='bold', color='#c0392b',
+                    bbox=dict(boxstyle='round,pad=0.4', facecolor='#ffc7ce',
+                              edgecolor='#e74c3c', alpha=0.92))
+        else:
+            ax.text(0.98, 0.97, "✅ MONOGRAPH COMPLIANT",
+                    transform=ax.transAxes, ha='right', va='top',
+                    fontsize=10, fontweight='bold', color='#1a5c2e',
+                    bbox=dict(boxstyle='round,pad=0.4', facecolor='#c6efce',
+                              edgecolor='#27ae60', alpha=0.92))
 
         ax.set_xlabel(f"Time ({time_unit})")
         ax.set_ylabel("Cumulative Drug Released (%)")
@@ -1446,6 +1517,37 @@ if nav == "Data Input":
                 "FDA Guidance for Industry: Dissolution Testing of Immediate Release "
                 "Solid Oral Dosage Forms (1997); USP <711> Dissolution."
             )
+
+        # ── OOS Akademik Uyarı Paneli ─────────────────────────────────────────
+        for nm, res in compliance_results.items():
+            if not res["passed"]:
+                deficit = q_limit - res["rel"]
+                st.error(
+                    f"**⚠️ OUT OF SPECIFICATION (OOS) — {nm}**\n\n"
+                    f"**Analiz Özeti:** *{nm}* formülasyonu, **{q_time:.0f} {time_unit}** zaman "
+                    f"noktasında **%{res['rel']:.2f}** kümülatif salım gerçekleştirmiştir. "
+                    f"Bu değer, belirlenen farmakope spesifikasyonunun (**Q = %{q_limit:.0f}**) "
+                    f"**%{deficit:.2f}** altında kalmaktadır.\n\n"
+                    f"**Olası Nedenler (Academic Assessment):**\n"
+                    f"- ð¬ **Yavaş salım hızı (Slow dissolution rate):** Aktif maddenin çözünme "
+                    f"kinetikleri beklenen profil ile uyuşmamaktadır.\n"
+                    f"- ð **Formülasyon bileşenleri:** Dağıtıcı (disintegrant) etkinliği, "
+                    f"lubrikant oranı veya binder konsantrasyonu gözden geçirilmelidir.\n"
+                    f"- ð¡️ **Stabilite/yaşlanma etkisi (Aging effect):** Uzun süreli depolamaya "
+                    f"bağlı matris sertleşmesi veya polimorfik dönüşüm ihtimali değerlendirilmelidir.\n"
+                    f"- ⚗️ **Analitik parametreler:** pH, sıcaklık ve çözünme ortamı bileşimi "
+                    f"metodun gerektirdiği koşullarla karşılaştırılmalıdır.\n\n"
+                    f"**Öneri:** USP <711> / ICH Q6A kapsamında OOS soruşturması başlatılması "
+                    f"ve formülasyonun Korsmeyer–Peppas veya Weibull modeli ile yeniden "
+                    f"karakterize edilmesi tavsiye edilmektedir."
+                )
+            else:
+                st.success(
+                    f"**✅ MONOGRAPH COMPLIANT — {nm}**  \n"
+                    f"*{nm}* formülasyonu, {q_time:.0f} {time_unit} zaman noktasında "
+                    f"**%{res['rel']:.2f}** salım yaparak **Q = %{q_limit:.0f}** "
+                    f"spesifikasyonunu karşılamaktadır. (USP <711> / FDA 1997)"
+                )
 
         # -- Per-profile statistics tables -------------------------------------
         st.markdown("#### Per-Profile Statistics")
@@ -2277,14 +2379,14 @@ elif nav == "Excel Report":
         st.stop()
 
     # ── Kişiselleştirme ───────────────────────────────────────────────────────
-    with st.expander("🎨 Report Customization", expanded=True):
+    with st.expander("ð¨ Report Customization", expanded=True):
         rc1, rc2 = st.columns([1.2, 0.8])
         with rc1:
             report_title  = st.text_input("Report Title", "DissolvA - Dissolution Analysis Report")
             report_author = st.text_input("Author / Institution", "M. Sinan KAYNAK, PhD | Anadolu University, Faculty of Pharmacy")
             report_email  = st.text_input("Contact E-mail", "msinankaynak@gmail.com")
         with rc2:
-            st.markdown("**📎 Logo Upload** *(optional)*")
+            st.markdown("**ð Logo Upload** *(optional)*")
             st.markdown(
                 '<div style="background:#f0ece0;border:1px solid #ddd;border-radius:4px;'
                 'padding:8px 12px;font-size:0.78rem;color:#666;margin-bottom:8px;">'
@@ -2299,20 +2401,20 @@ elif nav == "Excel Report":
             )
             logo_file = st.file_uploader("Upload logo", type=["png","jpg","jpeg"], key="report_logo", label_visibility="collapsed")
 
-        st.markdown("**📋 Select Sheets to Include:**")
+        st.markdown("**ð Select Sheets to Include:**")
         sc1, sc2, sc3, sc4 = st.columns(4)
         with sc1:
-            inc_cover    = st.checkbox("📄 Cover Page",           value=True)
+            inc_cover    = st.checkbox("ð Cover Page",           value=True)
             inc_method   = st.checkbox("⚗️ Method Report",        value=True)
         with sc2:
-            inc_profiles = st.checkbox("📈 Dissolution Profiles",  value=True)
-            inc_stats    = st.checkbox("📊 Statistics",            value=True)
+            inc_profiles = st.checkbox("ð Dissolution Profiles",  value=True)
+            inc_stats    = st.checkbox("ð Statistics",            value=True)
         with sc3:
-            inc_fitting  = st.checkbox("🔢 Model Fitting",         value=True)
-            inc_chart    = st.checkbox("📉 Dissolution Chart",     value=True)
+            inc_fitting  = st.checkbox("ð¢ Model Fitting",         value=True)
+            inc_chart    = st.checkbox("ð Dissolution Chart",     value=True)
         with sc4:
             inc_f2       = st.checkbox("⚖️ Similarity (f1/f2)",   value=True)
-            inc_bootstrap= st.checkbox("🔁 Bootstrap f2",          value=bool(st.session_state.get("bootstrap_results")))
+            inc_bootstrap= st.checkbox("ð Bootstrap f2",          value=bool(st.session_state.get("bootstrap_results")))
 
     report_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -2610,5 +2712,5 @@ elif nav == "Excel Report":
 # ===========================================================================
 # PAGE: ALL REFERENCES
 # ===========================================================================
-elif nav == "📚 All References":
+elif nav == "ð All References":
     show_all_references()
