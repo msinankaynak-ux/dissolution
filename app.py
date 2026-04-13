@@ -1802,7 +1802,7 @@ elif nav == "Kinetic Model Fitting":
     )
     use_smart = st.checkbox(
         f"Sadece önerilen {len(top_models_valid)} modeli kullan",
-        value=True, key="use_smart_models"
+        value=True, key=f"use_smart_models_{pname}"
     )
 
     st.markdown("#### Select Models by Category")
@@ -1817,7 +1817,7 @@ elif nav == "Kinetic Model Fitting":
                 default_sel = cat_models[:4] if cat=="Basic" else []
             chosen = st.multiselect(f"{cat} models", cat_models,
                                     default=default_sel,
-                                    key=f"ms_{cat}")
+                                    key=f"ms_{cat}_{pname}")
             selected_models.extend(chosen)
 
     if selected_models:
@@ -1907,7 +1907,9 @@ elif nav == "Statistical Analysis":
         rows.append({"Profile":nm,
                      f"MDT ({time_unit})":round(compute_mdt(ta,ra),3),
                      "DE (%)":round(compute_de(ta,ra),3)})
-    st.dataframe(pd.DataFrame(rows),use_container_width=True)
+    _df_mdt = pd.DataFrame(rows)
+    _df_mdt.index = range(1, len(_df_mdt)+1)
+    st.dataframe(_df_mdt, use_container_width=True)
 
     if len(names)>=2:
         st.subheader("Pooled Statistical Table")
@@ -1930,7 +1932,9 @@ elif nav == "Statistical Analysis":
                 rows2.append({f"Time ({time_unit})":ti,"Mean (%)":round(mn_v,2),
                               "SD":round(sd_v,2),"RSD (%)":round(rsd_v,2),
                               "CV (%)":round(rsd_v,2),"n":len(vals)})
-        st.dataframe(pd.DataFrame(rows2),use_container_width=True)
+        _df_pool = pd.DataFrame(rows2)
+        _df_pool.index = range(1, len(_df_pool)+1)
+        st.dataframe(_df_pool, use_container_width=True)
 
     st.subheader("Individual Profile Plots")
     # Görsel seçenekler
