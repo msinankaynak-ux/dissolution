@@ -175,13 +175,30 @@ section[data-testid="stSidebar"] .stNumberInput button {
   border-left: 4px solid #FFBF00; border-radius: 4px; padding: 12px;
 }
 .stButton > button {
+  background: rgba(0,33,71,0.6) !important; color: rgba(232,224,208,0.85) !important;
+  border: 1px solid rgba(255,191,0,0.3) !important;
+  font-family: 'EB Garamond', serif !important;
+  font-size: 0.92rem !important; font-weight: 500 !important;
+  border-radius: 6px !important; padding: 6px 16px !important;
+  transition: all 0.2s ease !important;
+}
+.stButton > button:hover {
+  background: rgba(255,191,0,0.15) !important;
+  color: #FFBF00 !important;
+  border-color: rgba(255,191,0,0.7) !important;
+}
+/* Ana içerik alanındaki primary butonlar farklı */
+section.main .stButton > button[kind="primary"],
+section.main .stButton > button[data-testid="baseButton-primary"] {
   background: #002147 !important; color: #FFBF00 !important;
   border: 2px solid #FFBF00 !important;
-  font-family: 'EB Garamond', serif !important;
-  font-size: 1rem !important; font-weight: 600 !important;
-  border-radius: 4px !important; padding: 8px 20px !important;
+  font-size: 1rem !important; font-weight: 700 !important;
+  padding: 8px 20px !important;
 }
-.stButton > button:hover { background: #FFBF00 !important; color: #002147 !important; }
+section.main .stButton > button[kind="primary"]:hover,
+section.main .stButton > button[data-testid="baseButton-primary"]:hover {
+  background: #FFBF00 !important; color: #002147 !important;
+}
 .stDownloadButton > button {
   background: #FFBF00 !important; color: #002147 !important;
   border: 2px solid #002147 !important;
@@ -466,7 +483,7 @@ with st.sidebar:
     )
     st.markdown(
         '<div style="text-align:center;padding:8px 0 4px 0;">'
-        '<div style="font-size:0.6rem;color:#4a5a70;">DissolvA v2.0 &nbsp;|&nbsp; 2025</div>'
+        '<div style="font-size:0.6rem;color:#4a5a70;">DissolvA™ v3.0 &nbsp;|&nbsp; 2026</div>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -591,7 +608,7 @@ def show_all_references():
     st.markdown("## 📚 DissolvA — Complete Reference List")
     st.markdown(
         '<div class="info-banner">All scientific sources, regulatory guidelines, and software references '
-        'used in DissolvA v2.0. Please cite these works in your publications.</div>',
+        'used in DissolvA™ v3.0. Please cite these works in your publications.</div>',
         unsafe_allow_html=True
     )
     for section_title, refs in ALL_REFERENCES:
@@ -600,7 +617,7 @@ def show_all_references():
             st.markdown(f"**{i}.** {ref}")
         st.markdown("---")
     st.caption(
-        "DissolvA v2.0 — Developed by M. Sinan KAYNAK, PhD | "
+        "DissolvA™ v3.0 — Developed by M. Sinan KAYNAK, PhD | "
         "Anadolu University, Faculty of Pharmacy | msinankaynak@gmail.com"
     )
 
@@ -972,38 +989,51 @@ if nav == "Method Settings":
     ql = cfg['q_limit']; qt = cfg['q_time']; tu = cfg['time_unit']
     st.markdown(f'<div class="info-banner">NLT <strong>{ql:.0f}%</strong> dissolved at <strong>{qt:.0f} {tu}</strong> &nbsp;|&nbsp; USP &lt;711&gt; / FDA 1997</div>', unsafe_allow_html=True)
 
-    # ── Internal Spec (Firma İçi Kriter) ─────────────────────────────────────
+    # ── Internal Spec (Firma İçi Kriter) — kaldırılabilir kart ──────────────
     st.markdown("---")
-    st.markdown("### Internal Acceptance Criterion *(optional)*")
-    cfg["internal_spec_enabled"] = st.toggle(
-        "Enable Internal Spec",
-        value=cfg.get("internal_spec_enabled", False),
-        help="Company internal acceptance criterion — shown as advisory only, not a regulatory requirement."
-    )
-    if cfg["internal_spec_enabled"]:
-        is_c1, is_c2, is_c3 = st.columns(3)
-        with is_c1:
-            cfg["internal_spec_name"] = st.text_input(
-                "Criterion Name", value=cfg.get("internal_spec_name", "Internal Spec"),
-                help="e.g. 'Internal Spec', 'Company Q', 'Release Limit'")
-        with is_c2:
-            cfg["internal_spec_time"] = st.number_input(
-                "Time Point", value=float(cfg.get("internal_spec_time", 45.0)), min_value=0.0)
-        with is_c3:
-            cfg["internal_spec_limit"] = st.number_input(
-                "Limit (%)", value=float(cfg.get("internal_spec_limit", 85.0)),
-                min_value=0.0, max_value=100.0)
-        isl  = cfg["internal_spec_limit"]
-        ist  = cfg["internal_spec_time"]
-        isn  = cfg["internal_spec_name"]
-        st.markdown(
-            f'<div style="background:rgba(148,103,189,0.1);border-left:4px solid #9467bd;' +
-            f'border-radius:0 6px 6px 0;padding:10px 14px;font-size:0.85rem;">' +
-            f'⚠️ <em>Advisory only</em> — {isn}: NLT <strong>{isl:.0f}%</strong> ' +
-            f'dissolved at <strong>{ist:.0f} {tu}</strong>. ' +
-            f'Non-compliance generates a warning, not a regulatory finding.</div>',
-            unsafe_allow_html=True
+    with st.expander(
+        "⚙️ Internal Acceptance Criterion *(optional — click to expand/collapse)*",
+        expanded=cfg.get("internal_spec_enabled", False)
+    ):
+        cfg["internal_spec_enabled"] = st.toggle(
+            "Enable Internal Spec",
+            value=cfg.get("internal_spec_enabled", False),
+            key="is_toggle_method",
+            help="Company internal criterion — advisory only, not a regulatory requirement."
         )
+        if cfg["internal_spec_enabled"]:
+            is_c1, is_c2, is_c3 = st.columns(3)
+            with is_c1:
+                cfg["internal_spec_name"] = st.text_input(
+                    "Criterion Name",
+                    value=cfg.get("internal_spec_name", "Internal Spec"),
+                    help="e.g. 'Internal Spec', 'Company Q', 'Release Limit'",
+                    key="is_name_method")
+            with is_c2:
+                cfg["internal_spec_time"] = st.number_input(
+                    "Time Point",
+                    value=float(cfg.get("internal_spec_time", 45.0)),
+                    min_value=0.0, key="is_time_method")
+            with is_c3:
+                cfg["internal_spec_limit"] = st.number_input(
+                    "Limit (%)",
+                    value=float(cfg.get("internal_spec_limit", 85.0)),
+                    min_value=0.0, max_value=100.0, key="is_limit_method")
+            isl = cfg["internal_spec_limit"]
+            ist = cfg["internal_spec_time"]
+            isn = cfg["internal_spec_name"]
+            st.markdown(
+                f'<div style="background:rgba(148,103,189,0.08);border-left:3px solid #9467bd;' +
+                f'border-radius:0 6px 6px 0;padding:10px 14px;font-size:0.83rem;margin-top:8px;">' +
+                f'<strong style="color:#9467bd;">ℹ️ Advisory only</strong> — ' +
+                f'{isn}: NLT <strong>{isl:.0f}%</strong> dissolved at ' +
+                f'<strong>{ist:.0f} {tu}</strong>. ' +
+                f'Non-compliance triggers a warning — not a regulatory finding.</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            st.caption("Toggle on to define a company internal release limit. "
+                       "Shown as a purple dashed line on dissolution charts — advisory only.")
 
     st.markdown("---")
     st.markdown("### Dissolution Apparatus & Medium")
@@ -1969,31 +1999,6 @@ elif nav == "Statistical Analysis":
     _df_mdt.index = range(1, len(_df_mdt)+1)
     st.dataframe(_df_mdt, use_container_width=True)
 
-    if len(names)>=2:
-        st.subheader("Pooled Statistical Table")
-        common_t=None
-        for nm in names:
-            ta=np.array(st.session_state.profiles[nm]["time"])
-            common_t=ta if common_t is None else np.intersect1d(common_t,ta)
-        rows2=[]
-        for ti in common_t:
-            vals=[]
-            for nm in names:
-                ta=np.array(st.session_state.profiles[nm]["time"])
-                ra=np.array(st.session_state.profiles[nm]["release"])
-                idx=np.where(ta==ti)[0]
-                if len(idx): vals.append(ra[idx[0]])
-            if vals:
-                vals=np.array(vals); mn_v=np.mean(vals)
-                sd_v=np.std(vals,ddof=1) if len(vals)>1 else 0.0
-                rsd_v=(sd_v/mn_v*100) if mn_v!=0 else 0.0
-                rows2.append({f"Time ({time_unit})":ti,"Mean (%)":round(mn_v,2),
-                              "SD":round(sd_v,2),"RSD (%)":round(rsd_v,2),
-                              "CV (%)":round(rsd_v,2),"n":len(vals)})
-        _df_pool = pd.DataFrame(rows2)
-        _df_pool.index = range(1, len(_df_pool)+1)
-        st.dataframe(_df_pool, use_container_width=True)
-
     st.subheader("Individual Profile Plots")
     # Görsel seçenekler
     sp_c1, sp_c2, sp_c3 = st.columns(3)
@@ -2003,6 +2008,13 @@ elif nav == "Statistical Analysis":
         show_qt_line = st.radio("Q Time Marker", ["Show","Hide"], horizontal=True, key="stat_qtline") == "Show"
     with sp_c3:
         show_eb      = st.radio("Error Bars (SD)", ["Show","Hide"], horizontal=True, key="stat_eb") == "Show"
+
+    # Internal Spec ayarlarını al
+    _is_cfg_s  = st.session_state.method_cfg
+    _is_on_s   = _is_cfg_s.get("internal_spec_enabled", False)
+    _isn_s     = _is_cfg_s.get("internal_spec_name",  "Internal Spec")
+    _isl_s     = float(_is_cfg_s.get("internal_spec_limit", 85.0))
+    _ist_s     = float(_is_cfg_s.get("internal_spec_time",  45.0))
 
     ncols=min(2,len(names)); cols=st.columns(ncols)
     for i,nm in enumerate(names):
@@ -2019,18 +2031,46 @@ elif nav == "Statistical Analysis":
             ax.plot(ta, ra, "o-", color=PALETTE[i%len(PALETTE)], lw=2, ms=6)
         if show_q_line:
             ax.axhline(q_limit, color=AMBER, lw=1.3, ls="--", alpha=0.85,
-                       label=f"Q = {q_limit:.0f}%")
+                       label=f"Q = {q_limit:.0f}% (FDA/USP)")
         if show_qt_line:
             ax.axvline(q_time, color="#e74c3c", lw=1.2, ls=":", alpha=0.75,
                        label=f"Q-time = {q_time:.0f} {time_unit}")
+        # Internal Spec çizgisi — Statistics sayfasında
+        if _is_on_s:
+            ax.axhline(_isl_s, color="#9467bd", lw=1.3, ls=(0,(5,3)), alpha=0.85,
+                       label=f"{_isn_s} = {_isl_s:.0f}%")
+            ax.axvline(_ist_s, color="#9467bd", lw=1.1, ls=(0,(3,3)), alpha=0.7,
+                       label=f"{_isn_s} t = {_ist_s:.0f} {time_unit}")
         ax.set_title(nm, fontsize=11)
         ax.set_xlabel(f"Time ({time_unit})")
         ax.set_ylabel("Cumulative Drug Released (%)")
         ax.set_xlim(left=0, right=ta.max()*1.05)
         ax.set_ylim(bottom=0, top=112)
-        if show_q_line or show_qt_line:
+        if show_q_line or show_qt_line or _is_on_s:
             ax.legend(fontsize=7.5)
         cols[i%ncols].pyplot(fig); plt.close()
+
+        # Internal Spec profil bazlı değerlendirme
+        if _is_on_s:
+            _is_idx_s = np.where(np.isclose(ta, _ist_s))[0]
+            if len(_is_idx_s) > 0:
+                _is_val_s = ra[_is_idx_s[0]]
+                if _is_val_s >= _isl_s:
+                    cols[i%ncols].success(
+                        f"✅ **{_isn_s} — PASS** · {nm}: "
+                        f"{_is_val_s:.1f}% ≥ {_isl_s:.0f}% @ {_ist_s:.0f} {time_unit} "
+                        f"*(Advisory — not a regulatory criterion)*"
+                    )
+                else:
+                    cols[i%ncols].warning(
+                        f"⚠️ **{_isn_s} — BELOW LIMIT** · {nm}: "
+                        f"{_is_val_s:.1f}% < {_isl_s:.0f}% @ {_ist_s:.0f} {time_unit} "
+                        f"*(Advisory only — not a regulatory finding)*"
+                    )
+            else:
+                cols[i%ncols].info(
+                    f"ℹ️ {_isn_s}: No data point at t={_ist_s:.0f} {time_unit} for {nm}."
+                )
 
     # ── Per-Profile Statistics (Data Input'tan taşındı) ─────────────────────
     st.markdown("---")
@@ -3612,7 +3652,7 @@ elif nav == "Excel Report":
             ws.write("A4", f"Author: {report_author}", fmt_n)
             ws.write("A5", f"Contact: {report_email}", fmt_n)
             ws.write("A6", f"Profiles: {len(st.session_state.profiles)}", fmt_p)
-            ws.write("A7", "Generated by DissolvA v2.0 | Powered by AI | 2025", fmt_n)
+            ws.write("A7", "Generated by DissolvA™ v3.0 | Powered by AI | 2025", fmt_n)
 
         # 2. METHOD REPORT
         if inc_method:
