@@ -262,7 +262,7 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
     // İlk öğenin önüne "Analysis Modules" etiketi
     var lbl1 = document.createElement('div');
     lbl1.className = 'nav-section-label';
-    lbl1.innerHTML = '📊 Analysis Modules';
+    lbl1.innerHTML = 'ð Analysis Modules';
     radioDiv.insertBefore(lbl1, children[0]);
 
     // "Excel Report" öğesinin önüne bölüm çizgisi + "Settings & Report"
@@ -441,11 +441,11 @@ with st.sidebar:
         if _np > 3: _pn += f" +{_np-3}"
         st.markdown(
             f'<div style="font-size:0.68rem;color:rgba(232,224,208,0.38);padding:0 2px 8px;">' +
-            f'📊 {_np} profile · {_pn}</div>',
+            f'ð {_np} profile · {_pn}</div>',
             unsafe_allow_html=True
         )
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.1);margin:6px 0;">', unsafe_allow_html=True)
-    if st.button("🗑️ Clear All", use_container_width=True, help="Clear all profiles and results."):
+    if st.button("ð️ Clear All", use_container_width=True, help="Clear all profiles and results."):
         st.session_state["_confirm_clear"] = True; st.rerun()
     if st.session_state.get("_confirm_clear"):
         st.warning("All data will be lost!", icon="⚠️")
@@ -528,7 +528,7 @@ def show_literature(page_key):
     refs = LITERATURE.get(page_key, [])
     if not refs:
         return
-    with st.expander("📚 Literature References (APA Format)", expanded=False):
+    with st.expander("ð Literature References (APA Format)", expanded=False):
         for i, ref in enumerate(refs, 1):
             st.markdown(f"**{i}.** {ref}")
 
@@ -587,7 +587,7 @@ ALL_REFERENCES = [
 
 def show_all_references():
     """Tüm program referanslarını göster - sidebar ikonu için."""
-    st.markdown("## 📚 DissolvA — Complete Reference List")
+    st.markdown("## ð DissolvA — Complete Reference List")
     st.markdown(
         '<div class="info-banner">All scientific sources, regulatory guidelines, and software references '
         'used in DissolvA v2.0. Please cite these works in your publications.</div>',
@@ -787,7 +787,7 @@ def analyze_profile_shape(t_arr, r_arr):
             'top_models': ['First Order + Fmax','Weibull','Makoid-Banakar','Peppas-Sahlin','Gompertz 2 (DDSolver)'],
             'categories': ['Basic','Empirical'],
             'reason': f"Profil %80 eşiğine ulaşmıyor (max: %{r.max():.1f}). Fmax parametreli veya ampirik modeller önerilir.",
-            'icon': '📉'
+            'icon': 'ð'
         }
     else:
         return {
@@ -942,8 +942,8 @@ nav = None  # Tab mimarisinde nav kullanılmıyor
 _profiles_loaded = len(st.session_state.profiles) > 0
 
 _tab_analyze, _tab_report, _tab_settings = st.tabs([
-    "🔬  Analyze",
-    "📄  Report",
+    "ð¬  Analyze",
+    "ð  Report",
     "⚙️  Settings",
 ])
 
@@ -953,16 +953,16 @@ _tab_analyze, _tab_report, _tab_settings = st.tabs([
 with _tab_analyze:
 
     # Alt tab etiketleri — veri yoksa kilitli görünüm için ikon ekle
-    _lock = "" if _profiles_loaded else " 🔒"
-    _ivivc_lock = "" if _profiles_loaded else " 🔒"
+    _lock = "" if _profiles_loaded else " ð"
+    _ivivc_lock = "" if _profiles_loaded else " ð"
 
     _at = st.tabs([
-        "📥  Data Input",
-        f"📈  Kinetic{_lock}",
-        f"📊  Statistics{_lock}",
+        "ð¥  Data Input",
+        f"ð  Kinetic{_lock}",
+        f"ð  Statistics{_lock}",
         f"⚖️  f1 / f2{_lock}",
-        f"🔁  Bootstrap{_lock}",
-        f"🔗  IVIVC{_ivivc_lock} ⓑ",
+        f"ð  Bootstrap{_lock}",
+        f"ð  IVIVC{_ivivc_lock} ⓑ",
     ])
 
     # ── Data Input ─────────────────────────────────────────────────────────────
@@ -973,7 +973,7 @@ with _tab_analyze:
         st.header("Data Input")
 
         # ── Proje Metadata Paneli ─────────────────────────────────────────────────
-        with st.expander("📁 Project Setup", expanded=not bool(st.session_state.profiles)):
+        with st.expander("ð Project Setup", expanded=not bool(st.session_state.profiles)):
             pm = st.session_state.project_metadata
             pc1, pc2 = st.columns([1, 1])
             with pc1:
@@ -986,7 +986,7 @@ with _tab_analyze:
                 new_desc = st.text_area("Project Description", value=pm.get("description",""),
                                         key="proj_desc_input", height=88,
                                         placeholder="e.g. Bioequivalence study of ibuprofen 400mg tablets...")
-            if st.button("💾 Save Project Info", key="save_proj_meta"):
+            if st.button("ð¾ Save Project Info", key="save_proj_meta"):
                 import datetime as _dt
                 st.session_state.project_metadata.update({
                     "name":        new_proj_name,
@@ -1442,7 +1442,7 @@ with _tab_analyze:
                 compliance_results[nm] = {"rel": rel_actual, "passed": passed}
 
             # ── Compliance Badge satırı ───────────────────────────────────────────
-            st.markdown("##### 🏛️ Monograph Compliance Status")
+            st.markdown("##### ð️ Monograph Compliance Status")
             badge_cols = st.columns(len(compliance_results) or 1)
             for i, (nm, res) in enumerate(compliance_results.items()):
                 with badge_cols[i % len(badge_cols)]:
@@ -1550,11 +1550,11 @@ with _tab_analyze:
                         f"Bu değer, belirlenen farmakope spesifikasyonunun (**Q = %{q_limit:.0f}**) "
                         f"**%{deficit:.2f}** altında kalmaktadır.\n\n"
                         f"**Olası Nedenler (Academic Assessment):**\n"
-                        f"- 🔬 **Yavaş salım hızı (Slow dissolution rate):** Aktif maddenin çözünme "
+                        f"- ð¬ **Yavaş salım hızı (Slow dissolution rate):** Aktif maddenin çözünme "
                         f"kinetikleri beklenen profil ile uyuşmamaktadır.\n"
-                        f"- 💊 **Formülasyon bileşenleri:** Dağıtıcı (disintegrant) etkinliği, "
+                        f"- ð **Formülasyon bileşenleri:** Dağıtıcı (disintegrant) etkinliği, "
                         f"lubrikant oranı veya binder konsantrasyonu gözden geçirilmelidir.\n"
-                        f"- 🌡️ **Stabilite/yaşlanma etkisi (Aging effect):** Uzun süreli depolamaya "
+                        f"- ð¡️ **Stabilite/yaşlanma etkisi (Aging effect):** Uzun süreli depolamaya "
                         f"bağlı matris sertleşmesi veya polimorfik dönüşüm ihtimali değerlendirilmelidir.\n"
                         f"- ⚗️ **Analitik parametreler:** pH, sıcaklık ve çözünme ortamı bileşimi "
                         f"metodun gerektirdiği koşullarla karşılaştırılmalıdır.\n\n"
@@ -1572,7 +1572,7 @@ with _tab_analyze:
 
             # Per-Profile Statistics → Statistical Analysis sayfasına taşındı
 
-            if st.button("🗑️ Remove All Profiles", key="clear_profiles_btn",
+            if st.button("ð️ Remove All Profiles", key="clear_profiles_btn",
                          help="Remove profiles but keep project metadata and settings."):
                 st.session_state.profiles = {}
                 st.session_state.fit_results = {}
@@ -1587,7 +1587,7 @@ with _tab_analyze:
     # ── Kinetic Fitting ────────────────────────────────────────────────────────
     with _at[1]:
         if not _profiles_loaded:
-            st.info("📥 Please load at least one dissolution profile in **Data Input** first.", icon="ℹ️")
+            st.info("ð¥ Please load at least one dissolution profile in **Data Input** first.", icon="ℹ️")
         else:
             # ===========================================================================
             # PAGE: KINETIC MODEL FITTING
@@ -1709,7 +1709,7 @@ with _tab_analyze:
     # ── Statistical Analysis ───────────────────────────────────────────────────
     with _at[2]:
         if not _profiles_loaded:
-            st.info("📥 Please load at least one dissolution profile in **Data Input** first.", icon="ℹ️")
+            st.info("ð¥ Please load at least one dissolution profile in **Data Input** first.", icon="ℹ️")
         else:
             # ===========================================================================
             # PAGE: STATISTICAL ANALYSIS
@@ -1838,7 +1838,7 @@ with _tab_analyze:
                             fda_ok       = fda_ok_early and fda_ok_late
                             n_vessels    = d.get("n", 1)
 
-                            st.markdown("##### 📊 FDA CV Criteria Assessment (f2 Eligibility)")
+                            st.markdown("##### ð FDA CV Criteria Assessment (f2 Eligibility)")
                             cv_c1, cv_c2, cv_c3 = st.columns(3)
                             cv_c1.metric(
                                 "Max CV% — Early points (<85%)",
@@ -1891,7 +1891,7 @@ with _tab_analyze:
     # ── f1 / f2 ────────────────────────────────────────────────────────────────
     with _at[3]:
         if not _profiles_loaded:
-            st.info("📥 Please load at least two dissolution profiles in **Data Input** first.", icon="ℹ️")
+            st.info("ð¥ Please load at least two dissolution profiles in **Data Input** first.", icon="ℹ️")
         else:
             # ===========================================================================
             # PAGE: f1 & f2
@@ -2016,7 +2016,7 @@ with _tab_analyze:
 
                 # ── Bootstrap Gerekli Mi? Kutusu ─────────────────────────────────────────
                 st.markdown("---")
-                st.markdown("#### 🔍 Bootstrap f2 Gerekli Mi?")
+                st.markdown("#### ð Bootstrap f2 Gerekli Mi?")
 
                 # Tüm değerlendirme kriterleri
                 _is_boundary  = 45 <= f2 <= 55
@@ -2075,7 +2075,7 @@ with _tab_analyze:
                         f"**Önerilen yöntem: {_recommended_method} Bootstrap**\n"
                         f"{'CV% > 15% olduğundan **Nonparametric Bootstrap** daha güvenilir sonuç verir. ' if _cv_max > 15 else 'CV% ≤ 15% olduğundan **Parametric Bootstrap** yeterlidir. '}"
                         f"Bootstrap f2 analizi için → **Bootstrap f2 Analysis** sayfasına geçin.\n\n"
-                        f"📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
+                        f"ð *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
                     )
 
                 if _needs_boot or not _fda_cv_ok:
@@ -2085,7 +2085,7 @@ with _tab_analyze:
                 if _bswarn:
                     _warn_md = "⚠️ **Bootstrap f2 Analizi Önerilir**\n\n"
                     _warn_md += "\n\n".join([f"{i+1}. {w}" for i, w in enumerate(_bswarn)])
-                    _warn_md += "\n\n📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
+                    _warn_md += "\n\nð *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
 
                 vf1="PASS - f1 <= 15: Profiles have acceptable difference" if f1<=15 else "FAIL - f1 > 15: Significant difference detected"
                 vf2="SIMILAR - f2 >= 50: Profiles are bioequivalent (FDA)" if f2>=50 else "DISSIMILAR - f2 < 50: Profiles are NOT similar"
@@ -2198,7 +2198,7 @@ with _tab_analyze:
     # ── Bootstrap f2 ───────────────────────────────────────────────────────────
     with _at[4]:
         if not _profiles_loaded:
-            st.info("📥 Please load at least two profiles with raw vessel data in **Data Input** first.", icon="ℹ️")
+            st.info("ð¥ Please load at least two profiles with raw vessel data in **Data Input** first.", icon="ℹ️")
         else:
             # ===========================================================================
             # PAGE: BOOTSTRAP f2 ANALYSIS
@@ -2283,10 +2283,11 @@ with _tab_analyze:
                     if d.get("raw") and d.get("vessels") and len(d.get("vessels", [])) >= 2
                 }
                 if len(profiles_with_raw) < 2:
-                    st.warning(
-                        "Bootstrap analysis requires **raw vessel-level data** for at least 2 profiles. "
-                        f"Profiles with raw data: **{list(profiles_with_raw.keys()) or 'None'}**. "
-                        "Please upload data using 'Excel / CSV Upload (Raw Vessel Data)' mode."
+                    st.info(
+                        "Bootstrap analysis requires **raw vessel-level data** for at least 2 profiles.  \n"
+                        f"Profiles with raw data: **{list(profiles_with_raw.keys()) or ['None']}**.  \n"
+                        "Please upload data using **Excel / CSV Upload (Raw Vessel Data)** mode in Data Input.",
+                        icon="ℹ️"
                     )
 
                 names_raw = list(profiles_with_raw.keys())
@@ -2329,12 +2330,15 @@ with _tab_analyze:
                     test_options = [nm for nm in names_raw if nm != ref_bs]
                     if not test_options:
                         st.error("Need at least 2 profiles with raw data.")
-                    test_bs = st.selectbox("Test", test_options,
-                        index=_get_index(test_options, st.session_state.selected_test_id, 0),
-                        key="_bs_test_sel", on_change=_on_test_bs,
-                        label_visibility="collapsed")
-                    n_test = st.session_state.profiles[test_bs].get("n", 0)
-                    st.caption(f"{test_bs} — {n_test} vessels")
+                        test_bs = None
+                    else:
+                        test_bs = st.selectbox("Test", test_options,
+                            index=_get_index(test_options, st.session_state.selected_test_id, 0),
+                            key="_bs_test_sel", on_change=_on_test_bs,
+                            label_visibility="collapsed")
+                    if test_bs and test_bs in st.session_state.profiles:
+                        n_test = st.session_state.profiles[test_bs].get("n", 0)
+                        st.caption(f"{test_bs} — {n_test} vessels")
 
                 st.markdown("---")
 
@@ -2361,10 +2365,12 @@ with _tab_analyze:
                     )
 
                 # ---- Run button ---------------------------------------------------------
-                if st.button("▶  Run Bootstrap Simulation", type="primary"):
-
-                    d_ref  = st.session_state.profiles[ref_bs]
-                    d_test = st.session_state.profiles[test_bs]
+                if test_bs and st.button("▶  Run Bootstrap Simulation", type="primary"):
+                    if test_bs not in st.session_state.profiles or ref_bs not in st.session_state.profiles:
+                        st.error("Selected profiles not found. Please re-select.")
+                    else:
+                     d_ref  = st.session_state.profiles[ref_bs]
+                     d_test = st.session_state.profiles[test_bs]
 
                     t_ref_arr  = np.array(d_ref["time"],  dtype=float)
                     t_test_arr = np.array(d_test["time"], dtype=float)
@@ -2631,7 +2637,7 @@ with _tab_analyze:
     # ── IVIVC ──────────────────────────────────────────────────────────────────
     with _at[5]:
         if not _profiles_loaded:
-            st.info("📥 Please load at least one dissolution profile in **Data Input** first.", icon="ℹ️")
+            st.info("ð¥ Please load at least one dissolution profile in **Data Input** first.", icon="ℹ️")
         else:
             # ===========================================================================
             # PAGE: IVIVC
@@ -2669,11 +2675,11 @@ with _tab_analyze:
 
                 # ── IVIVC Level Seçimi ────────────────────────────────────────────────────
                 IVIVC_LEVELS = {
-                    "Level A": ("🏆 Level A — Point-to-Point", "Wagner-Nelson deconvolution; highest regulatory value (FDA Preferred). [Professional]"),
-                    "Level B": ("📊 Level B — Statistical Moments", "In vitro MDT vs in vivo MRT; moment analysis."),
-                    "Level C": ("📈 Level C — Single Point", "Single PK parameter vs single dissolution time point."),
-                    "Multiple Level C": ("🔬 Multiple Level C — Multi-Point", "≥3 time points across dissolution profile; near Level A reliability. [Professional]"),
-                    "Level D": ("👁️ Level D — Qualitative/Visual", "Visual trend confirmation; rank ordering only."),
+                    "Level A": ("ð Level A — Point-to-Point", "Wagner-Nelson deconvolution; highest regulatory value (FDA Preferred). [Professional]"),
+                    "Level B": ("ð Level B — Statistical Moments", "In vitro MDT vs in vivo MRT; moment analysis."),
+                    "Level C": ("ð Level C — Single Point", "Single PK parameter vs single dissolution time point."),
+                    "Multiple Level C": ("ð¬ Multiple Level C — Multi-Point", "≥3 time points across dissolution profile; near Level A reliability. [Professional]"),
+                    "Level D": ("ð️ Level D — Qualitative/Visual", "Visual trend confirmation; rank ordering only."),
                 }
 
                 level_col, info_col = st.columns([1, 2])
@@ -2689,7 +2695,7 @@ with _tab_analyze:
                     label, desc = IVIVC_LEVELS[selected_level]
                     professional = "[Professional]" in desc
                     badge_color  = "#002147" if professional else "#27ae60"
-                    badge_text   = "🔒 Professional" if professional else "✅ All Plans"
+                    badge_text   = "ð Professional" if professional else "✅ All Plans"
                     st.markdown(
                         f'<div style="background:#f0ece0;border-left:4px solid {badge_color};'
                         f'border-radius:4px;padding:12px 16px;margin-top:8px;">'
@@ -2824,7 +2830,7 @@ with _tab_analyze:
                         )
                         st.session_state.ivivc_input_data["ke"] = ke_input
 
-                    st.markdown("#### 📥 In Vivo Plasma Concentration Data (Optional — for %PE validation)")
+                    st.markdown("#### ð¥ In Vivo Plasma Concentration Data (Optional — for %PE validation)")
                     st.markdown(
                         '<div class="step-box">Enter observed Cp–t data for %PE calculation. '
                         'If omitted, only the Wagner-Nelson deconvolution will be shown.</div>',
@@ -2912,7 +2918,7 @@ with _tab_analyze:
                             obs_auc  = nca_res["AUC"]
                             pe_auc   = abs(obs_auc - pred_auc) / obs_auc * 100 if obs_auc > 0 else np.nan
 
-                            st.markdown("#### 📋 NCA Results & Prediction Error (%PE)")
+                            st.markdown("#### ð NCA Results & Prediction Error (%PE)")
                             nc1, nc2, nc3, nc4, nc5 = st.columns(5)
                             nc1.metric("Cmax",   f"{nca_res['Cmax']:.2f}")
                             nc2.metric("Tmax",   f"{nca_res['Tmax']:.2f}")
@@ -2955,7 +2961,7 @@ with _tab_analyze:
                     mdt_iv = compute_mdt(t_iv, r_iv)
                     st.metric(f"In Vitro MDT ({time_unit})", f"{mdt_iv:.3f}" if not np.isnan(mdt_iv) else "N/A")
 
-                    st.markdown("#### 📥 In Vivo MRT Data Entry (Multiple Formulations)")
+                    st.markdown("#### ð¥ In Vivo MRT Data Entry (Multiple Formulations)")
                     st.markdown(
                         '<div class="step-box">Enter in vivo MRT values for each formulation. '
                         'You can enter data from multiple formulations to build the MDT–MRT regression.</div>',
@@ -3047,7 +3053,7 @@ with _tab_analyze:
                             f"**{auto_val:.3f} {time_unit}**" if not np.isnan(auto_val) else
                             f"Could not compute {diss_param_c} — dissolution may not reach required level.")
 
-                    st.markdown("#### 📥 Multi-Formulation Data Entry")
+                    st.markdown("#### ð¥ Multi-Formulation Data Entry")
                     n_forms_c = st.number_input("Number of formulations", min_value=2, max_value=12,
                                                  value=st.session_state.ivivc_input_data.get("lvc_n", 3),
                                                  key="lvc_n_input")
@@ -3121,7 +3127,7 @@ with _tab_analyze:
                             key="lvmc_pk_param")
                         st.session_state.ivivc_input_data["lvmc_pk_idx"] = ["Cmax","AUC(0-inf)","Tmax"].index(pk_param_mc)
 
-                    st.markdown(f"#### 📥 {pk_param_mc} Data for Each Phase (Multiple Formulations)")
+                    st.markdown(f"#### ð¥ {pk_param_mc} Data for Each Phase (Multiple Formulations)")
                     n_forms_mc = st.number_input("Number of formulations", min_value=3, max_value=12,
                                                   value=st.session_state.ivivc_input_data.get("lvmc_n", 4),
                                                   key="lvmc_n_input")
@@ -3194,7 +3200,7 @@ with _tab_analyze:
                                     all_r2_pass = False
 
                         if r2_results:
-                            st.markdown("#### 🎯 Multiple Level C — Overall Assessment")
+                            st.markdown("#### ð¯ Multiple Level C — Overall Assessment")
                             if all_r2_pass:
                                 st.success(
                                     "✅ All three phases achieve R² ≥ 0.90 — This correlation approaches "
@@ -3292,7 +3298,7 @@ with _tab_analyze:
 # ═══════════════════════════════════════════════════════════════════════════════
 with _tab_report:
     if not _profiles_loaded:
-        st.info("📥 Please load at least one dissolution profile in **Analyze → Data Input** first.", icon="ℹ️")
+        st.info("ð¥ Please load at least one dissolution profile in **Analyze → Data Input** first.", icon="ℹ️")
     else:
         # ===========================================================================
         # PAGE: EXCEL REPORT
@@ -3313,7 +3319,7 @@ with _tab_report:
             _default_title  = f"DissolvA — {_pm.get('name','Dissolution Analysis Report')}"
             _default_author = _pm.get("analyst","M. Sinan KAYNAK, PhD | Anadolu University, Faculty of Pharmacy")
 
-            with st.expander("🎨 Report Customization", expanded=True):
+            with st.expander("ð¨ Report Customization", expanded=True):
                 rc1, rc2 = st.columns([1.2, 0.8])
                 with rc1:
                     report_title  = st.text_input("Report Title", _default_title)
@@ -3322,7 +3328,7 @@ with _tab_report:
                     if _pm.get("description"):
                         st.caption(f"Project: {_pm['description'][:80]}")
                 with rc2:
-                    st.markdown("**📎 Logo Upload** *(optional)*")
+                    st.markdown("**ð Logo Upload** *(optional)*")
                     st.markdown(
                         '<div style="background:#f0ece0;border:1px solid #ddd;border-radius:4px;'
                         'padding:8px 12px;font-size:0.78rem;color:#666;margin-bottom:8px;">'
@@ -3337,20 +3343,20 @@ with _tab_report:
                     )
                     logo_file = st.file_uploader("Upload logo", type=["png","jpg","jpeg"], key="report_logo", label_visibility="collapsed")
 
-                st.markdown("**📋 Select Sheets to Include:**")
+                st.markdown("**ð Select Sheets to Include:**")
                 sc1, sc2, sc3, sc4 = st.columns(4)
                 with sc1:
-                    inc_cover    = st.checkbox("📄 Cover Page",           value=True)
+                    inc_cover    = st.checkbox("ð Cover Page",           value=True)
                     inc_method   = st.checkbox("⚗️ Method Report",        value=True)
                 with sc2:
-                    inc_profiles = st.checkbox("📈 Dissolution Profiles",  value=True)
-                    inc_stats    = st.checkbox("📊 Statistics",            value=True)
+                    inc_profiles = st.checkbox("ð Dissolution Profiles",  value=True)
+                    inc_stats    = st.checkbox("ð Statistics",            value=True)
                 with sc3:
-                    inc_fitting  = st.checkbox("🔢 Model Fitting",         value=True)
-                    inc_chart    = st.checkbox("📉 Dissolution Chart",     value=True)
+                    inc_fitting  = st.checkbox("ð¢ Model Fitting",         value=True)
+                    inc_chart    = st.checkbox("ð Dissolution Chart",     value=True)
                 with sc4:
                     inc_f2       = st.checkbox("⚖️ Similarity (f1/f2)",   value=True)
-                    inc_bootstrap= st.checkbox("🔁 Bootstrap f2",          value=bool(st.session_state.get("bootstrap_results")))
+                    inc_bootstrap= st.checkbox("ð Bootstrap f2",          value=bool(st.session_state.get("bootstrap_results")))
 
             report_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -3654,7 +3660,7 @@ with _tab_report:
 # TAB: SETTINGS
 # ═══════════════════════════════════════════════════════════════════════════════
 with _tab_settings:
-    _st_tabs = st.tabs(["⚙️  Method Settings", "🔬  Analytical Settings", "📚  References"])
+    _st_tabs = st.tabs(["⚙️  Method Settings", "ð¬  Analytical Settings", "ð  References"])
 
     with _st_tabs[0]:
         # ===========================================================================
