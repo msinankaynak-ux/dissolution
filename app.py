@@ -175,29 +175,25 @@ section[data-testid="stSidebar"] .stNumberInput button {
   border-left: 4px solid #FFBF00; border-radius: 4px; padding: 12px;
 }
 .stButton > button {
-  background: rgba(0,33,71,0.6) !important; color: rgba(232,224,208,0.85) !important;
-  border: 1px solid rgba(255,191,0,0.3) !important;
-  font-family: 'EB Garamond', serif !important;
-  font-size: 0.92rem !important; font-weight: 500 !important;
-  border-radius: 6px !important; padding: 6px 16px !important;
-  transition: all 0.2s ease !important;
-}
-.stButton > button:hover {
-  background: rgba(255,191,0,0.15) !important;
-  color: #FFBF00 !important;
-  border-color: rgba(255,191,0,0.7) !important;
-}
-/* Ana içerik alanındaki primary butonlar farklı */
-section.main .stButton > button[kind="primary"],
-section.main .stButton > button[data-testid="baseButton-primary"] {
   background: #002147 !important; color: #FFBF00 !important;
   border: 2px solid #FFBF00 !important;
-  font-size: 1rem !important; font-weight: 700 !important;
-  padding: 8px 20px !important;
+  font-family: 'EB Garamond', serif !important;
+  font-size: 1rem !important; font-weight: 600 !important;
+  border-radius: 4px !important; padding: 8px 20px !important;
 }
-section.main .stButton > button[kind="primary"]:hover,
-section.main .stButton > button[data-testid="baseButton-primary"]:hover {
-  background: #FFBF00 !important; color: #002147 !important;
+.stButton > button:hover { background: #FFBF00 !important; color: #002147 !important; }
+/* Sidebar butonları daha sade */
+[data-testid="stSidebar"] .stButton > button {
+  background: transparent !important;
+  color: rgba(232,224,208,0.65) !important;
+  border: 1px solid rgba(255,191,0,0.25) !important;
+  font-size: 0.85rem !important; font-weight: 400 !important;
+  padding: 5px 14px !important; border-radius: 6px !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+  background: rgba(255,191,0,0.1) !important;
+  color: #FFBF00 !important;
+  border-color: rgba(255,191,0,0.6) !important;
 }
 .stDownloadButton > button {
   background: #FFBF00 !important; color: #002147 !important;
