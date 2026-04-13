@@ -920,7 +920,7 @@ st.markdown(
     '<span style="font-size:1rem;color:#888;font-style:italic;font-weight:400;">' +
     '- Predictive Dissolution Suite</span></h1>' +
     '<div style="color:#5a6480;font-size:0.9rem;margin-top:4px;">' +
-    'FDA-Compliant - 48 Kinetic Models - Statistical Profiling - IVIVC' +
+    'FDA-Compliant - 62 Kinetic Models - Statistical Profiling - IVIVC' +
     '&nbsp;&nbsp;<span style="background:#002147;color:#FFBF00;padding:2px 10px;' +
     'border-radius:12px;font-size:0.76rem;font-weight:700;">POWERED BY AI</span></div>',
     unsafe_allow_html=True
