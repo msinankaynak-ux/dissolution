@@ -1759,34 +1759,7 @@ if nav == "Data Input":
                     f"spesifikasyonunu karşılamaktadır. (USP <711> / FDA 1997)"
                 )
 
-        # -- Per-profile statistics tables -------------------------------------
-        st.markdown("#### Per-Profile Statistics")
-        for nm, d in st.session_state.profiles.items():
-            with st.expander(f"{nm}  |  n={d.get('n',1)} vessels  |  {len(d['time'])} time points"):
-                t_v   = np.array(d["time"])
-                r_v   = np.array(d["release"])
-                sd_v  = np.array(d["sd"])  if d.get("sd")  is not None else np.zeros(len(t_v))
-                rsd_v = np.array(d["rsd"]) if d.get("rsd") is not None else np.zeros(len(t_v))
-
-                df_show = pd.DataFrame({
-                    f"Time ({time_unit})": t_v,
-                    "Mean (%)":  r_v.round(2),
-                    "SD":        sd_v.round(3),
-                    "RSD (%)":   rsd_v.round(2),
-                    "CV (%)":    rsd_v.round(2),
-                    "n":         d.get("n", 1),
-                })
-                st.dataframe(
-                    df_show.style.background_gradient(subset=["RSD (%)"], cmap="RdYlGn_r"),
-                    use_container_width=True
-                )
-
-                # Show raw vessel data if available
-                if d.get("raw") and d.get("vessels"):
-                    raw_df = pd.DataFrame(d["raw"], columns=d["vessels"])
-                    raw_df.insert(0, f"Time ({time_unit})", t_v)
-                    st.markdown("**Raw vessel data:**")
-                    st.dataframe(raw_df.style.format(precision=2), use_container_width=True)
+        # Per-Profile Statistics → Statistical Analysis sayfasına taşındı
 
         if st.button("🗑️ Remove All Profiles", key="clear_profiles_btn",
                      help="Remove profiles but keep project metadata and settings."):
@@ -1829,7 +1802,7 @@ elif nav == "Kinetic Model Fitting":
     )
     use_smart = st.checkbox(
         f"Sadece önerilen {len(top_models_valid)} modeli kullan",
-        value=True, key="use_smart_models"
+        value=True, key=f"use_smart_models_{pname}"
     )
 
     st.markdown("#### Select Models by Category")
@@ -1844,7 +1817,7 @@ elif nav == "Kinetic Model Fitting":
                 default_sel = cat_models[:4] if cat=="Basic" else []
             chosen = st.multiselect(f"{cat} models", cat_models,
                                     default=default_sel,
-                                    key=f"ms_{cat}")
+                                    key=f"ms_{cat}_{pname}")
             selected_models.extend(chosen)
 
     if selected_models:
@@ -1934,7 +1907,9 @@ elif nav == "Statistical Analysis":
         rows.append({"Profile":nm,
                      f"MDT ({time_unit})":round(compute_mdt(ta,ra),3),
                      "DE (%)":round(compute_de(ta,ra),3)})
-    st.dataframe(pd.DataFrame(rows),use_container_width=True)
+    _df_mdt = pd.DataFrame(rows)
+    _df_mdt.index = range(1, len(_df_mdt)+1)
+    st.dataframe(_df_mdt, use_container_width=True)
 
     if len(names)>=2:
         st.subheader("Pooled Statistical Table")
@@ -1957,7 +1932,9 @@ elif nav == "Statistical Analysis":
                 rows2.append({f"Time ({time_unit})":ti,"Mean (%)":round(mn_v,2),
                               "SD":round(sd_v,2),"RSD (%)":round(rsd_v,2),
                               "CV (%)":round(rsd_v,2),"n":len(vals)})
-        st.dataframe(pd.DataFrame(rows2),use_container_width=True)
+        _df_pool = pd.DataFrame(rows2)
+        _df_pool.index = range(1, len(_df_pool)+1)
+        st.dataframe(_df_pool, use_container_width=True)
 
     st.subheader("Individual Profile Plots")
     # Görsel seçenekler
@@ -1996,6 +1973,97 @@ elif nav == "Statistical Analysis":
         if show_q_line or show_qt_line:
             ax.legend(fontsize=7.5)
         cols[i%ncols].pyplot(fig); plt.close()
+
+    # ── Per-Profile Statistics (Data Input'tan taşındı) ─────────────────────
+    st.markdown("---")
+    st.subheader("Per-Profile Statistics")
+    st.caption(
+        "Profil başına vessel bazlı istatistikler. "
+        "SD ve RSD hesabı ham vessel verilerinden yapılmıştır."
+    )
+
+    for nm, d in st.session_state.profiles.items():
+        with st.expander(
+            f"{nm}  |  n={d.get('n',1)} vessels  |  {len(d['time'])} time points",
+            expanded=True
+        ):
+            t_v   = np.array(d["time"])
+            r_v   = np.array(d["release"])
+            sd_v  = np.array(d["sd"])  if d.get("sd")  is not None else np.zeros(len(t_v))
+            rsd_v = np.array(d["rsd"]) if d.get("rsd") is not None else np.zeros(len(t_v))
+
+            df_show = pd.DataFrame({
+                f"Time ({time_unit})": t_v.round(2),
+                "Mean (%)":  r_v.round(2),
+                "SD":        sd_v.round(3),
+                "RSD (%)":   rsd_v.round(2),
+                "CV (%)":    rsd_v.round(2),
+                "n":         d.get("n", 1),
+            })
+            st.dataframe(
+                df_show.style.background_gradient(subset=["RSD (%)"], cmap="RdYlGn_r"),
+                use_container_width=True
+            )
+
+            # RSD tabanlı Bootstrap değerlendirmesi
+            has_sd = not np.all(sd_v == 0)
+            if has_sd and len(rsd_v) > 0:
+                rsd_early = rsd_v[r_v < 85] if np.any(r_v < 85) else rsd_v
+                cv_early_max = float(np.max(rsd_early)) if len(rsd_early) > 0 else 0.0
+                cv_late_max  = float(np.max(rsd_v[r_v >= 85])) if np.any(r_v >= 85) else 0.0
+
+                # FDA kriterleri: erken nokta CV < 20%, diğerleri < 10%
+                fda_ok_early = cv_early_max <= 20.0
+                fda_ok_late  = cv_late_max  <= 10.0
+                fda_ok       = fda_ok_early and fda_ok_late
+                n_vessels    = d.get("n", 1)
+
+                st.markdown("##### 📊 FDA CV Criteria Assessment (f2 Eligibility)")
+                cv_c1, cv_c2, cv_c3 = st.columns(3)
+                cv_c1.metric(
+                    "Max CV% — Early points (<85%)",
+                    f"{cv_early_max:.1f}%",
+                    "✓ ≤ 20% (FDA)" if fda_ok_early else "✗ > 20% (FDA)",
+                    delta_color="normal" if fda_ok_early else "inverse"
+                )
+                cv_c2.metric(
+                    "Max CV% — Late points (≥85%)",
+                    f"{cv_late_max:.1f}%",
+                    "✓ ≤ 10% (FDA)" if fda_ok_late else "✗ > 10% (FDA)",
+                    delta_color="normal" if fda_ok_late else "inverse"
+                )
+                cv_c3.metric("Vessels (n)", n_vessels,
+                    "✓ ≥ 12 (FDA ideal)" if n_vessels >= 12 else f"⚠️ < 12")
+
+                if fda_ok and n_vessels >= 6:
+                    st.success(
+                        f"**✅ {nm} — Standart f2 Testi Yeterlidir.**\n\n"
+                        f"CV% değerleri FDA (1997) kriterlerini karşılıyor "
+                        f"(erken noktalar ≤ %20, geç noktalar ≤ %10). "
+                        f"Bootstrap f2 analizine gerek yoktur; "
+                        f"**tek noktalı f2 testi** sonuçlandırıcıdır."
+                    )
+                else:
+                    _reasons = []
+                    if not fda_ok_early:
+                        _reasons.append(f"Erken nokta CV% = {cv_early_max:.1f}% > 20%")
+                    if not fda_ok_late:
+                        _reasons.append(f"Geç nokta CV% = {cv_late_max:.1f}% > 10%")
+                    if n_vessels < 6:
+                        _reasons.append(f"n = {n_vessels} vessel < 6")
+                    st.warning(
+                        f"**⚠️ {nm} — Bootstrap f2 Değerlendirmesi Önerilir.**\n\n"
+                        f"Neden: {'; '.join(_reasons)}.\n\n"
+                        f"FDA (1997): CV% kriterleri aşıldığında standart f2 yerine "
+                        f"**Bootstrap f2** veya **Multivariate Confidence Region** analizi önerilir."
+                    )
+
+            # Raw vessel data
+            if d.get("raw") and d.get("vessels"):
+                raw_df = pd.DataFrame(d["raw"], columns=d["vessels"])
+                raw_df.insert(0, f"Time ({time_unit})", t_v)
+                with st.expander("Raw vessel data"):
+                    st.dataframe(raw_df.style.format(precision=2), use_container_width=True)
 
     show_literature("Statistical Analysis")
 
@@ -2066,7 +2134,22 @@ elif nav == "f1 and f2 Similarity":
 
     rr=np.array([r_ref[np.where(t_ref==ti)[0][0]] for ti in common])
     rt=np.array([r_tst[np.where(t_tst==ti)[0][0]] for ti in common])
-    mask=rr<=85; rrf,rtf=rr[mask],rt[mask]
+
+    # FDA Guidance (1997): ≤85% noktaları + 85%'i geçen ilk nokta dahil, sonrakiler hariç
+    _below = rr <= 85
+    _above_idx = np.where(~_below)[0]
+    if len(_above_idx) > 0:
+        # İlk aşan noktayı dahil et, sonrakileri hariç bırak
+        _cutoff = _above_idx[0]
+        _valid_mask = np.zeros(len(rr), dtype=bool)
+        _valid_mask[:_cutoff] = True       # 85% altı tüm noktalar
+        _valid_mask[_cutoff] = True        # 85%'i ilk kez geçen nokta
+    else:
+        _valid_mask = _below  # Hiç 85%'i geçmeyen profil
+    mask = _valid_mask
+    rrf, rtf = rr[mask], rt[mask]
+    n_points_above85 = int(np.sum(rr > 85))
+    n_points_excluded = max(0, n_points_above85 - 1)
 
     if len(rrf)==0:
         st.error("No valid time points (reference <= 85%)."); st.stop()
@@ -2074,11 +2157,20 @@ elif nav == "f1 and f2 Similarity":
     f1=float(np.sum(np.abs(rrf-rtf))/np.sum(rrf)*100)
     f2=float(50*np.log10(100/np.sqrt(1+np.mean((rrf-rtf)**2))))
 
-    mc1,mc2,mc3,mc4=st.columns(4)
+    mc1,mc2,mc3,mc4,mc5=st.columns(5)
     mc1.metric("f1 (Difference)", f"{f1:.2f}", "PASS (<=15)" if f1<=15 else "FAIL (>15)")
     mc2.metric("f2 (Similarity)", f"{f2:.2f}", "SIMILAR (>=50)" if f2>=50 else "DISSIMILAR (<50)")
     mc3.metric("Points used (n)", len(rrf))
     mc4.metric("Max |Delta R| (%)", f"{np.max(np.abs(rrf-rtf)):.2f}")
+    mc5.metric("Excluded (>85%)", n_points_excluded,
+        help="FDA (1997): 85%'i geçtikten sonra en fazla 1 nokta dahil edilir.")
+    if n_points_excluded > 0:
+        st.info(
+            f"ℹ️ **FDA 85% Kuralı uygulandı:** Referans profil {n_points_excluded} zaman "
+            f"noktasında 85%'i geçmiştir. Bu noktalardan yalnızca **ilki** f2 hesabına "
+            f"dahil edilmiş, sonrakiler dışarıda bırakılmıştır. "
+            f"*(FDA Guidance 1997, Section V.B)*"
+        )
 
     # Bootstrap uyarı sistemi
     _n_vessels = min(st.session_state.profiles[nm].get("n", 6)
@@ -2098,11 +2190,78 @@ elif nav == "f1 and f2 Similarity":
     if _cv_max > 15:
         _bswarn.append(f"**Yüksek varyasyon:** Max CV = {_cv_max:.1f}% > 15%. FDA (1997): CV > 15% durumunda Bootstrap f2 veya Multivariate CI önerilir.")
 
+    # ── Bootstrap Gerekli Mi? Kutusu ─────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### 🔍 Bootstrap f2 Gerekli Mi?")
+
+    # Tüm değerlendirme kriterleri
+    _is_boundary  = 45 <= f2 <= 55
+    _low_n        = _n_vessels <= 6
+    _high_cv      = _cv_max > 15
+    _needs_boot   = _is_boundary or _low_n or _high_cv
+
+    # CV > 15 ise nonparametrik, değilse parametrik öner
+    _recommended_method = "Nonparametric (Shah 1998)" if _cv_max > 15 else "Parametric"
+
+    # FDA CV kriterleri karşılanıyor mu?
+    _rsd_early_vals = []
+    _rsd_late_vals  = []
+    for _nm2 in [ref_nm, test_nm]:
+        _d2 = st.session_state.profiles[_nm2]
+        if _d2.get("rsd") and _d2.get("release"):
+            _r2  = np.array(_d2["release"])
+            _rsd2 = np.array(_d2["rsd"])
+            _rsd_early_vals.extend(_rsd2[_r2 < 85].tolist())
+            _rsd_late_vals.extend(_rsd2[_r2 >= 85].tolist())
+    _cv_early_max = max(_rsd_early_vals) if _rsd_early_vals else 0.0
+    _cv_late_max  = max(_rsd_late_vals)  if _rsd_late_vals  else 0.0
+    _fda_cv_ok    = _cv_early_max <= 20.0 and _cv_late_max <= 10.0
+
+    if not _needs_boot and _fda_cv_ok:
+        st.success(
+            f"**✅ Bootstrap f2 Analizine Gerek Yoktur — Standart f2 Testi Yeterlidir.**\n\n"
+            f"Aşağıdaki FDA kriterleri karşılanmaktadır:\n\n"
+            f"- f2 = **{f2:.2f}** — 45–55 sınır bölgesi dışında\n"
+            f"- n = **{_n_vessels}** vessel — örneklem yeterli\n"
+            f"- Max CV% (erken) = **{_cv_early_max:.1f}%** ≤ 20% ✓\n"
+            f"- Max CV% (geç) = **{_cv_late_max:.1f}%** ≤ 10% ✓\n\n"
+            f"**Tek noktalı f2 testi** FDA (1997) Guidance çerçevesinde sonuçlandırıcıdır. "
+            f"*(FDA Guidance for Industry: Dissolution Testing of Immediate Release Solid Oral "
+            f"Dosage Forms, 1997, Section V)*"
+        )
+    else:
+        _criteria_list = []
+        if _is_boundary:
+            _criteria_list.append(f"f2 = {f2:.2f} → **45–55 sınır bölgesinde** (istatistiksel güvensizlik)")
+        if _low_n:
+            _criteria_list.append(f"n = {_n_vessels} vessel → **FDA n ≥ 12 önerir**")
+        if _high_cv:
+            _criteria_list.append(f"Max CV% = {_cv_max:.1f}% → **> 15% (FDA eşiği)**")
+        if not _fda_cv_ok:
+            if _cv_early_max > 20:
+                _criteria_list.append(f"Erken nokta CV% = {_cv_early_max:.1f}% → **> 20% (FDA kriteri aşıldı)**")
+            if _cv_late_max > 10:
+                _criteria_list.append(f"Geç nokta CV% = {_cv_late_max:.1f}% → **> 10% (FDA kriteri aşıldı)**")
+
+        _criteria_text = "\n".join([f"- {c}" for c in _criteria_list])
+        st.warning(
+            f"**⚠️ Bootstrap f2 Analizi Önerilir**\n\n"
+            f"Aşağıdaki nedenlerle standart f2 testi yeterli değildir:\n\n"
+            f"{_criteria_text}\n\n"
+            f"**Önerilen yöntem: {_recommended_method} Bootstrap**\n"
+            f"{'CV% > 15% olduğundan **Nonparametric Bootstrap** daha güvenilir sonuç verir. ' if _cv_max > 15 else 'CV% ≤ 15% olduğundan **Parametric Bootstrap** yeterlidir. '}"
+            f"Bootstrap f2 analizi için → **Bootstrap f2 Analysis** sayfasına geçin.\n\n"
+            f"📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
+        )
+
+    if _needs_boot or not _fda_cv_ok:
+        _warn_md = ""
+        if _bswarn:
+            pass  # Zaten yukarıdaki kutucukta gösterildi
     if _bswarn:
         _warn_md = "⚠️ **Bootstrap f2 Analizi Önerilir**\n\n"
         _warn_md += "\n\n".join([f"{i+1}. {w}" for i, w in enumerate(_bswarn)])
         _warn_md += "\n\n📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
-        st.warning(_warn_md)
 
     vf1="PASS - f1 <= 15: Profiles have acceptable difference" if f1<=15 else "FAIL - f1 > 15: Significant difference detected"
     vf2="SIMILAR - f2 >= 50: Profiles are bioequivalent (FDA)" if f2>=50 else "DISSIMILAR - f2 < 50: Profiles are NOT similar"
