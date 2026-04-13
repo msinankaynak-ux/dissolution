@@ -1997,19 +1997,32 @@ elif nav == "Statistical Analysis":
 
     st.subheader("Individual Profile Plots")
     # Görsel seçenekler
-    sp_c1, sp_c2, sp_c3 = st.columns(3)
+    _is_cfg_s  = st.session_state.method_cfg
+    _is_on_s   = _is_cfg_s.get("internal_spec_enabled", False)
+    _isn_s     = _is_cfg_s.get("internal_spec_name",  "Internal Spec")
+    _isl_s     = float(_is_cfg_s.get("internal_spec_limit", 85.0))
+
+    # Internal Spec aktifse 4 kolon, değilse 3 kolon
+    if _is_on_s:
+        sp_c1, sp_c2, sp_c3, sp_c4 = st.columns(4)
+    else:
+        sp_c1, sp_c2, sp_c3 = st.columns(3)
+        sp_c4 = None
+
     with sp_c1:
         show_q_line  = st.radio("Q Value Line", ["Show","Hide"], horizontal=True, key="stat_qline") == "Show"
     with sp_c2:
         show_qt_line = st.radio("Q Time Marker", ["Show","Hide"], horizontal=True, key="stat_qtline") == "Show"
     with sp_c3:
         show_eb      = st.radio("Error Bars (SD)", ["Show","Hide"], horizontal=True, key="stat_eb") == "Show"
-
-    # Internal Spec ayarlarını al
-    _is_cfg_s  = st.session_state.method_cfg
-    _is_on_s   = _is_cfg_s.get("internal_spec_enabled", False)
-    _isn_s     = _is_cfg_s.get("internal_spec_name",  "Internal Spec")
-    _isl_s     = float(_is_cfg_s.get("internal_spec_limit", 85.0))
+    if _is_on_s and sp_c4:
+        with sp_c4:
+            show_is_stat = st.radio(
+                f"{_isn_s} Line",
+                ["Show", "Hide"], horizontal=True, key="stat_is_line"
+            ) == "Show"
+    else:
+        show_is_stat = False
     _ist_s     = float(_is_cfg_s.get("internal_spec_time",  45.0))
 
     ncols=min(2,len(names)); cols=st.columns(ncols)
@@ -2032,7 +2045,7 @@ elif nav == "Statistical Analysis":
             ax.axvline(q_time, color="#e74c3c", lw=1.2, ls=":", alpha=0.75,
                        label=f"Q-time = {q_time:.0f} {time_unit}")
         # Internal Spec çizgisi — Statistics sayfasında
-        if _is_on_s:
+        if _is_on_s and show_is_stat:
             ax.axhline(_isl_s, color="#9467bd", lw=1.3, ls=(0,(5,3)), alpha=0.85,
                        label=f"{_isn_s} = {_isl_s:.0f}%")
             ax.axvline(_ist_s, color="#9467bd", lw=1.1, ls=(0,(3,3)), alpha=0.7,
@@ -2042,12 +2055,12 @@ elif nav == "Statistical Analysis":
         ax.set_ylabel("Cumulative Drug Released (%)")
         ax.set_xlim(left=0, right=ta.max()*1.05)
         ax.set_ylim(bottom=0, top=112)
-        if show_q_line or show_qt_line or _is_on_s:
+        if show_q_line or show_qt_line or (show_is_stat and _is_on_s):
             ax.legend(fontsize=7.5)
         cols[i%ncols].pyplot(fig); plt.close()
 
         # Internal Spec profil bazlı değerlendirme
-        if _is_on_s:
+        if _is_on_s and show_is_stat:
             _is_idx_s = np.where(np.isclose(ta, _ist_s))[0]
             if len(_is_idx_s) > 0:
                 _is_val_s = ra[_is_idx_s[0]]
