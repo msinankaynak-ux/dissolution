@@ -262,7 +262,7 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
     // İlk öğenin önüne "Analysis Modules" etiketi
     var lbl1 = document.createElement('div');
     lbl1.className = 'nav-section-label';
-    lbl1.innerHTML = '📊 Analysis Modules';
+    lbl1.innerHTML = 'ð Analysis Modules';
     radioDiv.insertBefore(lbl1, children[0]);
 
     // "Excel Report" öğesinin önüne bölüm çizgisi + "Settings & Report"
@@ -315,16 +315,7 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
 
 # Feedback butonu sidebar'ın altına
 with st.sidebar:
-    st.markdown(
-        '''<div style="padding:6px 12px;margin-top:4px;">
-        <a href="mailto:msinankaynak@gmail.com?subject=DissolvA%20Feedback"
-           style="display:flex;align-items:center;gap:8px;text-decoration:none;
-                  color:rgba(232,224,208,0.5);font-size:0.78rem;"
-           onmouseover="this.style.color='#FFBF00'" onmouseout="this.style.color='rgba(232,224,208,0.5)'">
-          <span>✉️</span><span>Feedback / Bug Report</span>
-        </a></div>''',
-        unsafe_allow_html=True
-    )
+    pass  # top sidebar placeholder
 
 # ── Global Session State Initialization ──────────────────────────────────────
 _SS_DEFAULTS = {
@@ -403,6 +394,10 @@ with st.sidebar:
         st.session_state.method_cfg = {
             "time_unit": "minutes", "conc_unit": "mg/mL", "dose_mg": 100.0,
             "q_time": 45.0, "q_limit": 80.0,
+            "internal_spec_enabled": False,
+            "internal_spec_time": 45.0,
+            "internal_spec_limit": 85.0,
+            "internal_spec_name": "Internal Spec",
             "apparatus": "USP II (Paddle)", "medium": "0.1N HCl (pH 1.2)",
             "rpm": 50, "volume_ml": 900, "temp_c": 37.0,
             "analytical": "UV-Vis",
@@ -426,7 +421,7 @@ with st.sidebar:
         "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
         "f1 and f2 Similarity", "Bootstrap f2 Analysis", "IVIVC Analysis",
         "Excel Report", "Method Settings", "Analytical Settings",
-        "📚 All References",
+        "ð All References",
     ], label_visibility="hidden")
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.15);margin:10px 0 6px 0;">', unsafe_allow_html=True)
@@ -435,12 +430,12 @@ with st.sidebar:
     proj_name = st.session_state.project_metadata.get("name", "Untitled Project")
     st.markdown(
         f'<div style="padding:4px 12px;font-size:0.72rem;color:rgba(232,224,208,0.6);">'
-        f'📁 <em>{proj_name}</em></div>',
+        f'ð <em>{proj_name}</em></div>',
         unsafe_allow_html=True
     )
 
     # New Project butonu
-    if st.button("🗑️ New Project", use_container_width=True,
+    if st.button("ð️ New Project", use_container_width=True,
                  help="Clear all profiles, results and start fresh."):
         st.session_state["_confirm_new"] = True
         st.rerun()
@@ -532,7 +527,7 @@ def show_literature(page_key):
     refs = LITERATURE.get(page_key, [])
     if not refs:
         return
-    with st.expander("📚 Literature References (APA Format)", expanded=False):
+    with st.expander("ð Literature References (APA Format)", expanded=False):
         for i, ref in enumerate(refs, 1):
             st.markdown(f"**{i}.** {ref}")
 
@@ -568,6 +563,8 @@ ALL_REFERENCES = [
     ("f1/f2 & Statistical Methods", [
         "Moore, J. W., & Flanner, H. H. (1996). Mathematical comparison of dissolution profiles. *Pharmaceutical Technology*, 20(6), 64–74.",
         "Shah, V. P., Tsong, Y., Sathe, P., & Liu, J. P. (1998). In vitro dissolution profile comparison — statistics and analysis of the similarity factor, f2. *Pharmaceutical Research*, 15(6), 889–896.",
+        "European Medicines Agency. (2010). *Guideline on the investigation of bioequivalence*. EMA/CHMP/EWP/QWP/1401/98 Rev. 1. EMA. [Bootstrap f2 methodology — Section 4.1.1]",
+        "European Medicines Agency. (2018). *Guideline on the pharmacokinetic and clinical evaluation of modified release dosage forms*. EMA/CPMP/EWP/280/96 Corr1.",
         "Costa, P., & Lobo, J. M. S. (2001). Modeling and comparison of dissolution profiles. *European Journal of Pharmaceutical Sciences*, 13(2), 123–133.",
         "Tsong, Y., Hammerstrom, T., Sathe, P., & Shah, V. P. (1996). Statistical assessment of mean differences between two dissolution data sets. *Drug Information Journal*, 30(4), 1105–1112.",
         "Polli, J. E., Rekhi, G. S., Augsburger, L. L., & Shah, V. P. (1997). Methods to compare dissolution profiles and a rationale for wide dissolution specifications for metoprolol tartrate tablets. *Journal of Pharmaceutical Sciences*, 86(6), 690–700.",
@@ -591,7 +588,7 @@ ALL_REFERENCES = [
 
 def show_all_references():
     """Tüm program referanslarını göster - sidebar ikonu için."""
-    st.markdown("## 📚 DissolvA — Complete Reference List")
+    st.markdown("## ð DissolvA — Complete Reference List")
     st.markdown(
         '<div class="info-banner">All scientific sources, regulatory guidelines, and software references '
         'used in DissolvA v2.0. Please cite these works in your publications.</div>',
@@ -791,7 +788,7 @@ def analyze_profile_shape(t_arr, r_arr):
             'top_models': ['First Order + Fmax','Weibull','Makoid-Banakar','Peppas-Sahlin','Gompertz 2 (DDSolver)'],
             'categories': ['Basic','Empirical'],
             'reason': f"Profil %80 eşiğine ulaşmıyor (max: %{r.max():.1f}). Fmax parametreli veya ampirik modeller önerilir.",
-            'icon': '📉'
+            'icon': 'ð'
         }
     else:
         return {
@@ -974,6 +971,39 @@ if nav == "Method Settings":
             help="Minimum % dissolved at Q-time (default 80% per USP <711>)")
     ql = cfg['q_limit']; qt = cfg['q_time']; tu = cfg['time_unit']
     st.markdown(f'<div class="info-banner">NLT <strong>{ql:.0f}%</strong> dissolved at <strong>{qt:.0f} {tu}</strong> &nbsp;|&nbsp; USP &lt;711&gt; / FDA 1997</div>', unsafe_allow_html=True)
+
+    # ── Internal Spec (Firma İçi Kriter) ─────────────────────────────────────
+    st.markdown("---")
+    st.markdown("### Internal Acceptance Criterion *(optional)*")
+    cfg["internal_spec_enabled"] = st.toggle(
+        "Enable Internal Spec",
+        value=cfg.get("internal_spec_enabled", False),
+        help="Company internal acceptance criterion — shown as advisory only, not a regulatory requirement."
+    )
+    if cfg["internal_spec_enabled"]:
+        is_c1, is_c2, is_c3 = st.columns(3)
+        with is_c1:
+            cfg["internal_spec_name"] = st.text_input(
+                "Criterion Name", value=cfg.get("internal_spec_name", "Internal Spec"),
+                help="e.g. 'Internal Spec', 'Company Q', 'Release Limit'")
+        with is_c2:
+            cfg["internal_spec_time"] = st.number_input(
+                "Time Point", value=float(cfg.get("internal_spec_time", 45.0)), min_value=0.0)
+        with is_c3:
+            cfg["internal_spec_limit"] = st.number_input(
+                "Limit (%)", value=float(cfg.get("internal_spec_limit", 85.0)),
+                min_value=0.0, max_value=100.0)
+        isl  = cfg["internal_spec_limit"]
+        ist  = cfg["internal_spec_time"]
+        isn  = cfg["internal_spec_name"]
+        st.markdown(
+            f'<div style="background:rgba(148,103,189,0.1);border-left:4px solid #9467bd;' +
+            f'border-radius:0 6px 6px 0;padding:10px 14px;font-size:0.85rem;">' +
+            f'⚠️ <em>Advisory only</em> — {isn}: NLT <strong>{isl:.0f}%</strong> ' +
+            f'dissolved at <strong>{ist:.0f} {tu}</strong>. ' +
+            f'Non-compliance generates a warning, not a regulatory finding.</div>',
+            unsafe_allow_html=True
+        )
 
     st.markdown("---")
     st.markdown("### Dissolution Apparatus & Medium")
@@ -1162,7 +1192,7 @@ if nav == "Data Input":
     st.header("Data Input")
 
     # ── Proje Metadata Paneli ─────────────────────────────────────────────────
-    with st.expander("📁 Project Setup", expanded=not bool(st.session_state.profiles)):
+    with st.expander("ð Project Setup", expanded=not bool(st.session_state.profiles)):
         pm = st.session_state.project_metadata
         pc1, pc2 = st.columns([1, 1])
         with pc1:
@@ -1175,7 +1205,7 @@ if nav == "Data Input":
             new_desc = st.text_area("Project Description", value=pm.get("description",""),
                                     key="proj_desc_input", height=88,
                                     placeholder="e.g. Bioequivalence study of ibuprofen 400mg tablets...")
-        if st.button("💾 Save Project Info", key="save_proj_meta"):
+        if st.button("ð¾ Save Project Info", key="save_proj_meta"):
             import datetime as _dt
             st.session_state.project_metadata.update({
                 "name":        new_proj_name,
@@ -1631,7 +1661,7 @@ if nav == "Data Input":
             compliance_results[nm] = {"rel": rel_actual, "passed": passed}
 
         # ── Compliance Badge satırı ───────────────────────────────────────────
-        st.markdown("##### 🏛️ Monograph Compliance Status")
+        st.markdown("##### ð️ Monograph Compliance Status")
         badge_cols = st.columns(len(compliance_results) or 1)
         for i, (nm, res) in enumerate(compliance_results.items()):
             with badge_cols[i % len(badge_cols)]:
@@ -1697,6 +1727,34 @@ if nav == "Data Input":
             ax.axvline(q_time, color="#27ae60", lw=1.4, ls=":", alpha=0.85,
                        label=f"Q-time = {q_time:.0f} {time_unit}")
 
+        # ── Internal Spec çizgisi ─────────────────────────────────────────────
+        _is_cfg = st.session_state.method_cfg
+        if _is_cfg.get("internal_spec_enabled", False):
+            _isn = _is_cfg.get("internal_spec_name", "Internal Spec")
+            _isl = float(_is_cfg.get("internal_spec_limit", 85.0))
+            _ist = float(_is_cfg.get("internal_spec_time", 45.0))
+            ax.axhline(_isl, color="#9467bd", lw=1.4, ls=(0,(5,3)), alpha=0.85,
+                       label=f"{_isn} = {_isl:.0f}%")
+            ax.axvline(_ist, color="#9467bd", lw=1.2, ls=(0,(3,3)), alpha=0.75,
+                       label=f"{_isn} t = {_ist:.0f} {time_unit}")
+
+            # Internal Spec uyarısı — her profil için
+            _is_warn_profs = []
+            for _nm, _d in st.session_state.profiles.items():
+                _t_arr = np.array(_d["time"])
+                _r_arr = np.array(_d["release"])
+                _is_idx = np.where(np.isclose(_t_arr, _ist))[0]
+                if len(_is_idx) > 0:
+                    _is_val = _r_arr[_is_idx[0]]
+                    if _is_val < _isl:
+                        _is_warn_profs.append(f"{_nm} ({_is_val:.1f}% < {_isl:.0f}%)")
+            if _is_warn_profs:
+                st.warning(
+                    f"⚠️ **{_isn} — Below Internal Limit:**  \n"
+                    + "\n".join([f"- {p}" for p in _is_warn_profs])
+                    + f"\n\n*Advisory only — not a regulatory (FDA/USP) finding.*"
+                )
+
         # OOS/COMPLIANT annotation grafik köşesine
         if any_fail:
             ax.text(0.98, 0.97, "⚠️ OOS / NON-COMPLIANT",
@@ -1739,11 +1797,11 @@ if nav == "Data Input":
                     f"Bu değer, belirlenen farmakope spesifikasyonunun (**Q = %{q_limit:.0f}**) "
                     f"**%{deficit:.2f}** altında kalmaktadır.\n\n"
                     f"**Olası Nedenler (Academic Assessment):**\n"
-                    f"- 🔬 **Yavaş salım hızı (Slow dissolution rate):** Aktif maddenin çözünme "
+                    f"- ð¬ **Yavaş salım hızı (Slow dissolution rate):** Aktif maddenin çözünme "
                     f"kinetikleri beklenen profil ile uyuşmamaktadır.\n"
-                    f"- 💊 **Formülasyon bileşenleri:** Dağıtıcı (disintegrant) etkinliği, "
+                    f"- ð **Formülasyon bileşenleri:** Dağıtıcı (disintegrant) etkinliği, "
                     f"lubrikant oranı veya binder konsantrasyonu gözden geçirilmelidir.\n"
-                    f"- 🌡️ **Stabilite/yaşlanma etkisi (Aging effect):** Uzun süreli depolamaya "
+                    f"- ð¡️ **Stabilite/yaşlanma etkisi (Aging effect):** Uzun süreli depolamaya "
                     f"bağlı matris sertleşmesi veya polimorfik dönüşüm ihtimali değerlendirilmelidir.\n"
                     f"- ⚗️ **Analitik parametreler:** pH, sıcaklık ve çözünme ortamı bileşimi "
                     f"metodun gerektirdiği koşullarla karşılaştırılmalıdır.\n\n"
@@ -1761,7 +1819,7 @@ if nav == "Data Input":
 
         # Per-Profile Statistics → Statistical Analysis sayfasına taşındı
 
-        if st.button("🗑️ Remove All Profiles", key="clear_profiles_btn",
+        if st.button("ð️ Remove All Profiles", key="clear_profiles_btn",
                      help="Remove profiles but keep project metadata and settings."):
             st.session_state.profiles = {}
             st.session_state.fit_results = {}
@@ -2018,7 +2076,7 @@ elif nav == "Statistical Analysis":
                 fda_ok       = fda_ok_early and fda_ok_late
                 n_vessels    = d.get("n", 1)
 
-                st.markdown("##### 📊 FDA CV Criteria Assessment (f2 Eligibility)")
+                st.markdown("##### ð FDA CV Criteria Assessment (f2 Eligibility)")
                 cv_c1, cv_c2, cv_c3 = st.columns(3)
                 cv_c1.metric(
                     "Max CV% — Early points (<85%)",
@@ -2192,7 +2250,7 @@ elif nav == "f1 and f2 Similarity":
 
     # ── Bootstrap Gerekli Mi? Kutusu ─────────────────────────────────────────
     st.markdown("---")
-    st.markdown("#### 🔍 Bootstrap f2 Gerekli Mi?")
+    st.markdown("#### ð Bootstrap f2 Gerekli Mi?")
 
     # Tüm değerlendirme kriterleri
     _is_boundary  = 45 <= f2 <= 55
@@ -2251,7 +2309,7 @@ elif nav == "f1 and f2 Similarity":
             f"**Önerilen yöntem: {_recommended_method} Bootstrap**\n"
             f"{'CV% > 15% olduğundan **Nonparametric Bootstrap** daha güvenilir sonuç verir. ' if _cv_max > 15 else 'CV% ≤ 15% olduğundan **Parametric Bootstrap** yeterlidir. '}"
             f"Bootstrap f2 analizi için → **Bootstrap f2 Analysis** sayfasına geçin.\n\n"
-            f"📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
+            f"ð *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
         )
 
     if _needs_boot or not _fda_cv_ok:
@@ -2261,7 +2319,7 @@ elif nav == "f1 and f2 Similarity":
     if _bswarn:
         _warn_md = "⚠️ **Bootstrap f2 Analizi Önerilir**\n\n"
         _warn_md += "\n\n".join([f"{i+1}. {w}" for i, w in enumerate(_bswarn)])
-        _warn_md += "\n\n📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
+        _warn_md += "\n\nð *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
 
     vf1="PASS - f1 <= 15: Profiles have acceptable difference" if f1<=15 else "FAIL - f1 > 15: Significant difference detected"
     vf2="SIMILAR - f2 >= 50: Profiles are bioequivalent (FDA)" if f2>=50 else "DISSIMILAR - f2 < 50: Profiles are NOT similar"
@@ -2784,6 +2842,8 @@ elif nav == "Bootstrap f2 Analysis":
             "ref":      ref_bs,
             "test":     test_bs,
             "verdict":  verdict_icon,
+            "f2_dist":  f2_boot.tolist(),
+            "method":   bs_method,
         }
 
         # ---- Reference citation ---------------------------------------------
@@ -2838,11 +2898,11 @@ elif nav == "IVIVC Analysis":
 
     # ── IVIVC Level Seçimi ────────────────────────────────────────────────────
     IVIVC_LEVELS = {
-        "Level A": ("🏆 Level A — Point-to-Point", "Wagner-Nelson deconvolution; highest regulatory value (FDA Preferred). [Professional]"),
-        "Level B": ("📊 Level B — Statistical Moments", "In vitro MDT vs in vivo MRT; moment analysis."),
-        "Level C": ("📈 Level C — Single Point", "Single PK parameter vs single dissolution time point."),
-        "Multiple Level C": ("🔬 Multiple Level C — Multi-Point", "≥3 time points across dissolution profile; near Level A reliability. [Professional]"),
-        "Level D": ("👁️ Level D — Qualitative/Visual", "Visual trend confirmation; rank ordering only."),
+        "Level A": ("ð Level A — Point-to-Point", "Wagner-Nelson deconvolution; highest regulatory value (FDA Preferred). [Professional]"),
+        "Level B": ("ð Level B — Statistical Moments", "In vitro MDT vs in vivo MRT; moment analysis."),
+        "Level C": ("ð Level C — Single Point", "Single PK parameter vs single dissolution time point."),
+        "Multiple Level C": ("ð¬ Multiple Level C — Multi-Point", "≥3 time points across dissolution profile; near Level A reliability. [Professional]"),
+        "Level D": ("ð️ Level D — Qualitative/Visual", "Visual trend confirmation; rank ordering only."),
     }
 
     level_col, info_col = st.columns([1, 2])
@@ -2858,7 +2918,7 @@ elif nav == "IVIVC Analysis":
         label, desc = IVIVC_LEVELS[selected_level]
         professional = "[Professional]" in desc
         badge_color  = "#002147" if professional else "#27ae60"
-        badge_text   = "🔒 Professional" if professional else "✅ All Plans"
+        badge_text   = "ð Professional" if professional else "✅ All Plans"
         st.markdown(
             f'<div style="background:#f0ece0;border-left:4px solid {badge_color};'
             f'border-radius:4px;padding:12px 16px;margin-top:8px;">'
@@ -2993,7 +3053,7 @@ elif nav == "IVIVC Analysis":
             )
             st.session_state.ivivc_input_data["ke"] = ke_input
 
-        st.markdown("#### 📥 In Vivo Plasma Concentration Data (Optional — for %PE validation)")
+        st.markdown("#### ð¥ In Vivo Plasma Concentration Data (Optional — for %PE validation)")
         st.markdown(
             '<div class="step-box">Enter observed Cp–t data for %PE calculation. '
             'If omitted, only the Wagner-Nelson deconvolution will be shown.</div>',
@@ -3081,7 +3141,7 @@ elif nav == "IVIVC Analysis":
                 obs_auc  = nca_res["AUC"]
                 pe_auc   = abs(obs_auc - pred_auc) / obs_auc * 100 if obs_auc > 0 else np.nan
 
-                st.markdown("#### 📋 NCA Results & Prediction Error (%PE)")
+                st.markdown("#### ð NCA Results & Prediction Error (%PE)")
                 nc1, nc2, nc3, nc4, nc5 = st.columns(5)
                 nc1.metric("Cmax",   f"{nca_res['Cmax']:.2f}")
                 nc2.metric("Tmax",   f"{nca_res['Tmax']:.2f}")
@@ -3124,7 +3184,7 @@ elif nav == "IVIVC Analysis":
         mdt_iv = compute_mdt(t_iv, r_iv)
         st.metric(f"In Vitro MDT ({time_unit})", f"{mdt_iv:.3f}" if not np.isnan(mdt_iv) else "N/A")
 
-        st.markdown("#### 📥 In Vivo MRT Data Entry (Multiple Formulations)")
+        st.markdown("#### ð¥ In Vivo MRT Data Entry (Multiple Formulations)")
         st.markdown(
             '<div class="step-box">Enter in vivo MRT values for each formulation. '
             'You can enter data from multiple formulations to build the MDT–MRT regression.</div>',
@@ -3216,7 +3276,7 @@ elif nav == "IVIVC Analysis":
                 f"**{auto_val:.3f} {time_unit}**" if not np.isnan(auto_val) else
                 f"Could not compute {diss_param_c} — dissolution may not reach required level.")
 
-        st.markdown("#### 📥 Multi-Formulation Data Entry")
+        st.markdown("#### ð¥ Multi-Formulation Data Entry")
         n_forms_c = st.number_input("Number of formulations", min_value=2, max_value=12,
                                      value=st.session_state.ivivc_input_data.get("lvc_n", 3),
                                      key="lvc_n_input")
@@ -3290,7 +3350,7 @@ elif nav == "IVIVC Analysis":
                 key="lvmc_pk_param")
             st.session_state.ivivc_input_data["lvmc_pk_idx"] = ["Cmax","AUC(0-inf)","Tmax"].index(pk_param_mc)
 
-        st.markdown(f"#### 📥 {pk_param_mc} Data for Each Phase (Multiple Formulations)")
+        st.markdown(f"#### ð¥ {pk_param_mc} Data for Each Phase (Multiple Formulations)")
         n_forms_mc = st.number_input("Number of formulations", min_value=3, max_value=12,
                                       value=st.session_state.ivivc_input_data.get("lvmc_n", 4),
                                       key="lvmc_n_input")
@@ -3363,7 +3423,7 @@ elif nav == "IVIVC Analysis":
                         all_r2_pass = False
 
             if r2_results:
-                st.markdown("#### 🎯 Multiple Level C — Overall Assessment")
+                st.markdown("#### ð¯ Multiple Level C — Overall Assessment")
                 if all_r2_pass:
                     st.success(
                         "✅ All three phases achieve R² ≥ 0.90 — This correlation approaches "
@@ -3476,7 +3536,7 @@ elif nav == "Excel Report":
     _default_title  = f"DissolvA — {_pm.get('name','Dissolution Analysis Report')}"
     _default_author = _pm.get("analyst","M. Sinan KAYNAK, PhD | Anadolu University, Faculty of Pharmacy")
 
-    with st.expander("🎨 Report Customization", expanded=True):
+    with st.expander("ð¨ Report Customization", expanded=True):
         rc1, rc2 = st.columns([1.2, 0.8])
         with rc1:
             report_title  = st.text_input("Report Title", _default_title)
@@ -3485,7 +3545,7 @@ elif nav == "Excel Report":
             if _pm.get("description"):
                 st.caption(f"Project: {_pm['description'][:80]}")
         with rc2:
-            st.markdown("**📎 Logo Upload** *(optional)*")
+            st.markdown("**ð Logo Upload** *(optional)*")
             st.markdown(
                 '<div style="background:#f0ece0;border:1px solid #ddd;border-radius:4px;'
                 'padding:8px 12px;font-size:0.78rem;color:#666;margin-bottom:8px;">'
@@ -3500,20 +3560,20 @@ elif nav == "Excel Report":
             )
             logo_file = st.file_uploader("Upload logo", type=["png","jpg","jpeg"], key="report_logo", label_visibility="collapsed")
 
-        st.markdown("**📋 Select Sheets to Include:**")
+        st.markdown("**ð Select Sheets to Include:**")
         sc1, sc2, sc3, sc4 = st.columns(4)
         with sc1:
-            inc_cover    = st.checkbox("📄 Cover Page",           value=True)
+            inc_cover    = st.checkbox("ð Cover Page",           value=True)
             inc_method   = st.checkbox("⚗️ Method Report",        value=True)
         with sc2:
-            inc_profiles = st.checkbox("📈 Dissolution Profiles",  value=True)
-            inc_stats    = st.checkbox("📊 Statistics",            value=True)
+            inc_profiles = st.checkbox("ð Dissolution Profiles",  value=True)
+            inc_stats    = st.checkbox("ð Statistics",            value=True)
         with sc3:
-            inc_fitting  = st.checkbox("🔢 Model Fitting",         value=True)
-            inc_chart    = st.checkbox("📉 Dissolution Chart",     value=True)
+            inc_fitting  = st.checkbox("ð¢ Model Fitting",         value=True)
+            inc_chart    = st.checkbox("ð Dissolution Chart",     value=True)
         with sc4:
             inc_f2       = st.checkbox("⚖️ Similarity (f1/f2)",   value=True)
-            inc_bootstrap= st.checkbox("🔁 Bootstrap f2",          value=bool(st.session_state.get("bootstrap_results")))
+            inc_bootstrap= st.checkbox("ð Bootstrap f2",          value=bool(st.session_state.get("bootstrap_results")))
 
     report_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -3633,6 +3693,43 @@ elif nav == "Excel Report":
                     ws2.write(ri+2, col+2, round(sd_a[ri],4), fmt_d)
                     ws2.write(ri+2, col+3, round(rsd_a[ri],2), fmt_d)
                 col += 5
+
+            # Dissolution Profiles — matplotlib grafiği PNG olarak ekle
+            try:
+                import io as _io_dp
+                _fig_dp, _ax_dp = plt.subplots(figsize=(8, 4.5))
+                _fig_dp.patch.set_facecolor("#FDFAF5")
+                _ax_dp.set_facecolor("#F8F4EC")
+                _pal = ["#002147","#e6194B","#3cb44b","#4363d8","#f58231","#911eb4"]
+                for _ci, (_nm, _dd) in enumerate(st.session_state.profiles.items()):
+                    _ta = np.array(_dd["time"]); _ra = np.array(_dd["release"])
+                    _sd = np.array(_dd.get("sd") or [0.0]*len(_ta))
+                    _col = _pal[_ci % len(_pal)]
+                    _ax_dp.plot(_ta, _ra, "o-", color=_col, lw=2, ms=5, label=_nm)
+                    if not np.all(_sd == 0):
+                        _ax_dp.fill_between(_ta, np.clip(_ra-_sd,0,None), _ra+_sd,
+                                            alpha=0.12, color=_col)
+                _ax_dp.axhline(q_limit, color="#FFBF00", lw=1.5, ls="--",
+                               label=f"Q = {q_limit:.0f}% (FDA/USP)")
+                _ax_dp.set_xlim(left=0); _ax_dp.set_ylim(bottom=0, top=112)
+                _ax_dp.set_xlabel(f"Time ({time_unit})", fontsize=11)
+                _ax_dp.set_ylabel("Cumulative Drug Released (%)", fontsize=11)
+                _ax_dp.set_title("Mean Dissolution Profiles (Mean ± SD)", fontsize=12, color="#002147")
+                _ax_dp.legend(fontsize=9, framealpha=0.9)
+                for _sp in ["top","right"]: _ax_dp.spines[_sp].set_visible(False)
+                _buf_dp = _io_dp.BytesIO()
+                _fig_dp.tight_layout()
+                _fig_dp.savefig(_buf_dp, format="png", dpi=130)
+                plt.close(_fig_dp)
+                _buf_dp.seek(0)
+                _img_col = len(st.session_state.profiles) * 5 + 1
+                _img_cell = xlsxwriter.utility.xl_col_to_name(_img_col) + "2"
+                ws2.insert_image(_img_cell, "profile_chart.png", {
+                    "image_data": _buf_dp, "x_scale": 1.0, "y_scale": 1.0,
+                    "x_offset": 5, "y_offset": 5, "object_position": 1
+                })
+            except Exception as _e_dp:
+                ws2.write(0, len(st.session_state.profiles)*5+1, f"Chart err: {_e_dp}", fmt_n)
 
         # 4. STATISTICS
         if inc_stats:
@@ -3794,14 +3891,73 @@ elif nav == "Excel Report":
         # 8. BOOTSTRAP f2
         if inc_bootstrap and st.session_state.get("bootstrap_results"):
             ws7 = wb.add_worksheet("Bootstrap f2")
+            ws7.set_column("A:A", 30); ws7.set_column("B:B", 18)
             ws7.write("A1","Bootstrap f2 Analysis",fmt_t)
-            ws7.write("A2","Shah et al. 1998 | 5000 iterations",fmt_n)
+            ws7.write("A2","Shah VP et al. Pharm Res. 1998;15(6):889-896 | EMA/CHMP/EWP/QWP/1401/98 Rev.1",fmt_n)
             br = st.session_state["bootstrap_results"]
-            ws7.write("A4","f2 (observed)",fmt_h); ws7.write("B4",round(br.get("f2_obs",0),3),fmt_p)
-            ws7.write("A5","Mean Bootstrap f2",fmt_h); ws7.write("B5",round(br.get("f2_mean",0),3),fmt_p)
-            ws7.write("A6","90% CI Lower",fmt_h); ws7.write("B6",round(br.get("ci_lower",0),3),fmt_p)
-            ws7.write("A7","90% CI Upper",fmt_h); ws7.write("B7",round(br.get("ci_upper",0),3),fmt_p)
-            ws7.write("A8","n Iterations",fmt_h); ws7.write("B8",br.get("n_iter",5000),fmt_p)
+            f2_obs   = br.get("f2_obs",  0)
+            ci_lower = br.get("ci_lower", 0)
+            ci_upper = br.get("ci_upper", 0)
+            f2_mean  = br.get("f2_mean",  0)
+            n_iter   = br.get("n_iter", 5000)
+            method   = br.get("method", "Parametric")
+
+            # Karar
+            is_similar = ci_lower >= 50
+            verdict    = "SIMILAR" if is_similar else "DISSIMILAR"
+            vfmt       = fmt_pass if is_similar else fmt_fail
+
+            ws7.write("A4","Method",fmt_h);              ws7.write("B4", method, fmt_p)
+            ws7.write("A5","n Iterations",fmt_h);         ws7.write("B5", n_iter, fmt_p)
+            ws7.write("A6","f2 (observed)",fmt_h);        ws7.write("B6", round(f2_obs,3), fmt_p)
+            ws7.write("A7","Mean Bootstrap f2",fmt_h);    ws7.write("B7", round(f2_mean,3), fmt_p)
+            ws7.write("A8","90% CI Lower (5th pct)",fmt_h); ws7.write("B8", round(ci_lower,3), fmt_p)
+            ws7.write("A9","90% CI Upper (95th pct)",fmt_h); ws7.write("B9", round(ci_upper,3), fmt_p)
+            ws7.write("A10","FDA Criterion (CI Lower >= 50)",fmt_h)
+            ws7.write("B10", verdict, vfmt)
+            ws7.write("A12","Interpretation",fmt_t)
+            if is_similar:
+                ws7.write("A13",
+                    f"The 90% CI lower bound ({ci_lower:.2f}) is >= 50. "
+                    "Profiles are considered SIMILAR per bootstrap f2 criterion. "
+                    "(Shah et al. 1998; FDA Guidance 1997)", fmt_n)
+            else:
+                ws7.write("A13",
+                    f"The 90% CI lower bound ({ci_lower:.2f}) is < 50. "
+                    "Profiles are NOT similar per bootstrap f2 criterion. "
+                    "(Shah et al. 1998; FDA Guidance 1997)", fmt_n)
+
+            # Bootstrap dağılım grafiği (matplotlib PNG → BytesIO → insert_image)
+            if br.get("f2_dist") is not None:
+                try:
+                    import io as _io_bs
+                    _f2d = np.array(br["f2_dist"])
+                    _fig_bs, _ax_bs = plt.subplots(figsize=(7,4))
+                    _fig_bs.patch.set_facecolor("#FDFAF5")
+                    _ax_bs.set_facecolor("#F8F4EC")
+                    _ax_bs.hist(_f2d, bins=60, color="#002147", alpha=0.75, edgecolor="white", linewidth=0.4)
+                    _ax_bs.axvline(50, color="#e74c3c", lw=2, ls="--", label="f2 = 50 (FDA limit)")
+                    _ax_bs.axvline(ci_lower, color="#FFBF00", lw=1.8, ls=":", label=f"CI Lower = {ci_lower:.2f}")
+                    _ax_bs.axvline(f2_obs,   color="#27ae60", lw=1.8, ls="-.", label=f"Observed f2 = {f2_obs:.2f}")
+                    _ax_bs.set_xlabel("Bootstrap f2 Value", fontsize=11)
+                    _ax_bs.set_ylabel("Frequency", fontsize=11)
+                    _ax_bs.set_title(
+                        f"Bootstrap f2 Distribution — {verdict}  (CI: {ci_lower:.2f}–{ci_upper:.2f})",
+                        fontsize=11, color="#002147"
+                    )
+                    _ax_bs.legend(fontsize=9)
+                    for sp in ["top","right"]: _ax_bs.spines[sp].set_visible(False)
+                    _buf_bs = _io_bs.BytesIO()
+                    _fig_bs.tight_layout()
+                    _fig_bs.savefig(_buf_bs, format="png", dpi=130)
+                    plt.close(_fig_bs)
+                    _buf_bs.seek(0)
+                    ws7.insert_image("D4", "bs_chart.png", {
+                        "image_data": _buf_bs, "x_scale": 1.0, "y_scale": 1.0,
+                        "x_offset": 5, "y_offset": 5, "object_position": 1
+                    })
+                except Exception as _e_bs:
+                    ws7.write("D4", f"Chart error: {_e_bs}", fmt_n)
 
         wb.close(); buf.seek(0)
         st.success("✅ Report ready!")
@@ -3815,5 +3971,5 @@ elif nav == "Excel Report":
 # ===========================================================================
 # PAGE: ALL REFERENCES
 # ===========================================================================
-elif nav == "📚 All References":
+elif nav == "ð All References":
     show_all_references()
