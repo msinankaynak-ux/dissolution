@@ -395,13 +395,25 @@ def _clear_all():
 
 # --- Sidebar ---
 with st.sidebar:
-    st.markdown(
-        f'''<div style="border-radius:8px;overflow:hidden;margin-bottom:20px;
-                    box-shadow:0 4px 18px rgba(0,0,0,0.5);">
-          <img src="data:image/jpeg;base64,{LOGO_B64}" style="width:100%;display:block;" />
-        </div>''',
-        unsafe_allow_html=True
-    )
+    st.markdown("""
+    <div style="padding:16px 16px 14px;border-bottom:1px solid rgba(255,191,0,0.12);margin-bottom:8px;">
+      <a href="#" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;">
+        <div style="position:relative;width:32px;height:32px;background:#003171;border-radius:8px;
+                    display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <div style="position:absolute;top:0;right:0;width:9px;height:3px;
+                      background:#FFBF00;border-radius:0 8px 0 2px;"></div>
+          <div style="position:absolute;top:0;right:0;width:3px;height:9px;
+                      background:#FFBF00;border-radius:0 8px 0 2px;"></div>
+          <span style="font-size:18px;font-weight:500;color:#FFBF00;line-height:1;margin-top:1px;
+                       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">A</span>
+        </div>
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                    font-size:17px;font-weight:400;color:white;letter-spacing:-0.3px;line-height:1;">
+          Dissolv<span style="font-weight:500;color:#FFBF00;">A</span><sup style="font-size:9px;color:rgba(255,255,255,0.35);font-weight:400;">™</sup>
+        </div>
+      </a>
+    </div>
+    """, unsafe_allow_html=True)
 
     if "method_cfg" not in st.session_state:
         st.session_state.method_cfg = {
@@ -2516,7 +2528,12 @@ elif nav == "Bootstrap f2 Analysis":
             test_sample = test_raw[:, rng.integers(0, n_v_test, size=n_v_test)]
             R_bar = np.mean(ref_sample,  axis=1)
             T_bar = np.mean(test_sample, axis=1)
-            mask  = R_bar <= 85
+            # FDA 85% kuralı: ref<85 tümü + ilk kez 85 geçen nokta
+            _below_b = R_bar <= 85
+            _above_b = R_bar > 85
+            mask = _below_b.copy()
+            if np.any(_above_b):
+                mask[np.where(_above_b)[0][0]] = True
             if np.any(mask):
                 R_f, T_f = R_bar[mask], T_bar[mask]
                 mse = np.mean((R_f - T_f) ** 2)
@@ -2541,7 +2558,12 @@ elif nav == "Bootstrap f2 Analysis":
             test_s = test_raw[:, idx_test]
             R_bar = np.mean(ref_s,  axis=1)
             T_bar = np.mean(test_s, axis=1)
-            mask  = R_bar <= 85
+            # FDA 85% kuralı: ref<85 tümü + ilk kez 85 geçen nokta
+            _below_b = R_bar <= 85
+            _above_b = R_bar > 85
+            mask = _below_b.copy()
+            if np.any(_above_b):
+                mask[np.where(_above_b)[0][0]] = True
             if np.any(mask):
                 mse = np.mean((R_bar[mask] - T_bar[mask]) ** 2)
                 results.append(50 * np.log10(100 / np.sqrt(1 + mse)))
@@ -3906,7 +3928,9 @@ elif nav == "Excel Report":
                 if len(cm_xl) > 0:
                     rr_xl = np.array([r_rx[np.where(t_rx==ti)[0][0]] for ti in cm_xl])
                     rt_xl = np.array([r_tx[np.where(t_tx==ti)[0][0]] for ti in cm_xl])
-                    msk_xl = rr_xl <= 85; rrf_xl = rr_xl[msk_xl]; rtf_xl = rt_xl[msk_xl]
+                    _msk_xl = rr_xl <= 85
+                    if np.any(rr_xl > 85): _msk_xl[np.where(rr_xl > 85)[0][0]] = True
+                    msk_xl = _msk_xl; rrf_xl = rr_xl[msk_xl]; rtf_xl = rt_xl[msk_xl]
                     if len(rrf_xl) > 0:
                         f1_xl = float(np.sum(np.abs(rrf_xl-rtf_xl))/np.sum(rrf_xl)*100)
                         f2_xl = float(50*np.log10(100/np.sqrt(1+np.mean((rrf_xl-rtf_xl)**2))))
