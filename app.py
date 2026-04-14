@@ -2278,8 +2278,12 @@ elif nav == "f1 and f2 Similarity":
     f2=float(50*np.log10(100/np.sqrt(1+np.mean((rrf-rtf)**2))))
 
     mc1,mc2,mc3,mc4,mc5=st.columns(5)
-    mc1.metric("f1 (Difference)", f"{f1:.2f}", "PASS (<=15)" if f1<=15 else "FAIL (>15)")
-    mc2.metric("f2 (Similarity)", f"{f2:.2f}", "SIMILAR (>=50)" if f2>=50 else "DISSIMILAR (<50)")
+    mc1.metric("f1 (Difference)", f"{f1:.2f}",
+        "✓ PASS (≤15)" if f1<=15 else "✗ FAIL (>15)",
+        delta_color="normal" if f1<=15 else "inverse")
+    mc2.metric("f2 (Similarity)", f"{f2:.2f}",
+        "✓ SIMILAR (≥50)" if f2>=50 else "✗ DISSIMILAR (<50)",
+        delta_color="normal" if f2>=50 else "inverse")
     mc3.metric("Points used (n)", len(rrf))
     mc4.metric("Max |Delta R| (%)", f"{np.max(np.abs(rrf-rtf)):.2f}")
     mc5.metric("Excluded (>85%)", n_points_excluded,
