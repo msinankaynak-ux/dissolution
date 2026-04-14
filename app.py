@@ -396,7 +396,7 @@ def _clear_all():
 # --- Sidebar ---
 with st.sidebar:
     st.markdown("""
-    <div style="padding:16px 16px 14px;border-bottom:1px solid rgba(255,191,0,0.12);margin-bottom:8px;">
+    <div style="padding:16px 16px 14px;margin-bottom:8px;">
       <div style="display:inline-flex;align-items:center;gap:12px;
                   background:rgba(255,191,0,0.05);border:1px solid rgba(255,191,0,0.22);
                   border-radius:12px;padding:10px 14px;">
@@ -409,14 +409,14 @@ with st.sidebar:
           <span style="font-size:24px;font-weight:500;color:#FFBF00;line-height:1;
                        font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">A</span>
         </div>
-        <div style="display:flex;flex-direction:column;justify-content:center;gap:3px;">
+        <div style="display:flex;flex-direction:column;justify-content:center;gap:4px;">
           <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
                       font-size:17px;font-weight:400;color:white;letter-spacing:-0.3px;line-height:1;">
-            Dissolv<span style="font-weight:600;color:#FFBF00;">A</span><sup style="font-size:8px;color:rgba(255,255,255,0.3);font-weight:400;">™</sup>
+            Dissolv<span style="font-weight:600;color:#FFBF00;">A</span><sup style="font-size:8px;color:white;font-weight:400;">™</sup>
           </div>
-          <div style="font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;
-                      color:rgba(255,191,0,0.5);font-weight:600;line-height:1;">
-            Predictive Suite · Powered by AI
+          <div style="font-size:8.5px;letter-spacing:1.4px;text-transform:uppercase;
+                      color:rgba(255,191,0,0.55);font-weight:600;line-height:1;">
+            Predictive Dissolution Suite
           </div>
         </div>
       </div>
