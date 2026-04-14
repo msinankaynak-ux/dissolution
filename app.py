@@ -396,33 +396,27 @@ def _clear_all():
 # --- Sidebar ---
 with st.sidebar:
     st.markdown("""
-    <div style="padding:20px 16px 16px;border-bottom:1px solid rgba(255,191,0,0.12);margin-bottom:8px;">
-      <div style="display:inline-flex;align-items:center;gap:10px;">
-        <div style="position:relative;width:48px;height:48px;background:#003171;border-radius:12px;
+    <div style="padding:16px 16px 14px;border-bottom:1px solid rgba(255,191,0,0.12);margin-bottom:8px;">
+      <div style="display:inline-flex;align-items:center;gap:12px;
+                  background:rgba(255,191,0,0.05);border:1px solid rgba(255,191,0,0.22);
+                  border-radius:12px;padding:10px 14px;">
+        <div style="position:relative;width:44px;height:44px;background:#003171;border-radius:10px;
                     display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <div style="position:absolute;top:0;right:0;width:13px;height:4px;
-                      background:#FFBF00;border-radius:0 12px 0 2px;"></div>
-          <div style="position:absolute;top:0;right:0;width:4px;height:13px;
-                      background:#FFBF00;border-radius:0 12px 0 2px;"></div>
-          <span style="font-size:26px;font-weight:500;color:#FFBF00;line-height:1;margin-top:1px;
+          <div style="position:absolute;top:0;right:0;width:12px;height:3px;
+                      background:#FFBF00;border-radius:0 10px 0 2px;"></div>
+          <div style="position:absolute;top:0;right:0;width:3px;height:12px;
+                      background:#FFBF00;border-radius:0 10px 0 2px;"></div>
+          <span style="font-size:24px;font-weight:500;color:#FFBF00;line-height:1;
                        font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">A</span>
         </div>
-        <div style="line-height:1.3;">
+        <div style="display:flex;flex-direction:column;justify-content:center;gap:3px;">
           <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                      font-size:18px;font-weight:400;color:white;letter-spacing:-0.3px;">
-            Dissolv<span style="font-weight:500;color:#FFBF00;">A</span><sup style="font-size:9px;color:rgba(255,255,255,0.35);font-weight:400;">™</sup>
+                      font-size:17px;font-weight:400;color:white;letter-spacing:-0.3px;line-height:1;">
+            Dissolv<span style="font-weight:600;color:#FFBF00;">A</span><sup style="font-size:8px;color:rgba(255,255,255,0.3);font-weight:400;">™</sup>
           </div>
-          <div style="display:flex;flex-direction:column;gap:4px;margin-top:5px;">
-            <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,191,0,0.08);
-                        border:1px solid rgba(255,191,0,0.18);border-radius:20px;padding:3px 10px;width:fit-content;">
-              <span style="font-size:9px;letter-spacing:1.2px;text-transform:uppercase;
-                           color:rgba(255,191,0,0.75);font-weight:600;">Predictive Suite</span>
-            </div>
-            <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,191,0,0.08);
-                        border:1px solid rgba(255,191,0,0.18);border-radius:20px;padding:3px 10px;width:fit-content;">
-              <span style="font-size:9px;letter-spacing:1.2px;text-transform:uppercase;
-                           color:rgba(255,191,0,0.75);font-weight:600;">Powered by AI</span>
-            </div>
+          <div style="font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;
+                      color:rgba(255,191,0,0.5);font-weight:600;line-height:1;">
+            Predictive Suite · Powered by AI
           </div>
         </div>
       </div>
