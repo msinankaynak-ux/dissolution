@@ -2113,11 +2113,24 @@ elif nav == "Statistical Analysis":
             )
 
             # RSD tabanlı Bootstrap değerlendirmesi
+            # ─────────────────────────────────────────────────────────────────
+            # KILAVUZ TANIMI (onaylanan 14-04-2026):
+            #   FDA 1997  → "earlier time points (e.g. 15 min)" → t ≤ 15 dk: CV ≤ %20
+            #              → diğer noktalar (t > 15 dk)         : CV ≤ %10
+            #   EMA 2010  → "first time point" → gayri resmi: t ≤ 10 dk: CV ≤ %20
+            #   EMA RP2017→ "> 20% RSD at time-points ≤ 10 min" (sayısal netleşme)
+            # ESKİ (hatalı): ref<%85 → early, ref≥%85 → late
+            # DOĞRU: ZAMAN BAZLI eşik
+            # ─────────────────────────────────────────────────────────────────
             has_sd = not np.all(sd_v == 0)
             if has_sd and len(rsd_v) > 0:
-                rsd_early = rsd_v[r_v < 85] if np.any(r_v < 85) else rsd_v
-                cv_early_max = float(np.max(rsd_early)) if len(rsd_early) > 0 else 0.0
-                cv_late_max  = float(np.max(rsd_v[r_v >= 85])) if np.any(r_v >= 85) else 0.0
+                # FDA: t ≤ 15 dk = early (CV ≤ %20), t > 15 dk = late (CV ≤ %10)
+                early_mask = t_v <= 15.0
+                late_mask  = t_v > 15.0
+                rsd_early_arr = rsd_v[early_mask]
+                rsd_late_arr  = rsd_v[late_mask]
+                cv_early_max = float(np.max(rsd_early_arr)) if len(rsd_early_arr) > 0 else 0.0
+                cv_late_max  = float(np.max(rsd_late_arr))  if len(rsd_late_arr)  > 0 else 0.0
 
                 # FDA kriterleri: erken nokta CV < 20%, diğerleri < 10%
                 fda_ok_early = cv_early_max <= 20.0
@@ -2128,13 +2141,13 @@ elif nav == "Statistical Analysis":
                 st.markdown("##### 📊 FDA CV Criteria Assessment (f2 Eligibility)")
                 cv_c1, cv_c2, cv_c3 = st.columns(3)
                 cv_c1.metric(
-                    "Max CV% — Early points (<85%)",
+                    "Max CV% — Early points (≤15 min | FDA)",
                     f"{cv_early_max:.1f}%",
                     "✓ ≤ 20% (FDA)" if fda_ok_early else "✗ > 20% (FDA)",
                     delta_color="normal" if fda_ok_early else "inverse"
                 )
                 cv_c2.metric(
-                    "Max CV% — Late points (≥85%)",
+                    "Max CV% — Late points (>15 min | FDA)",
                     f"{cv_late_max:.1f}%",
                     "✓ ≤ 10% (FDA)" if fda_ok_late else "✗ > 10% (FDA)",
                     delta_color="normal" if fda_ok_late else "inverse"
@@ -2146,7 +2159,7 @@ elif nav == "Statistical Analysis":
                     st.success(
                         f"**✅ {nm} — Standart f2 Testi Yeterlidir.**\n\n"
                         f"CV% değerleri FDA (1997) kriterlerini karşılıyor "
-                        f"(erken noktalar ≤ %20, geç noktalar ≤ %10). "
+                        f"(FDA: t ≤ 15 dk → CV ≤ %20; t > 15 dk → CV ≤ %10). "
                         f"Bootstrap f2 analizine gerek yoktur; "
                         f"**tek noktalı f2 testi** sonuçlandırıcıdır."
                     )
@@ -2311,15 +2324,17 @@ elif nav == "f1 and f2 Similarity":
     _recommended_method = "Nonparametric (Shah 1998)" if _cv_max > 15 else "Parametric"
 
     # FDA CV kriterleri karşılanıyor mu?
+    # FDA CV kriteri — ZAMAN BAZLI (onaylanan 14-04-2026):
+    # t ≤ 15 dk → early (CV ≤ %20) | t > 15 dk → late (CV ≤ %10)
     _rsd_early_vals = []
     _rsd_late_vals  = []
     for _nm2 in [ref_nm, test_nm]:
         _d2 = st.session_state.profiles[_nm2]
-        if _d2.get("rsd") and _d2.get("release"):
-            _r2  = np.array(_d2["release"])
+        if _d2.get("rsd") and _d2.get("time"):
+            _t2   = np.array(_d2["time"])
             _rsd2 = np.array(_d2["rsd"])
-            _rsd_early_vals.extend(_rsd2[_r2 < 85].tolist())
-            _rsd_late_vals.extend(_rsd2[_r2 >= 85].tolist())
+            _rsd_early_vals.extend(_rsd2[_t2 <= 15.0].tolist())
+            _rsd_late_vals.extend(_rsd2[_t2 > 15.0].tolist())
     _cv_early_max = max(_rsd_early_vals) if _rsd_early_vals else 0.0
     _cv_late_max  = max(_rsd_late_vals)  if _rsd_late_vals  else 0.0
     _fda_cv_ok    = _cv_early_max <= 20.0 and _cv_late_max <= 10.0
@@ -2330,8 +2345,8 @@ elif nav == "f1 and f2 Similarity":
             f"Aşağıdaki FDA kriterleri karşılanmaktadır:\n\n"
             f"- f2 = **{f2:.2f}** — 45–55 sınır bölgesi dışında\n"
             f"- n = **{_n_vessels}** vessel — örneklem yeterli\n"
-            f"- Max CV% (erken) = **{_cv_early_max:.1f}%** ≤ 20% ✓\n"
-            f"- Max CV% (geç) = **{_cv_late_max:.1f}%** ≤ 10% ✓\n\n"
+            f"- Max CV% (t ≤ 15 dk, FDA early) = **{_cv_early_max:.1f}%** ≤ 20% ✓\n"
+            f"- Max CV% (t > 15 dk, FDA late) = **{_cv_late_max:.1f}%** ≤ 10% ✓\n\n"
             f"**Tek noktalı f2 testi** FDA (1997) Guidance çerçevesinde sonuçlandırıcıdır. "
             f"*(FDA Guidance for Industry: Dissolution Testing of Immediate Release Solid Oral "
             f"Dosage Forms, 1997, Section V)*"
