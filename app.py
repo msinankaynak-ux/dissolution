@@ -460,15 +460,8 @@ with st.sidebar:
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.15);margin:10px 0 6px 0;">', unsafe_allow_html=True)
 
     # Proje adı göster
-    proj_name = st.session_state.project_metadata.get("name", "Untitled Project")
-    st.markdown(
-        f'<div style="padding:4px 12px;font-size:0.72rem;color:rgba(232,224,208,0.6);">'
-        f'📁 <em>{proj_name}</em></div>',
-        unsafe_allow_html=True
-    )
-
-    # New Project butonu
-    if st.button("🗑️ New Project", use_container_width=True,
+    # New Session butonu
+    if st.button("✦ New Session", use_container_width=True,
                  help="Clear all profiles, results and start fresh."):
         st.session_state["_confirm_new"] = True
         st.rerun()
@@ -489,11 +482,11 @@ with st.sidebar:
     # Feedback linki
     st.markdown(
         '''<div style="padding:6px 12px;margin-top:4px;">
-        <a href="mailto:dissolva.app@gmail.com?subject=DissolvA%20Feedback"
+        <a href="https://tally.so/r/44oM55" target="_blank"
            style="display:flex;align-items:center;gap:8px;text-decoration:none;
-                  color:rgba(232,224,208,0.5);font-size:0.78rem;"
-           onmouseover="this.style.color='#FFBF00'" onmouseout="this.style.color='rgba(232,224,208,0.5)'">
-          <span>✉️</span><span>Feedback / Bug Report</span>
+                  color:rgba(232,224,208,0.4);font-size:0.75rem;"
+           onmouseover="this.style.color='#FFBF00'" onmouseout="this.style.color='rgba(232,224,208,0.4)'">
+          <span>✉</span><span>Share Feedback</span>
         </a></div>''',
         unsafe_allow_html=True
     )
