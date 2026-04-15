@@ -182,7 +182,7 @@ section[data-testid="stSidebar"] .stNumberInput button {
   border-radius: 4px !important; padding: 8px 20px !important;
 }
 .stButton > button:hover { background: #FFBF00 !important; color: #002147 !important; }
-/* Sidebar butonları daha sade */
+/* Sidebar buttons simplified */
 [data-testid="stSidebar"] .stButton > button {
   background: transparent !important;
   color: rgba(232,224,208,0.65) !important;
@@ -241,7 +241,7 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
 
 <script>
 (function() {
-  // Sidebar gruplandırma - Analysis Modules / Settings & Report
+  // Sidebar grouping - Analysis Modules / Settings & Report
   var ANALYSIS = ["Data Input","Kinetic Model Fitting","Statistical Analysis",
                   "f1 and f2 Similarity","Bootstrap f2 Analysis","IVIVC Analysis ⓑ"];
   var SETTINGS = ["Excel Report","Method Settings","Analytical Settings"];
@@ -266,19 +266,19 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFB
       }
     });
 
-    // Grup başlıklarını ve çizgiyi ekle (bir kez)
+    // Add group headers and divider (once)
     if (document.querySelector('.nav-section-label')) return;
     var radioDiv = document.querySelector('[data-testid="stSidebar"] .stRadio > div');
     if (!radioDiv) return;
     var children = Array.from(radioDiv.children);
 
-    // İlk öğenin önüne "Analysis Modules" etiketi
+    // Add "Analysis Modules" label before first item
     var lbl1 = document.createElement('div');
     lbl1.className = 'nav-section-label';
     lbl1.innerHTML = '📊 Analysis Modules';
     radioDiv.insertBefore(lbl1, children[0]);
 
-    // "Excel Report" öğesinin önüne bölüm çizgisi + "Settings & Report"
+    // Add divider + "Settings & Report" before Excel Report
     var excelIdx = children.findIndex(function(c) {
       return c.innerText && c.innerText.trim().startsWith("Excel Report");
     });
@@ -349,23 +349,23 @@ for _k, _v in _SS_DEFAULTS.items():
         st.session_state[_k] = _v
 
 def _safe_profile_names():
-    """Güncel profil isimlerini döndür."""
+    """Return current profile names."""
     return list(st.session_state.profiles.keys())
 
 def _get_index(lst, val, default=0):
-    """session_state değerinin listedeki index'ini güvenli bul."""
+    """Safely find index of value in list."""
     try:
         return lst.index(val) if val in lst else default
     except Exception:
         return default
 
 def _rename_profile(old_name: str, new_name: str):
-    """Profili yeniden adlandır, tüm session_state'i senkronize et."""
+    """Rename profile and sync all session_state."""
     if old_name == new_name or new_name.strip() == "" or old_name not in st.session_state.profiles:
         return False
     if new_name in st.session_state.profiles:
-        return False  # çakışma
-    # Profiles dict güncelle (sıra korunarak)
+        return False  # conflict
+    # Profilees dict güncelle (sıra korunarak)
     new_profiles = {}
     for k, v in st.session_state.profiles.items():
         new_profiles[new_name if k == old_name else k] = v
@@ -381,7 +381,7 @@ def _rename_profile(old_name: str, new_name: str):
     return True
 
 def _clear_all():
-    """Tüm proje verisini sıfırla."""
+    """Reset all project data."""
     st.session_state.profiles          = {}
     st.session_state.fit_results       = {}
     st.session_state.selected_ref_id   = None
@@ -489,7 +489,7 @@ with st.sidebar:
     # Feedback linki
     st.markdown(
         '''<div style="padding:6px 12px;margin-top:4px;">
-        <a href="mailto:msinankaynak@gmail.com?subject=DissolvA%20Feedback"
+        <a href="mailto:dissolva.app@gmail.com?subject=DissolvA%20Feedback"
            style="display:flex;align-items:center;gap:8px;text-decoration:none;
                   color:rgba(232,224,208,0.5);font-size:0.78rem;"
            onmouseover="this.style.color='#FFBF00'" onmouseout="this.style.color='rgba(232,224,208,0.5)'">
@@ -620,7 +620,7 @@ ALL_REFERENCES = [
 ]
 
 def show_all_references():
-    """Tüm program referanslarını göster - sidebar ikonu için."""
+    """Show all program references."""
     st.markdown("## 📚 DissolvA — Complete Reference List")
     st.markdown(
         '<div class="info-banner">All scientific sources, regulatory guidelines, and software references '
@@ -634,7 +634,7 @@ def show_all_references():
         st.markdown("---")
     st.caption(
         "DissolvA™ v3.0 — Developed by M. Sinan KAYNAK, PhD | "
-        "Anadolu University, Faculty of Pharmacy | msinankaynak@gmail.com"
+        "Anadolu University, Faculty of Pharmacy | dissolva.app@gmail.com"
     )
 
 
@@ -767,9 +767,9 @@ def m_probit1_dds(t, alpha, beta):
 
 
 
-# ── Akıllı Model Önerisi ──────────────────────────────────────────────────────
+# ── Smart Model Recommendation ──────────────────────────────────────────────────────
 def analyze_profile_shape(t_arr, r_arr):
-    """Profil şeklini analiz ederek uygun model kategorilerini önerir."""
+    """Analyze profile shape and recommend model categories."""
     t = np.array(t_arr, dtype=float)
     r = np.array(r_arr, dtype=float)
     n = len(r)
@@ -796,7 +796,7 @@ def analyze_profile_shape(t_arr, r_arr):
             'shape': 'Burst Release',
             'top_models': ['Zero Order + F0','First Order + Fmax','Higuchi + F0','KP + F0','First Order + Tlag + Fmax'],
             'categories': ['Burst Release','Basic'],
-            'reason': f"Erken faz yüksek salım tespit edildi (%{r_norm[:t_20idx].mean()*100:.0f} @ t₂₀). Burst release modeller önerilir.",
+            'reason': f"Early phase high release detected (%{r_norm[:t_20idx].mean()*100:.0f} @ t₂₀). Burst release models recommended.",
             'icon': '⚡'
         }
     elif is_sigmoid:
@@ -804,7 +804,7 @@ def analyze_profile_shape(t_arr, r_arr):
             'shape': 'Sigmoid',
             'top_models': ['Weibull','Gompertz 1 (DDSolver)','Logistic 1 (DDSolver)','Hill','Richards'],
             'categories': ['Sigmoid'],
-            'reason': f"S-şekilli profil tespit edildi (infleksiyon noktası t={t[int(np.argmax(np.gradient(r_norm,t)))]:.1f}). Sigmoid modeller önerilir.",
+            'reason': f"S-shaped profile detected (inflection point t={t[int(np.argmax(np.gradient(r_norm,t)))]:.1f}). Sigmoid models recommended.",
             'icon': '〜'
         }
     elif has_lag:
@@ -812,7 +812,7 @@ def analyze_profile_shape(t_arr, r_arr):
             'shape': 'Lag-Time',
             'top_models': ['First Order + Lag','Korsmeyer-Peppas + Lag','Higuchi + Lag','Zero Order + Lag','Hixson-Crowell + Lag'],
             'categories': ['Lag-Time'],
-            'reason': f"Başlangıç lag fazı tespit edildi (t₂₀ ort. salım: %{r_norm[:t_20idx].mean()*100:.1f}). Lag-time modeller önerilir.",
+            'reason': f"Initial lag phase detected (t₂₀ avg. release: %{r_norm[:t_20idx].mean()*100:.1f}). Lag-time models recommended.",
             'icon': '⏱️'
         }
     elif plateau_early:
@@ -820,7 +820,7 @@ def analyze_profile_shape(t_arr, r_arr):
             'shape': 'Plateau / Fmax',
             'top_models': ['First Order + Fmax','Weibull','Makoid-Banakar','Peppas-Sahlin','Gompertz 2 (DDSolver)'],
             'categories': ['Basic','Empirical'],
-            'reason': f"Profil %80 eşiğine ulaşmıyor (max: %{r.max():.1f}). Fmax parametreli veya ampirik modeller önerilir.",
+            'reason': f"Profilee does not reach 80% threshold (max: %{r.max():.1f}). Fmax-parameterized or empirical models recommended.",
             'icon': '📉'
         }
     else:
@@ -828,7 +828,7 @@ def analyze_profile_shape(t_arr, r_arr):
             'shape': 'Standard',
             'top_models': ['First Order','Weibull','Korsmeyer-Peppas','Higuchi','Hixson-Crowell'],
             'categories': ['Basic','Lag-Time'],
-            'reason': f"Standart salım profili (max: %{r.max():.1f}, 80% eşiğine ulaşıyor). Temel kinetik modeller önerilir.",
+            'reason': f"Standard release profile (max: %{r.max():.1f}, reaches 80% threshold). Basic kinetic models recommended.",
             'icon': '✓'
         }
 
@@ -950,7 +950,7 @@ st.markdown(
     '<span style="font-size:1rem;color:#888;font-style:italic;font-weight:400;">' +
     '- Predictive Dissolution Suite</span></h1>' +
     '<div style="color:#5a6480;font-size:0.9rem;margin-top:4px;">' +
-    'FDA-Compliant - 62 Kinetic Models - Statistical Profiling - IVIVC' +
+    'FDA-Compliant - 62 Kinetic Models - Statistical Profileing - IVIVC' +
     '&nbsp;&nbsp;<span style="background:#002147;color:#FFBF00;padding:2px 10px;' +
     'border-radius:12px;font-size:0.76rem;font-weight:700;">POWERED BY AI</span></div>',
     unsafe_allow_html=True
@@ -958,11 +958,11 @@ st.markdown(
 st.markdown('<hr style="border:1px solid #FFBF00;margin:10px 0 4px 0;">', unsafe_allow_html=True)
 st.markdown(
     "<div style='font-size:0.76rem;color:#8aadcc;padding:3px 0 14px 0;'>"
-    "<strong style='color:#5a8ab0;'>M. Sinan KAYNAK, PhD</strong>"
-    " &nbsp;&bull;&nbsp; Anadolu University, Faculty of Pharmacy"
+    "<strong style='color:#5a8ab0;'>DissolvA Team</strong>"
+    ""
     " &nbsp;&bull;&nbsp; "
-    "<a href='mailto:msinankaynak@gmail.com' style='color:#7a9dbf;text-decoration:none;'>"
-    "msinankaynak@gmail.com</a>"
+    "<a href='mailto:dissolva.app@gmail.com' style='color:#7a9dbf;text-decoration:none;'>"
+    "dissolva.app@gmail.com</a>"
     "</div>",
     unsafe_allow_html=True
 )
@@ -1246,7 +1246,7 @@ if nav == "Data Input":
                                           key="proj_name_input")
             new_analyst   = st.text_input("Analyst / Author", value=pm.get("analyst",""),
                                           key="proj_analyst_input",
-                                          placeholder="e.g. M. Sinan KAYNAK, PhD")
+                                          placeholder="e.g. Dr. Jane Smith")
         with pc2:
             new_desc = st.text_area("Project Description", value=pm.get("description",""),
                                     key="proj_desc_input", height=88,
@@ -1384,7 +1384,7 @@ if nav == "Data Input":
                         subset=["RSD (%)"], cmap="RdYlGn_r"), use_container_width=True)
 
                 # -- Import button ---------------------------------------------
-                if selected_sheets and st.button("Import Selected Sheets as Profiles", type="primary"):
+                if selected_sheets and st.button("Import Selected Sheets as Profilees", type="primary"):
                     imported = []
                     warnings_list = []
                     for sh in selected_sheets:
@@ -1451,7 +1451,7 @@ if nav == "Data Input":
 
         ed_col1, ed_col2 = st.columns([2, 1])
         with ed_col1:
-            ed_pname = st.text_input("Profile Name", "Formulation A", key="ed_pname")
+            ed_pname = st.text_input("Profilee Name", "Formulation A", key="ed_pname")
         with ed_col2:
             n_tablets_hint = st.number_input(
                 "Expected Vessels (hint)", min_value=1, max_value=24,
@@ -1538,7 +1538,7 @@ if nav == "Data Input":
                     use_container_width=True
                 )
 
-                if st.button("Compute & Add Profile", type="primary", key="ed_compute"):
+                if st.button("Compute & Add Profilee", type="primary", key="ed_compute"):
                     t_vals = df_pasted[time_col].values.astype(float)
                     vdata  = df_pasted[vessel_cols].apply(
                         pd.to_numeric, errors="coerce"
@@ -1560,7 +1560,7 @@ if nav == "Data Input":
                         "raw":     vdata.values.tolist(),
                     }
                     st.success(
-                        f"Profile '{ed_pname}' added - "
+                        f"Profilee '{ed_pname}' added - "
                         f"{n_v} vessels, {len(t_vals)} time points, "
                         f"max release = {mean_r.max():.1f}%"
                     )
@@ -1596,8 +1596,8 @@ if nav == "Data Input":
         with c2:
             r_str = st.text_area("Mean Cumulative Release % (comma-separated)",
                                  "0,18,35,49,62,74,82,89,94", height=100)
-        pname = st.text_input("Profile Name", "Formulation A")
-        if st.button("Add Profile"):
+        pname = st.text_input("Profilee Name", "Formulation A")
+        if st.button("Add Profilee"):
             try:
                 ta = np.array([float(x.strip()) for x in t_str.split(",")])
                 ra = np.array([float(x.strip()) for x in r_str.split(",")])
@@ -1608,7 +1608,7 @@ if nav == "Data Input":
                         "time": ta.tolist(), "release": ra.tolist(),
                         "sd": None, "rsd": None, "cv": None, "n": 1, "vessels": []
                     }
-                    st.success(f"Profile '{pname}' added.")
+                    st.success(f"Profilee '{pname}' added.")
             except Exception as e:
                 st.error(f"Error: {e}")
 
@@ -1617,10 +1617,10 @@ if nav == "Data Input":
     # =========================================================================
     if st.session_state.profiles:
         st.markdown("---")
-        st.subheader("Loaded Dissolution Profiles")
+        st.subheader("Loaded Dissolution Profilees")
 
-        # -- Profil Yeniden Adlandırma ─────────────────────────────────────────
-        with st.expander("✏️ Edit / Rename Profiles", expanded=False):
+        # -- Profile Yeniden Adlandırma ─────────────────────────────────────────
+        with st.expander("✏️ Edit / Rename Profilees", expanded=False):
             st.markdown("Rename a profile — all analysis results will be synchronized automatically.")
             for nm in list(st.session_state.profiles.keys()):
                 r_col1, r_col2, r_col3 = st.columns([2, 2, 1])
@@ -1660,7 +1660,7 @@ if nav == "Data Input":
                 )
 
         # -- Mean profiles plot with error bars -------------------------------
-        st.markdown("#### Mean Dissolution Profiles")
+        st.markdown("#### Mean Dissolution Profilees")
 
         opt_col1, opt_col2, opt_col3, opt_col4 = st.columns(4)
         with opt_col1:
@@ -1690,7 +1690,7 @@ if nav == "Data Input":
 
         # ── Compliance Engine: OOS hesapla ────────────────────────────────────
         def compute_compliance(t_arr, r_arr, q_t, q_lim):
-            """Q-time anındaki salımı interpole ederek hesapla."""
+            """Calculate release at Q-time via interpolation."""
             t_arr = np.array(t_arr, dtype=float)
             r_arr = np.array(r_arr, dtype=float)
             if q_t <= t_arr.min():
@@ -1784,7 +1784,7 @@ if nav == "Data Input":
             ax.axvline(_ist, color="#9467bd", lw=1.2, ls=(0,(3,3)), alpha=0.75,
                        label=f"{_isn} t = {_ist:.0f} {time_unit}")
 
-            # Internal Spec uyarısı — her profil için
+            # Internal Spec warning — per profile
             _is_warn_profs = []
             for _nm, _d in st.session_state.profiles.items():
                 _t_arr = np.array(_d["time"])
@@ -1817,7 +1817,7 @@ if nav == "Data Input":
 
         ax.set_xlabel(f"Time ({time_unit})")
         ax.set_ylabel("Cumulative Drug Released (%)")
-        ax.set_title("Mean Dissolution Profiles  (Mean ± SD)")
+        ax.set_title("Mean Dissolution Profilees  (Mean ± SD)")
         t_all = np.concatenate([np.array(d["time"]) for d in st.session_state.profiles.values()])
         ax.set_xlim(left=0, right=t_all.max() * 1.05)
         ax.set_ylim(bottom=0, top=112)
@@ -1838,34 +1838,32 @@ if nav == "Data Input":
                 deficit = q_limit - res["rel"]
                 st.error(
                     f"**⚠️ OUT OF SPECIFICATION (OOS) — {nm}**\n\n"
-                    f"**Analiz Özeti:** *{nm}* formülasyonu, **{q_time:.0f} {time_unit}** zaman "
-                    f"noktasında **%{res['rel']:.2f}** kümülatif salım gerçekleştirmiştir. "
-                    f"Bu değer, belirlenen farmakope spesifikasyonunun (**Q = %{q_limit:.0f}**) "
-                    f"**%{deficit:.2f}** altında kalmaktadır.\n\n"
-                    f"**Olası Nedenler (Academic Assessment):**\n"
-                    f"- 🔬 **Yavaş salım hızı (Slow dissolution rate):** Aktif maddenin çözünme "
-                    f"kinetikleri beklenen profil ile uyuşmamaktadır.\n"
-                    f"- 💊 **Formülasyon bileşenleri:** Dağıtıcı (disintegrant) etkinliği, "
-                    f"lubrikant oranı veya binder konsantrasyonu gözden geçirilmelidir.\n"
-                    f"- 🌡️ **Stabilite/yaşlanma etkisi (Aging effect):** Uzun süreli depolamaya "
-                    f"bağlı matris sertleşmesi veya polimorfik dönüşüm ihtimali değerlendirilmelidir.\n"
-                    f"- ⚗️ **Analitik parametreler:** pH, sıcaklık ve çözünme ortamı bileşimi "
-                    f"metodun gerektirdiği koşullarla karşılaştırılmalıdır.\n\n"
-                    f"**Öneri:** USP <711> / ICH Q6A kapsamında OOS soruşturması başlatılması "
-                    f"ve formülasyonun Korsmeyer–Peppas veya Weibull modeli ile yeniden "
+                    f"**Analysis Summary:** *{nm}* formulation released **{res['rel']:.2f}%** "
+                    f"at **{q_time:.0f} {time_unit}**, which is **{deficit:.2f}%** below "
+                    f"the specified pharmacopeial limit (**Q = {q_limit:.0f}%**).\n\n"
+                    f"**Possible Root Causes (Academic Assessment):**\n"
+                    f"- 🔬 **Slow dissolution rate:** The active ingredient's dissolution kinetics "
+                    f"do not match the expected profile.\n"
+                    f"- 💊 **Formulation components:** Disintegrant efficiency, lubricant ratio, "
+                    f"or binder concentration should be reviewed.\n"
+                    f"- 🌡️ **Stability / aging effect:** Matrix hardening or polymorphic conversion "
+                    f"due to long-term storage should be evaluated.\n"
+                    f"- ⚗️ **Analytical parameters:** pH, temperature, and dissolution medium "
+                    f"composition should be compared against method requirements.\n\n"
+                    f"**Recommendation:** Initiate an OOS investigation per USP <711> / ICH Q6A "
+                    f"and re-fit the formulation using Korsmeyer–Peppas or Weibull model "
                     f"karakterize edilmesi tavsiye edilmektedir."
                 )
             else:
                 st.success(
                     f"**✅ MONOGRAPH COMPLIANT — {nm}**  \n"
-                    f"*{nm}* formülasyonu, {q_time:.0f} {time_unit} zaman noktasında "
-                    f"**%{res['rel']:.2f}** salım yaparak **Q = %{q_limit:.0f}** "
-                    f"spesifikasyonunu karşılamaktadır. (USP <711> / FDA 1997)"
+                    f"*{nm}* formulation released **{res['rel']:.2f}%** at {q_time:.0f} {time_unit}, "
+                    f"meeting the **Q = {q_limit:.0f}%** specification. (USP <711> / FDA 1997)"
                 )
 
-        # Per-Profile Statistics → Statistical Analysis sayfasına taşındı
+        # Per-Profilee Statistics → Statistical Analysis sayfasına taşındı
 
-        if st.button("🗑️ Remove All Profiles", key="clear_profiles_btn",
+        if st.button("🗑️ Remove All Profilees", key="clear_profiles_btn",
                      help="Remove profiles but keep project metadata and settings."):
             st.session_state.profiles = {}
             st.session_state.fit_results = {}
@@ -1886,7 +1884,7 @@ elif nav == "Kinetic Model Fitting":
         st.stop()
 
     _km_names = list(st.session_state.profiles.keys())
-    pname = st.selectbox("Select Profile", _km_names,
+    pname = st.selectbox("Select Profilee", _km_names,
         index=_get_index(_km_names, st.session_state.selected_ref_id, 0))
     d = st.session_state.profiles[pname]
     t_arr = np.array(d["time"], dtype=float)
@@ -1899,13 +1897,13 @@ elif nav == "Kinetic Model Fitting":
         f'<div style="background:rgba(255,191,0,0.08);border-left:4px solid #FFBF00;'
         f'border-radius:0 6px 6px 0;padding:14px 18px;margin:12px 0;">'
         f'<div style="font-size:0.85rem;font-weight:700;color:#e6ac00;margin-bottom:6px;">'
-        f'{shape_info["icon"]} Akıllı Model Önerisi — {shape_info["shape"]} Profil</div>'
+        f'{shape_info["icon"]} Smart Model Recommendation — {shape_info["shape"]} Profile</div>'
         f'<div style="font-size:0.82rem;color:#666;">{shape_info["reason"]}<br>'
-        f'<strong>Önerilen:</strong> {", ".join(top_models_valid)}</div></div>',
+        f'<strong>Recommended:</strong> {", ".join(top_models_valid)}</div></div>',
         unsafe_allow_html=True
     )
     use_smart = st.checkbox(
-        f"Sadece önerilen {len(top_models_valid)} modeli kullan",
+        f"Use only recommended {len(top_models_valid)} models",
         value=True, key=f"use_smart_models_{pname}"
     )
 
@@ -2003,19 +2001,19 @@ elif nav == "Statistical Analysis":
         st.warning("No profiles loaded."); st.stop()
 
     names = list(st.session_state.profiles.keys())
-    st.subheader("MDT and DE per Profile")
+    st.subheader("MDT and DE per Profilee")
     rows=[]
     for nm in names:
         ta=np.array(st.session_state.profiles[nm]["time"])
         ra=np.array(st.session_state.profiles[nm]["release"])
-        rows.append({"Profile":nm,
+        rows.append({"Profilee":nm,
                      f"MDT ({time_unit})":round(compute_mdt(ta,ra),3),
                      "DE (%)":round(compute_de(ta,ra),3)})
     _df_mdt = pd.DataFrame(rows)
     _df_mdt.index = range(1, len(_df_mdt)+1)
     st.dataframe(_df_mdt, use_container_width=True)
 
-    st.subheader("Individual Profile Plots")
+    st.subheader("Individual Profilee Plots")
     # Görsel seçenekler
     _is_cfg_s  = st.session_state.method_cfg
     _is_on_s   = _is_cfg_s.get("internal_spec_enabled", False)
@@ -2101,12 +2099,12 @@ elif nav == "Statistical Analysis":
                     f"ℹ️ {_isn_s}: No data point at t={_ist_s:.0f} {time_unit} for {nm}."
                 )
 
-    # ── Per-Profile Statistics (Data Input'tan taşındı) ─────────────────────
+    # ── Per-Profilee Statistics (Data Input'tan taşındı) ─────────────────────
     st.markdown("---")
-    st.subheader("Per-Profile Statistics")
+    st.subheader("Per-Profilee Statistics")
     st.caption(
-        "Profil başına vessel bazlı istatistikler. "
-        "SD ve RSD hesabı ham vessel verilerinden yapılmıştır."
+        "Per-profile vessel-based statistics. "
+        "SD and RSD calculated from raw vessel data."
     )
 
     for nm, d in st.session_state.profiles.items():
@@ -2139,7 +2137,7 @@ elif nav == "Statistical Analysis":
             #              → diğer noktalar (t > 15 dk)         : CV ≤ %10
             #   EMA 2010  → "first time point" → gayri resmi: t ≤ 10 dk: CV ≤ %20
             #   EMA RP2017→ "> 20% RSD at time-points ≤ 10 min" (sayısal netleşme)
-            # ESKİ (hatalı): ref<%85 → early, ref≥%85 → late
+            # OLD (incorrect): ref<%85 → early, ref≥%85 → late
             # DOĞRU: ZAMAN BAZLI eşik
             # ─────────────────────────────────────────────────────────────────
             has_sd = not np.all(sd_v == 0)
@@ -2178,24 +2176,24 @@ elif nav == "Statistical Analysis":
                 if fda_ok and n_vessels >= 6:
                     st.success(
                         f"**✅ {nm} — Standart f2 Testi Yeterlidir.**\n\n"
-                        f"CV% değerleri FDA (1997) kriterlerini karşılıyor "
+                        f"CV% values meet FDA (1997) criteria "
                         f"(FDA: t ≤ 15 dk → CV ≤ %20; t > 15 dk → CV ≤ %10). "
                         f"Bootstrap f2 analizine gerek yoktur; "
-                        f"**tek noktalı f2 testi** sonuçlandırıcıdır."
+                        f"the **single-point f2 test** is conclusive."
                     )
                 else:
                     _reasons = []
                     if not fda_ok_early:
                         _reasons.append(f"Erken nokta CV% = {cv_early_max:.1f}% > 20%")
                     if not fda_ok_late:
-                        _reasons.append(f"Geç nokta CV% = {cv_late_max:.1f}% > 10%")
+                        _reasons.append(f"Late-point CV% = {cv_late_max:.1f}% > 10%")
                     if n_vessels < 6:
                         _reasons.append(f"n = {n_vessels} vessel < 6")
                     st.warning(
-                        f"**⚠️ {nm} — Bootstrap f2 Değerlendirmesi Önerilir.**\n\n"
+                        f"**⚠️ {nm} — Bootstrap f2 Assessment Recommended.**\n\n"
                         f"Neden: {'; '.join(_reasons)}.\n\n"
-                        f"FDA (1997): CV% kriterleri aşıldığında standart f2 yerine "
-                        f"**Bootstrap f2** veya **Multivariate Confidence Region** analizi önerilir."
+                        f"FDA (1997): When CV% criteria are exceeded, "
+                        f"**Bootstrap f2** or **Multivariate Confidence Region** analysis is recommended."
                     )
 
             # Raw vessel data
@@ -2217,8 +2215,8 @@ elif nav == "f1 and f2 Similarity":
     <div class="step-box">
     <strong>How to use this page:</strong><br>
     1. Load your dissolution profiles in the <em>Data Input</em> page first.<br>
-    2. <strong>Reference Profile</strong>: Select the innovator / originator product (the product you are comparing against).<br>
-    3. <strong>Test Profile</strong>: Select your formulation (the product you want to compare).<br>
+    2. <strong>Reference Profilee</strong>: Select the innovator / originator product (the product you are comparing against).<br>
+    3. <strong>Test Profilee</strong>: Select your formulation (the product you want to compare).<br>
     4. The calculator uses only time points where the reference release is 85% or less (FDA guidance).<br>
     5. <strong>f2 >= 50</strong> means the profiles are similar. <strong>f1 <= 15</strong> means acceptable difference.
     </div>
@@ -2237,7 +2235,7 @@ elif nav == "f1 and f2 Similarity":
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("**Reference Profile** *(innovator / originator)*")
+        st.markdown("**Reference Profilee** *(innovator / originator)*")
         ref_nm = st.selectbox(
             "Reference", names,
             index=_get_index(names, st.session_state.selected_ref_id, 0),
@@ -2248,7 +2246,7 @@ elif nav == "f1 and f2 Similarity":
         st.session_state.selected_ref_id = ref_nm
         st.caption(f"This is the product you compare AGAINST: {ref_nm}")
     with col2:
-        st.markdown("**Test Profile** *(your formulation)*)")
+        st.markdown("**Test Profilee** *(your formulation)*)")
         test_options_f2 = [n for n in names if n != ref_nm]
         test_nm = st.selectbox(
             "Test", names,
@@ -2282,10 +2280,10 @@ elif nav == "f1 and f2 Similarity":
         # İlk aşan noktayı dahil et, sonrakileri hariç bırak
         _cutoff = _above_idx[0]
         _valid_mask = np.zeros(len(rr), dtype=bool)
-        _valid_mask[:_cutoff] = True       # 85% altı tüm noktalar
-        _valid_mask[_cutoff] = True        # 85%'i ilk kez geçen nokta
+        _valid_mask[:_cutoff] = True       # All points below 85%
+        _valid_mask[_cutoff] = True        # First point exceeding 85%
     else:
-        _valid_mask = _below  # Hiç 85%'i geçmeyen profil
+        _valid_mask = _below  # Profile never exceeding 85%
     mask = _valid_mask
     rrf, rtf = rr[mask], rt[mask]
     n_points_above85 = int(np.sum(rr > 85))
@@ -2307,16 +2305,16 @@ elif nav == "f1 and f2 Similarity":
     mc3.metric("Points used (n)", len(rrf))
     mc4.metric("Max |Delta R| (%)", f"{np.max(np.abs(rrf-rtf)):.2f}")
     mc5.metric("Excluded (>85%)", n_points_excluded,
-        help="FDA (1997): 85%'i geçtikten sonra en fazla 1 nokta dahil edilir.")
+        help="FDA (1997): After exceeding 85%, only 1 additional point may be included.")
     if n_points_excluded > 0:
         st.info(
-            f"ℹ️ **FDA 85% Kuralı uygulandı:** Referans profil {n_points_excluded} zaman "
-            f"noktasında 85%'i geçmiştir. Bu noktalardan yalnızca **ilki** f2 hesabına "
-            f"dahil edilmiş, sonrakiler dışarıda bırakılmıştır. "
+            f"ℹ️ **FDA 85% Rule applied:** Reference profile exceeded 85% at {n_points_excluded} time "
+            f"point(s). Only the **first** exceeding point has been included in the f2 calculation; "
+            f"subsequent points have been excluded. "
             f"*(FDA Guidance 1997, Section V.B)*"
         )
 
-    # Bootstrap uyarı sistemi
+    # Bootstrap warning system
     _n_vessels = min(st.session_state.profiles[nm].get("n", 6)
                      for nm in [ref_nm, test_nm])
     _rsd_vals = []
@@ -2328,11 +2326,11 @@ elif nav == "f1 and f2 Similarity":
 
     _bswarn = []
     if 45 <= f2 <= 55:
-        _bswarn.append(f"**Sınır bölgesi:** f2 = {f2:.2f} (45–55 arası). f2 bu aralıkta istatistiksel güvensizdir.")
+        _bswarn.append(f"**Boundary zone:** f2 = {f2:.2f} (45–55 range). f2 in this range statisticallyiksel unreliablezdir.")
     if _n_vessels <= 6:
-        _bswarn.append(f"**Düşük örneklem:** n = {_n_vessels} vessel/profil. FDA n ≥ 12 önerir; daha küçük n için Bootstrap daha güvenilirdir.")
+        _bswarn.append(f"**Low sample size:** n = {_n_vessels} vessels/profile. FDA recommends n ≥ 12; for smaller n, Bootstrap is more reliable.")
     if _cv_max > 15:
-        _bswarn.append(f"**Yüksek varyasyon:** Max CV = {_cv_max:.1f}% > 15%. FDA (1997): CV > 15% durumunda Bootstrap f2 veya Multivariate CI önerilir.")
+        _bswarn.append(f"**High variability:** Max CV = {_cv_max:.1f}% > 15%. FDA (1997): When CV > 15%, Bootstrap f2 or Multivariate CI is recommended.")
 
     # ── Bootstrap Gerekli Mi? Kutusu ─────────────────────────────────────────
     st.markdown("---")
@@ -2366,51 +2364,51 @@ elif nav == "f1 and f2 Similarity":
     if not _needs_boot and _fda_cv_ok:
         st.success(
             f"**✅ Bootstrap f2 Analizine Gerek Yoktur — Standart f2 Testi Yeterlidir.**\n\n"
-            f"Aşağıdaki FDA kriterleri karşılanmaktadır:\n\n"
-            f"- f2 = **{f2:.2f}** — 45–55 sınır bölgesi dışında\n"
-            f"- n = **{_n_vessels}** vessel — örneklem yeterli\n"
+            f"The following FDA criteria are met:\n\n"
+            f"- f2 = **{f2:.2f}** — outside the 45–55 boundary zone\n"
+            f"- n = **{_n_vessels}** vessels — adequate sample size\n"
             f"- Max CV% (t ≤ 15 dk, FDA early) = **{_cv_early_max:.1f}%** ≤ 20% ✓\n"
             f"- Max CV% (t > 15 dk, FDA late) = **{_cv_late_max:.1f}%** ≤ 10% ✓\n\n"
-            f"**Tek noktalı f2 testi** FDA (1997) Guidance çerçevesinde sonuçlandırıcıdır. "
+            f"**Single-point f2 test** is conclusive per FDA (1997) Guidance. "
             f"*(FDA Guidance for Industry: Dissolution Testing of Immediate Release Solid Oral "
             f"Dosage Forms, 1997, Section V)*"
         )
     else:
         _criteria_list = []
         if _is_boundary:
-            _criteria_list.append(f"f2 = {f2:.2f} → **45–55 sınır bölgesinde** (istatistiksel güvensizlik)")
+            _criteria_list.append(f"f2 = {f2:.2f} → **in 45–55 boundary zone** (statisticallyl unreliablezlik)")
         if _low_n:
-            _criteria_list.append(f"n = {_n_vessels} vessel → **FDA n ≥ 12 önerir**")
+            _criteria_list.append(f"n = {_n_vessels} vessels → **FDA recommends n ≥ 12**")
         if _high_cv:
-            _criteria_list.append(f"Max CV% = {_cv_max:.1f}% → **> 15% (FDA eşiği)**")
+            _criteria_list.append(f"Max CV% = {_cv_max:.1f}% → **> 15% (FDA threshold)**")
         if not _fda_cv_ok:
             if _cv_early_max > 20:
-                _criteria_list.append(f"Erken nokta CV% = {_cv_early_max:.1f}% → **> 20% (FDA kriteri aşıldı)**")
+                _criteria_list.append(f"Early-point CV% = {_cv_early_max:.1f}% → **> 20% (FDA criterion exceeded)**")
             if _cv_late_max > 10:
-                _criteria_list.append(f"Geç nokta CV% = {_cv_late_max:.1f}% → **> 10% (FDA kriteri aşıldı)**")
+                _criteria_list.append(f"Late-point CV% = {_cv_late_max:.1f}% → **> 10% (FDA criterion exceeded)**")
 
         _criteria_text = "\n".join([f"- {c}" for c in _criteria_list])
         st.warning(
-            f"**⚠️ Bootstrap f2 Analizi Önerilir**\n\n"
-            f"Aşağıdaki nedenlerle standart f2 testi yeterli değildir:\n\n"
+            f"**⚠️ Bootstrap f2 Analysis Recommended**\n\n"
+            f"Standard f2 test is insufficient for the following reasons:\n\n"
             f"{_criteria_text}\n\n"
-            f"**Önerilen yöntem: {_recommended_method} Bootstrap**\n"
-            f"{'CV% > 15% olduğundan **Nonparametric Bootstrap** daha güvenilir sonuç verir. ' if _cv_max > 15 else 'CV% ≤ 15% olduğundan **Parametric Bootstrap** yeterlidir. '}"
-            f"Bootstrap f2 analizi için → **Bootstrap f2 Analysis** sayfasına geçin.\n\n"
+            f"**Recommended method: {_recommended_method} Bootstrap**\n"
+            f"{'Because CV% > 15%, **Nonparametric Bootstrap** provides more reliable results. ' if _cv_max > 15 else 'CV% ≤ 15%, **Parametric Bootstrap** is sufficient. '}"
+            f"For Bootstrap f2 analysis → go to the **Bootstrap f2 Analysis** page.\n\n"
             f"📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
         )
 
     if _needs_boot or not _fda_cv_ok:
         _warn_md = ""
         if _bswarn:
-            pass  # Zaten yukarıdaki kutucukta gösterildi
+            pass  # Already shown in the box above
     if _bswarn:
-        _warn_md = "⚠️ **Bootstrap f2 Analizi Önerilir**\n\n"
+        _warn_md = "⚠️ **Bootstrap f2 Analysis Recommended**\n\n"
         _warn_md += "\n\n".join([f"{i+1}. {w}" for i, w in enumerate(_bswarn)])
         _warn_md += "\n\n📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
 
-    vf1="PASS - f1 <= 15: Profiles have acceptable difference" if f1<=15 else "FAIL - f1 > 15: Significant difference detected"
-    vf2="SIMILAR - f2 >= 50: Profiles are bioequivalent (FDA)" if f2>=50 else "DISSIMILAR - f2 < 50: Profiles are NOT similar"
+    vf1="PASS - f1 <= 15: Profilees have acceptable difference" if f1<=15 else "FAIL - f1 > 15: Significant difference detected"
+    vf2="SIMILAR - f2 >= 50: Profilees are bioequivalent (FDA)" if f2>=50 else "DISSIMILAR - f2 < 50: Profilees are NOT similar"
     color1="#c6efce" if f1<=15 else "#ffc7ce"
     color2="#c6efce" if f2>=50 else "#ffc7ce"
     st.markdown(
@@ -2553,7 +2551,7 @@ elif nav == "Bootstrap f2 Analysis":
 
     # ── Nonparametrik bootstrap fonksiyonu ───────────────────────────────────
     def run_nonparametric_bootstrap_f2(ref_raw, test_raw, iterations=5000, seed=42):
-        """Shah 1998 orijinal — nonparametrik bootstrap. Dağılım varsayımı yok."""
+        """Shah 1998 original — nonparametric bootstrap. No distribution assumption."""
         rng = np.random.default_rng(seed if seed > 0 else None)
         n_v_ref  = ref_raw.shape[1]
         n_v_test = test_raw.shape[1]
@@ -2613,7 +2611,7 @@ elif nav == "Bootstrap f2 Analysis":
     if len(profiles_with_raw) < 2:
         st.warning(
             "Bootstrap analysis requires **raw vessel-level data** for at least 2 profiles. "
-            f"Profiles with raw data: **{list(profiles_with_raw.keys()) or 'None'}**. "
+            f"Profilees with raw data: **{list(profiles_with_raw.keys()) or 'None'}**. "
             "Please upload data using 'Excel / CSV Upload (Raw Vessel Data)' mode."
         )
         st.stop()
@@ -2627,23 +2625,23 @@ elif nav == "Bootstrap f2 Analysis":
         horizontal=True,
         key="bs_method_radio",
         help=(
-            "Parametric: Mevcut standart yöntem — resampling ile dağılım varsayımı yapar. "
-            "Nonparametric: Dağılım varsayımı yok; Shah 1998 orijinal önerisi. "
-            "CV > 15% durumlarında nonparametric daha güvenilir CI verir."
+            "Parametric: Current standard method — resampling with distribution assumption. "
+            "Nonparametric: No distribution assumption; Shah 1998 original recommendation. "
+            "For CV > 15%, nonparametric provides more reliable CI."
         )
     )
     if "Nonparametric" in bs_method:
         st.info(
-            "ℹ️ **Nonparametric Bootstrap (Shah 1998):** Vessel verileri hiçbir dağılım "
-            "varsayımı yapılmaksızın resampling ile yeniden örneklendi. "
-            "CV > 15% durumlarında parametrik yöntemden farklı CI verebilir. "
+            "ℹ️ **Nonparametric Bootstrap (Shah 1998):** Vessel data were resampled without "
+            "any distribution assumption. "
+            "May yield different CI than parametric method when CV > 15%. "
             "*Shah VP et al. Pharm Res. 1998;15(6):889-896*"
         )
 
-    # ---- Profile selection --------------------------------------------------
+    # ---- Profilee selection --------------------------------------------------
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("**Reference Profile** *(innovator / originator)*")
+        st.markdown("**Reference Profilee** *(innovator / originator)*")
         def _on_ref_bs(): st.session_state.selected_ref_id = st.session_state._bs_ref_sel
         def _on_test_bs(): st.session_state.selected_test_id = st.session_state._bs_test_sel
 
@@ -2654,7 +2652,7 @@ elif nav == "Bootstrap f2 Analysis":
         n_ref = st.session_state.profiles[ref_bs].get("n", 0)
         st.caption(f"{ref_bs} — {n_ref} vessels")
     with col2:
-        st.markdown("**Test Profile** *(your formulation)*")
+        st.markdown("**Test Profilee** *(your formulation)*")
         test_options = [nm for nm in names_raw if nm != ref_bs]
         if not test_options:
             st.error("Need at least 2 profiles with raw data."); st.stop()
@@ -3030,12 +3028,12 @@ elif nav == "IVIVC Analysis":
 
     st.markdown("---")
 
-    # ── Profil Seçimi ─────────────────────────────────────────────────────────
+    # ── Profile Seçimi ─────────────────────────────────────────────────────────
     _ivivc_names = list(st.session_state.profiles.keys())
     sel_col1, sel_col2 = st.columns(2)
     with sel_col1:
         iv_profile = st.selectbox(
-            "In Vitro Dissolution Profile",
+            "In Vitro Dissolution Profilee",
             _ivivc_names,
             index=_get_index(_ivivc_names, st.session_state.selected_ref_id, 0),
             help="Select the dissolution profile to be used as in vitro input."
@@ -3123,7 +3121,7 @@ elif nav == "IVIVC Analysis":
         return fig, r2, slope, intercept, p
 
     def _pe_badge(pe):
-        """Prediction Error değerlendirmesi."""
+        """Prediction Error assessment."""
         if pe < 10:
             return "✅ Model Validated (FDA Grade)", "#c6efce", "#1a5c2e"
         elif pe < 20:
@@ -3562,7 +3560,7 @@ elif nav == "IVIVC Analysis":
             import plotly.subplots as _ps
             fig_d = _ps.make_subplots(
                 rows=1, cols=2,
-                subplot_titles=("In Vitro Dissolution Profile", "Estimated In Vivo Absorption (Fa)"),
+                subplot_titles=("In Vitro Dissolution Profilee", "Estimated In Vivo Absorption (Fa)"),
                 shared_yaxes=True
             )
             fig_d.add_trace(_go.Scatter(
@@ -3632,14 +3630,14 @@ elif nav == "Excel Report":
     # Proje metadata'dan varsayılanları al
     _pm = st.session_state.project_metadata
     _default_title  = f"DissolvA — {_pm.get('name','Dissolution Analysis Report')}"
-    _default_author = _pm.get("analyst","M. Sinan KAYNAK, PhD | Anadolu University, Faculty of Pharmacy")
+    _default_author = _pm.get("analyst","DissolvA Team")
 
     with st.expander("🎨 Report Customization", expanded=True):
         rc1, rc2 = st.columns([1.2, 0.8])
         with rc1:
             report_title  = st.text_input("Report Title", _default_title)
             report_author = st.text_input("Author / Institution", _default_author)
-            report_email  = st.text_input("Contact E-mail", "msinankaynak@gmail.com")
+            report_email  = st.text_input("Contact E-mail", "dissolva.app@gmail.com")
             if _pm.get("description"):
                 st.caption(f"Project: {_pm['description'][:80]}")
         with rc2:
@@ -3664,7 +3662,7 @@ elif nav == "Excel Report":
             inc_cover    = st.checkbox("📄 Cover Page",           value=True)
             inc_method   = st.checkbox("⚗️ Method Report",        value=True)
         with sc2:
-            inc_profiles = st.checkbox("📈 Dissolution Profiles",  value=True)
+            inc_profiles = st.checkbox("📈 Dissolution Profilees",  value=True)
             inc_stats    = st.checkbox("📊 Statistics",            value=True)
         with sc3:
             inc_fitting  = st.checkbox("🔢 Model Fitting",         value=True)
@@ -3709,7 +3707,7 @@ elif nav == "Excel Report":
             ws.write("A3", f"Generated: {report_date}", fmt_n)
             ws.write("A4", f"Author: {report_author}", fmt_n)
             ws.write("A5", f"Contact: {report_email}", fmt_n)
-            ws.write("A6", f"Profiles: {len(st.session_state.profiles)}", fmt_p)
+            ws.write("A6", f"Profilees: {len(st.session_state.profiles)}", fmt_p)
             ws.write("A7", "Generated by DissolvA™ v3.0 | Powered by AI | 2025", fmt_n)
 
         # 2. METHOD REPORT
@@ -3775,7 +3773,7 @@ elif nav == "Excel Report":
 
         # 3. DISSOLUTION PROFILES
         if inc_profiles:
-            ws2 = wb.add_worksheet("Dissolution Profiles"); col = 0
+            ws2 = wb.add_worksheet("Dissolution Profilees"); col = 0
             for nm, dd in st.session_state.profiles.items():
                 ws2.write(0, col, nm, fmt_s)
                 ws2.write(1, col, f"Time ({time_unit})", fmt_h)
@@ -3792,7 +3790,7 @@ elif nav == "Excel Report":
                     ws2.write(ri+2, col+3, round(rsd_a[ri],2), fmt_d)
                 col += 5
 
-            # Dissolution Profiles — matplotlib grafiği PNG olarak ekle
+            # Dissolution Profilees — matplotlib grafiği PNG olarak ekle
             try:
                 import io as _io_dp
                 _fig_dp, _ax_dp = plt.subplots(figsize=(8, 4.5))
@@ -3812,7 +3810,7 @@ elif nav == "Excel Report":
                 _ax_dp.set_xlim(left=0); _ax_dp.set_ylim(bottom=0, top=112)
                 _ax_dp.set_xlabel(f"Time ({time_unit})", fontsize=11)
                 _ax_dp.set_ylabel("Cumulative Drug Released (%)", fontsize=11)
-                _ax_dp.set_title("Mean Dissolution Profiles (Mean ± SD)", fontsize=12, color="#002147")
+                _ax_dp.set_title("Mean Dissolution Profilees (Mean ± SD)", fontsize=12, color="#002147")
                 _ax_dp.legend(fontsize=9, framealpha=0.9)
                 for _sp in ["top","right"]: _ax_dp.spines[_sp].set_visible(False)
                 _buf_dp = _io_dp.BytesIO()
@@ -3834,7 +3832,7 @@ elif nav == "Excel Report":
             ws3 = wb.add_worksheet("Statistics")
             ws3.write(0, 0, "Statistical Summary", fmt_t)
             ws3.write(1, 0, f"Generated: {report_date}", fmt_n)
-            hdrs = [f"Time ({time_unit})", "Profile", "Mean (%)", "SD", "RSD (%)", "CV (%)", "MDT", "DE (%)"]
+            hdrs = [f"Time ({time_unit})", "Profilee", "Mean (%)", "SD", "RSD (%)", "CV (%)", "MDT", "DE (%)"]
             for ci, h in enumerate(hdrs): ws3.write(3, ci, h, fmt_h); ws3.set_column(ci, ci, 16)
             ri2 = 4
             for nm, dd in st.session_state.profiles.items():
@@ -3878,7 +3876,7 @@ elif nav == "Excel Report":
         # 6. DISSOLUTION CHART
         if inc_chart:
             ws5 = wb.add_worksheet("Dissolution Chart")
-            ws5.write("A1","Dissolution Profile Chart",fmt_t)
+            ws5.write("A1","Dissolution Profilee Chart",fmt_t)
             ws5.write("A2",f"Mean cumulative release (%) vs Time | {report_date}",fmt_n)
             cdr = 4
             ws5.write(cdr,0,f"Time ({time_unit})",fmt_h)
@@ -3905,7 +3903,7 @@ elif nav == "Excel Report":
                     "marker":{"type":markers_list[ci%len(markers_list)],"size":7,
                               "fill":{"color":colors[ci%len(colors)]},"border":{"color":colors[ci%len(colors)]}},
                 })
-            chart.set_title({"name":"Mean Dissolution Profiles"})
+            chart.set_title({"name":"Mean Dissolution Profilees"})
             chart.set_x_axis({"name":f"Time ({time_unit})","min":0,"major_gridlines":{"visible":False}})
             chart.set_y_axis({"name":"Cumulative Release (%)","min":0,"max":105,
                              "major_gridlines":{"visible":True,"line":{"color":"#dddddd","dash_type":"dash"}}})
@@ -3942,8 +3940,8 @@ elif nav == "Excel Report":
                     if len(rrf_xl) > 0:
                         f1_xl = float(np.sum(np.abs(rrf_xl-rtf_xl))/np.sum(rrf_xl)*100)
                         f2_xl = float(50*np.log10(100/np.sqrt(1+np.mean((rrf_xl-rtf_xl)**2))))
-                        ws6.write("A4","Reference Profile",fmt_h); ws6.write("B4",ref_xl,fmt_p)
-                        ws6.write("A5","Test Profile",fmt_h); ws6.write("B5",test_xl,fmt_p)
+                        ws6.write("A4","Reference Profilee",fmt_h); ws6.write("B4",ref_xl,fmt_p)
+                        ws6.write("A5","Test Profilee",fmt_h); ws6.write("B5",test_xl,fmt_p)
                         ws6.write("A6","Common Time Points",fmt_h); ws6.write("B6",len(cm_xl),fmt_p)
                         ws6.write("A7","Points Used (ref<=85%)",fmt_h); ws6.write("B7",len(rrf_xl),fmt_p)
                         ws6.write("A9","f1 (Difference Factor)",fmt_h)
@@ -4019,12 +4017,12 @@ elif nav == "Excel Report":
             if is_similar:
                 ws7.write("A13",
                     f"The 90% CI lower bound ({ci_lower:.2f}) is >= 50. "
-                    "Profiles are considered SIMILAR per bootstrap f2 criterion. "
+                    "Profilees are considered SIMILAR per bootstrap f2 criterion. "
                     "(Shah et al. 1998; FDA Guidance 1997)", fmt_n)
             else:
                 ws7.write("A13",
                     f"The 90% CI lower bound ({ci_lower:.2f}) is < 50. "
-                    "Profiles are NOT similar per bootstrap f2 criterion. "
+                    "Profilees are NOT similar per bootstrap f2 criterion. "
                     "(Shah et al. 1998; FDA Guidance 1997)", fmt_n)
 
             # Bootstrap dağılım grafiği (matplotlib PNG → BytesIO → insert_image)
