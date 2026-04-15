@@ -459,7 +459,22 @@ with st.sidebar:
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.15);margin:10px 0 6px 0;">', unsafe_allow_html=True)
 
-    # Proje adı göster
+    st.markdown("""<style>
+    div[data-testid="stSidebarContent"] div.stButton > button {
+        background: transparent !important;
+        border: 1px solid rgba(255,191,0,0.35) !important;
+        color: rgba(255,191,0,0.75) !important;
+        font-size: 0.78rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.5px !important;
+        border-radius: 8px !important;
+    }
+    div[data-testid="stSidebarContent"] div.stButton > button:hover {
+        border-color: #FFBF00 !important;
+        color: #FFBF00 !important;
+        background: rgba(255,191,0,0.06) !important;
+    }
+    </style>""", unsafe_allow_html=True)
     # New Session butonu
     if st.button("✦ New Session", use_container_width=True,
                  help="Clear all profiles, results and start fresh."):
