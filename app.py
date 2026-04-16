@@ -782,9 +782,10 @@ def analyze_profile_shape(t_arr, r_arr):
     r = np.array(r_arr, dtype=float)
     n = len(r)
     r_norm = r / (r.max() + 1e-9)
-    t_20idx = max(1, int(n * 0.2))
-    # Lag tespiti
-    has_lag = r_norm[:t_20idx].mean() < 0.05
+    t_20idx = max(2, int(n * 0.25))  # At least 2 points, up to 25% of profile
+    # Lag detection: ignore t=0 if it's always 0
+    _lag_slice = r_norm[1:t_20idx] if r_norm[0] < 0.01 and n > 2 else r_norm[:t_20idx]
+    has_lag = _lag_slice.mean() < 0.05 if len(_lag_slice) > 0 else False
     # Sigmoid tespiti
     is_sigmoid = False
     if n >= 4:
@@ -792,7 +793,8 @@ def analyze_profile_shape(t_arr, r_arr):
         dr_max_idx = int(np.argmax(dr))
         is_sigmoid = (0.25 * n) < dr_max_idx < (0.75 * n)
     # Burst tespiti
-    has_burst = r_norm[:t_20idx].mean() > 0.40
+    _burst_slice = r_norm[1:t_20idx] if r_norm[0] < 0.01 and n > 2 else r_norm[:t_20idx]
+    has_burst = _burst_slice.mean() > 0.50 if len(_burst_slice) > 0 else False
     # 80% eşiği
     reaches_80 = r.max() >= 78.0
     # Erken plato
