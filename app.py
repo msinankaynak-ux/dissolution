@@ -2183,23 +2183,23 @@ elif nav == "Statistical Analysis":
 
                 if fda_ok and n_vessels >= 6:
                     st.success(
-                        f"**✅ {nm} — Standart f2 Testi Yeterlidir.**\n\n"
+                        f"**✅ {nm} — Standard f2 Test is Sufficient.**\n\n"
                         f"CV% values meet FDA (1997) criteria "
-                        f"(FDA: t ≤ 15 dk → CV ≤ %20; t > 15 dk → CV ≤ %10). "
-                        f"Bootstrap f2 analizine gerek yoktur; "
+                        f"(FDA: t ≤ 15 min → CV ≤ 20%; t > 15 min → CV ≤ 10%). "
+                        f"Bootstrap f2 analysis is not required; "
                         f"the **single-point f2 test** is conclusive."
                     )
                 else:
                     _reasons = []
                     if not fda_ok_early:
-                        _reasons.append(f"Erken nokta CV% = {cv_early_max:.1f}% > 20%")
+                        _reasons.append(f"Early-point CV% = {cv_early_max:.1f}% > 20%")
                     if not fda_ok_late:
                         _reasons.append(f"Late-point CV% = {cv_late_max:.1f}% > 10%")
                     if n_vessels < 6:
                         _reasons.append(f"n = {n_vessels} vessel < 6")
                     st.warning(
                         f"**⚠️ {nm} — Bootstrap f2 Assessment Recommended.**\n\n"
-                        f"Neden: {'; '.join(_reasons)}.\n\n"
+                        f"Reason: {'; '.join(_reasons)}.\n\n"
                         f"FDA (1997): When CV% criteria are exceeded, "
                         f"**Bootstrap f2** or **Multivariate Confidence Region** analysis is recommended."
                     )
@@ -2371,12 +2371,12 @@ elif nav == "f1 and f2 Similarity":
 
     if not _needs_boot and _fda_cv_ok:
         st.success(
-            f"**✅ Bootstrap f2 Analizine Gerek Yoktur — Standart f2 Testi Yeterlidir.**\n\n"
+            f"**✅ Bootstrap f2 Analysis Not Required — Standard f2 Test is Sufficient.**\n\n"
             f"The following FDA criteria are met:\n\n"
             f"- f2 = **{f2:.2f}** — outside the 45–55 boundary zone\n"
             f"- n = **{_n_vessels}** vessels — adequate sample size\n"
-            f"- Max CV% (t ≤ 15 dk, FDA early) = **{_cv_early_max:.1f}%** ≤ 20% ✓\n"
-            f"- Max CV% (t > 15 dk, FDA late) = **{_cv_late_max:.1f}%** ≤ 10% ✓\n\n"
+            f"- Max CV% (t ≤ 15 min, FDA early) = **{_cv_early_max:.1f}%** ≤ 20% ✓\n"
+            f"- Max CV% (t > 15 min, FDA late) = **{_cv_late_max:.1f}%** ≤ 10% ✓\n\n"
             f"**Single-point f2 test** is conclusive per FDA (1997) Guidance. "
             f"*(FDA Guidance for Industry: Dissolution Testing of Immediate Release Solid Oral "
             f"Dosage Forms, 1997, Section V)*"
@@ -2716,6 +2716,9 @@ elif nav == "Bootstrap f2 Analysis":
         rt_obs = np.array([raw_test[np.where(t_test_arr == ti)[0][0], :].mean()
                            for ti in t_common])
         mask_obs = rr_obs <= 85
+        _above_obs = np.where(rr_obs > 85)[0]
+        if len(_above_obs) > 0:
+            mask_obs[_above_obs[0]] = True  # First point exceeding 85% included
         if not np.any(mask_obs):
             st.error("No valid time points where reference release ≤ 85%."); st.stop()
 
