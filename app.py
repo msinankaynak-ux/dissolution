@@ -2316,9 +2316,9 @@ elif nav == "f1 and f2 Similarity":
         help="FDA (1997): After exceeding 85%, only 1 additional point may be included.")
     if n_points_excluded > 0:
         st.info(
-            f"ℹ️ **FDA 85% Rule applied:** Reference profile exceeded 85% at {n_points_excluded} time "
-            f"point(s). Only the **first** exceeding point has been included in the f2 calculation; "
-            f"subsequent points have been excluded. "
+            f"ℹ️ **FDA 85% Rule applied:** {n_points_excluded} time point(s) beyond the first "
+            f"exceeding 85% have been excluded. The **first point exceeding 85%** is included in "
+            f"the f2 calculation; subsequent points are excluded. "
             f"*(FDA Guidance 1997, Section V.B)*"
         )
 
@@ -2428,7 +2428,7 @@ elif nav == "f1 and f2 Similarity":
     df_cmp=pd.DataFrame({
         f"Time ({time_unit})":common,"Reference: "+ref_nm+" (%)":rr,
         "Test: "+test_nm+" (%)":rt,"|Diff| (%)":np.abs(rr-rt).round(2),
-        "Used in f2":["Yes (ref<=85%)" if r<=85 else "No (ref>85%)" for r in rr]
+        "Used in f2":["Yes (ref<=85%)" if r<=85 else ("Yes (1st >85%)" if i==int(np.where(rr>85)[0][0]) else "No (ref>85%)") if np.any(rr>85) else "No (ref>85%)" for i,r in enumerate(rr)]
     })
     st.dataframe(df_cmp,use_container_width=True)
 
