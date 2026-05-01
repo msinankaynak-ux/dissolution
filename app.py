@@ -4172,17 +4172,23 @@ elif nav == "🏛️ FDA Database":
         return results
 
     # ── Canlı Arama Fonksiyonu (Streamlit cache ile) ─────────────────────────
-    @st.cache_data(ttl=3600, show_spinner=False)
     def _fda_search_live(drug_name: str) -> tuple:
         """
         FDA dissolution DB'den canlı veri çeker.
-        Returns: (results_list, error_message)
-        ttl=3600 → 1 saat cache (aynı sorgu tekrar HTTP atmaz)
+        Returns: (results_list, error_message, debug_html)
+        Cache yok — her aramada taze veri.
         """
         if not _FDA_LIVE_OK:
-            return [], "requests veya beautifulsoup4 paketi eksik"
+            return [], "requests veya beautifulsoup4 paketi eksik", ""
         try:
-            resp = _requests.get(
+            session = _requests.Session()
+            # Önce ana sayfayı ziyaret et (cookie/session için)
+            session.get(
+                "https://www.accessdata.fda.gov/scripts/cder/dissolution/index.cfm",
+                headers=_FDA_HEADERS, timeout=10
+            )
+            # Asıl arama
+            resp = session.get(
                 _FDA_SEARCH_URL,
                 params={"SearchTerm": drug_name, "basic": "1"},
                 headers=_FDA_HEADERS,
@@ -4190,13 +4196,15 @@ elif nav == "🏛️ FDA Database":
             )
             resp.raise_for_status()
             parsed = _parse_fda_html(resp.text)
-            return parsed, None
+            return parsed, None, resp.text
         except _requests.exceptions.Timeout:
-            return [], "FDA sunucusuna bağlanılamadı (timeout). Lütfen tekrar deneyin."
-        except _requests.exceptions.ConnectionError:
-            return [], "İnternet bağlantısı kurulamadı."
+            return [], "FDA sunucusuna bağlanılamadı (timeout). Lütfen tekrar deneyin.", ""
+        except _requests.exceptions.ConnectionError as e:
+            return [], f"İnternet bağlantısı kurulamadı: {e}", ""
+        except _requests.exceptions.HTTPError as e:
+            return [], f"FDA HTTP hatası: {e} — FDA sitesi erişimi kısıtlamış olabilir.", ""
         except Exception as e:
-            return [], f"FDA erişim hatası: {str(e)}"
+            return [], f"FDA erişim hatası: {str(e)}", ""
 
     def _parse_times_fda(s: str) -> list:
         """'5, 10, 20, 30 and 45 min' → [5, 10, 20, 30, 45]"""
@@ -4299,7 +4307,7 @@ elif nav == "🏛️ FDA Database":
 
     if fda_query and _FDA_LIVE_OK:
         with st.spinner(f'FDA sunucusundan "{fda_query}" aranıyor...'):
-            _results, _err = _fda_search_live(fda_query.strip())
+            _results, _err, _raw_html = _fda_search_live(fda_query.strip())
 
         if _err:
             st.error(
@@ -4308,6 +4316,9 @@ elif nav == "🏛️ FDA Database":
                 f"[accessdata.fda.gov/scripts/cder/dissolution]"
                 f"(https://www.accessdata.fda.gov/scripts/cder/dissolution/)"
             )
+            if _raw_html:
+                with st.expander("🔧 Debug — FDA Ham Yanıt", expanded=False):
+                    st.code(_raw_html[:3000], language="html")
         elif not _results:
             st.warning(
                 f'**"{fda_query}"** için FDA Dissolution Methods Database\'de '
@@ -4316,6 +4327,10 @@ elif nav == "🏛️ FDA Database":
                 f'FDA sitesini doğrudan kontrol edin: '
                 f'[accessdata.fda.gov](https://www.accessdata.fda.gov/scripts/cder/dissolution/)'
             )
+            if _raw_html:
+                with st.expander('🔧 Debug — FDA Ham Yanıt (tablo parse edilemedi)', expanded=True):
+                    st.caption(f'HTML boyutu: {len(_raw_html)} karakter. Tablo yapısını inceleyin.')
+                    st.code(_raw_html[:6000], language='html')
         else:
             # Sonuç sayısı başlığı
             st.markdown(
