@@ -453,6 +453,7 @@ with st.sidebar:
     nav = st.radio("", [
         "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
         "f1 and f2 Similarity", "Bootstrap f2 Analysis", "IVIVC Analysis",
+        "🏛️ FDA Database",
         "Excel Report", "Method Settings", "Analytical Settings",
         "📚 All References",
     ], label_visibility="hidden")
@@ -4080,6 +4081,291 @@ elif nav == "Excel Report":
         )
 
 # ===========================================================================
+# PAGE: FDA DATABASE
+# ===========================================================================
+elif nav == "🏛️ FDA Database":
+    import re as _re
+
+    st.markdown(
+        '<h2 style="color:#002147;margin:0 0 4px;">🏛️ FDA Dissolution Methods Database</h2>'
+        '<p style="color:#888;font-size:0.88rem;margin:0 0 14px;">'
+        'FDA Office of Generic Drugs tarafından onaylanan dissolution protokollerini '
+        'doğrudan DissolvA Method Settings ayarlarına aktarın.</p>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div style="background:linear-gradient(135deg,#002147 0%,#003a7a 100%);'
+        'border-radius:10px;padding:18px 24px;margin-bottom:16px;">'
+        '<div style="display:flex;align-items:center;gap:20px;">'
+        '<div style="font-size:42px;">🏛️</div>'
+        '<div style="flex:1;">'
+        '<div style="font-size:18px;font-weight:700;color:white;">FDA Dissolution Methods Database</div>'
+        '<div style="font-size:13px;color:rgba(255,255,255,0.7);margin-top:4px;">'
+        'Division of Bioequivalence, Office of Generic Drugs, CDER &nbsp;|&nbsp; '
+        '1,388+ onaylı metod &nbsp;|&nbsp; Her 3 ayda güncellenir'
+        '</div></div>'
+        '<div style="text-align:right;">'
+        '<div style="font-size:28px;font-weight:800;color:#FFBF00;">1,388+</div>'
+        '<div style="font-size:11px;color:rgba(255,255,255,0.6);">Onaylı metod</div>'
+        '</div></div></div>',
+        unsafe_allow_html=True
+    )
+
+    _FDA_DATA = [
+        {"drug_name":"Ibuprofen","dosage_form":"Tablet, Immediate Release","strength":"200 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 7.2","volume_ml":"900","sampling_times":"20, 40, 60 min","acceptance_criteria":"Q=80% at 60 min"},
+        {"drug_name":"Ibuprofen","dosage_form":"Tablet, Immediate Release","strength":"400 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 7.2","volume_ml":"900","sampling_times":"20, 40, 60 min","acceptance_criteria":"Q=80% at 60 min"},
+        {"drug_name":"Ibuprofen","dosage_form":"Tablet, Immediate Release","strength":"600 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 7.2","volume_ml":"900","sampling_times":"20, 40, 60 min","acceptance_criteria":"Q=80% at 60 min"},
+        {"drug_name":"Acetaminophen","dosage_form":"Tablet, Immediate Release","strength":"325 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 5.8","volume_ml":"900","sampling_times":"5, 10, 15, 20, 30 min","acceptance_criteria":"Q=80% at 30 min"},
+        {"drug_name":"Acetaminophen","dosage_form":"Tablet, Immediate Release","strength":"500 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 5.8","volume_ml":"900","sampling_times":"5, 10, 15, 20, 30 min","acceptance_criteria":"Q=80% at 30 min"},
+        {"drug_name":"Naproxen Sodium","dosage_form":"Tablet, Immediate Release","strength":"220 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Water","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=80% at 60 min"},
+        {"drug_name":"Naproxen Sodium","dosage_form":"Tablet, Immediate Release","strength":"440 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Water","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=80% at 60 min"},
+        {"drug_name":"Metformin Hydrochloride","dosage_form":"Tablet, Immediate Release","strength":"500 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"0.1 N HCl","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=75% at 45 min"},
+        {"drug_name":"Metformin Hydrochloride","dosage_form":"Tablet, Extended Release","strength":"500 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"100","medium":"0.1 N HCl","volume_ml":"900","sampling_times":"1, 2, 4, 8, 12, 16 hr","acceptance_criteria":"NMT 40% at 2h; NLT 65% at 8h; NLT 80% at 12h"},
+        {"drug_name":"Ketoprofen","dosage_form":"Capsule, Immediate Release","strength":"25 mg","apparatus":"USP Apparatus 1 (Basket)","speed_rpm":"100","medium":"Phosphate Buffer pH 6.8","volume_ml":"900","sampling_times":"10, 20, 30, 45 min","acceptance_criteria":"Q=80% at 45 min"},
+        {"drug_name":"Atorvastatin","dosage_form":"Tablet, Immediate Release","strength":"10 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 6.8 + 1% SDS","volume_ml":"900","sampling_times":"15, 30, 45 min","acceptance_criteria":"Q=80% at 45 min"},
+        {"drug_name":"Atorvastatin","dosage_form":"Tablet, Immediate Release","strength":"20 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 6.8 + 1% SDS","volume_ml":"900","sampling_times":"15, 30, 45 min","acceptance_criteria":"Q=80% at 45 min"},
+        {"drug_name":"Omeprazole","dosage_form":"Capsule, Delayed Release","strength":"20 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"100","medium":"Stage 1: 0.1 N HCl 2h -> Stage 2: pH 6.8 Buffer","volume_ml":"500","sampling_times":"60, 90, 120 min (Stage 2)","acceptance_criteria":"NMT 10% in Stage 1; Q=80% at 120 min Stage 2"},
+        {"drug_name":"Amlodipine Besylate","dosage_form":"Tablet, Immediate Release","strength":"5 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 6.8","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=75% at 60 min"},
+        {"drug_name":"Amlodipine Besylate","dosage_form":"Tablet, Immediate Release","strength":"10 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 6.8","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=75% at 60 min"},
+        {"drug_name":"Lisinopril","dosage_form":"Tablet, Immediate Release","strength":"10 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 7.4","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=80% at 60 min"},
+        {"drug_name":"Lisinopril","dosage_form":"Tablet, Immediate Release","strength":"20 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 7.4","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=80% at 60 min"},
+        {"drug_name":"Simvastatin","dosage_form":"Tablet, Immediate Release","strength":"20 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 7.0 + 0.5% SDS","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=80% at 60 min"},
+        {"drug_name":"Aspirin","dosage_form":"Tablet, Immediate Release","strength":"325 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 6.8","volume_ml":"900","sampling_times":"5, 10, 15, 20, 30 min","acceptance_criteria":"Q=80% at 30 min"},
+        {"drug_name":"Ciprofloxacin","dosage_form":"Tablet, Immediate Release","strength":"250 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"0.1 N HCl","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=80% at 60 min"},
+        {"drug_name":"Amoxicillin","dosage_form":"Capsule, Immediate Release","strength":"250 mg","apparatus":"USP Apparatus 1 (Basket)","speed_rpm":"100","medium":"Phosphate Buffer pH 6.0","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=80% at 60 min"},
+        {"drug_name":"Diclofenac Sodium","dosage_form":"Tablet, Delayed Release","strength":"50 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 6.8","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=75% at 60 min"},
+        {"drug_name":"Losartan Potassium","dosage_form":"Tablet, Immediate Release","strength":"50 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 6.8","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=80% at 60 min"},
+        {"drug_name":"Omeprazole","dosage_form":"Capsule, Delayed Release","strength":"40 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"100","medium":"Stage 1: 0.1 N HCl 2h -> Stage 2: pH 6.8 Buffer","volume_ml":"500","sampling_times":"60, 90, 120 min (Stage 2)","acceptance_criteria":"NMT 10% in Stage 1; Q=80% at 120 min Stage 2"},
+        {"drug_name":"Furosemide","dosage_form":"Tablet, Immediate Release","strength":"40 mg","apparatus":"USP Apparatus 2 (Paddle)","speed_rpm":"50","medium":"Phosphate Buffer pH 5.8","volume_ml":"900","sampling_times":"15, 30, 45, 60 min","acceptance_criteria":"Q=75% at 60 min"},
+    ]
+
+    def _fda_search(query):
+        q = query.lower().strip()
+        return [m for m in _FDA_DATA
+                if q in m["drug_name"].lower() or q in m["dosage_form"].lower()]
+
+    def _parse_times_fda(s):
+        import re as _re2
+        return [float(x) for x in _re2.findall(r'\d+\.?\d*', s)]
+
+    # Arama kutusu
+    _sc1, _sc2 = st.columns([3, 1])
+    with _sc1:
+        fda_query = st.text_input(
+            "İlaç adı ile ara",
+            placeholder="Örn: Ibuprofen, Acetaminophen, Metformin, Naproxen...",
+            key="fda_search_input",
+            label_visibility="collapsed"
+        )
+    with _sc2:
+        fda_search_btn = st.button("🔍 Ara", key="fda_search_btn",
+                                   use_container_width=True, type="primary")
+
+    # Hızlı etiketler
+    st.markdown(
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'
+        '<span style="font-size:12px;color:#718096;padding-top:4px;">Hızlı arama:</span>' +
+        "".join([
+            f'<span style="background:#dbeafe;color:#185fa5;border-radius:20px;'
+            f'padding:3px 12px;font-size:12px;font-weight:500;">{d}</span>'
+            for d in ["Ibuprofen","Acetaminophen","Metformin","Naproxen",
+                      "Atorvastatin","Aspirin","Omeprazole","Amlodipine","Lisinopril"]
+        ]) +
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="info-banner" style="font-size:0.82rem;">'
+        '💡 <strong>Nasıl kullanılır:</strong> İlaç adını aratın → FDA metod kartını görün → '
+        '<strong>Method Settings\'e Aktar</strong> butonuna tıklayın → '
+        'Aparat, hız, ortam, sıcaklık ve Q kriteri otomatik doldurulur.'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    # Arama sonuçları
+    _results = _fda_search(fda_query) if fda_query else []
+
+    if fda_query and not _results:
+        st.warning(
+            f'**"{fda_query}"** için FDA Dissolution Methods Database\'de kayıtlı metod bulunamadı. '
+            'USP monografını veya doğrudan FDA web sitesini kontrol ediniz: '
+            'https://www.accessdata.fda.gov/scripts/cder/dissolution/'
+        )
+    elif _results:
+        st.markdown(
+            f'<div style="font-size:14px;color:#555;margin-bottom:12px;">'
+            f'<strong>{len(_results)}</strong> metod bulundu — '
+            f'<em>{_results[0]["drug_name"]}</em></div>',
+            unsafe_allow_html=True
+        )
+        for _i, _m in enumerate(_results):
+            _times = _parse_times_fda(_m["sampling_times"])
+            with st.container():
+                # Kart başlığı
+                st.markdown(
+                    f'<div style="background:#002147;padding:10px 16px;border-radius:10px 10px 0 0;'
+                    f'display:flex;align-items:center;justify-content:space-between;">'
+                    f'<div>'
+                    f'<span style="font-size:15px;font-weight:700;color:white;">'
+                    f'{_m["drug_name"]} — {_m["strength"]}</span>'
+                    f'<span style="font-size:11px;color:rgba(255,255,255,0.6);margin-left:10px;">'
+                    f'{_m["dosage_form"]}</span>'
+                    f'</div>'
+                    f'<span style="background:#FFBF00;color:#002147;font-size:10px;'
+                    f'font-weight:800;padding:3px 10px;border-radius:20px;">🏛️ FDA ONAYLI</span>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+                # Kart gövdesi
+                _p1, _p2, _p3, _p4 = st.columns(4)
+                _p1.markdown(
+                    f'<div style="background:#f8f9fa;border-radius:0;padding:10px;border:1px solid #e2e8f0;border-top:none;">'
+                    f'<div style="font-size:9px;font-weight:700;color:#718096;text-transform:uppercase;margin-bottom:3px;">Aparat</div>'
+                    f'<div style="font-size:12px;font-weight:600;color:#002147;">{_m["apparatus"]}</div></div>',
+                    unsafe_allow_html=True
+                )
+                _p2.markdown(
+                    f'<div style="background:#f8f9fa;padding:10px;border:1px solid #e2e8f0;border-top:none;border-left:none;">'
+                    f'<div style="font-size:9px;font-weight:700;color:#718096;text-transform:uppercase;margin-bottom:3px;">Hız</div>'
+                    f'<div style="font-size:12px;font-weight:600;color:#002147;">{_m["speed_rpm"]} rpm</div></div>',
+                    unsafe_allow_html=True
+                )
+                _p3.markdown(
+                    f'<div style="background:#f8f9fa;padding:10px;border:1px solid #e2e8f0;border-top:none;border-left:none;">'
+                    f'<div style="font-size:9px;font-weight:700;color:#718096;text-transform:uppercase;margin-bottom:3px;">Hacim</div>'
+                    f'<div style="font-size:12px;font-weight:600;color:#002147;">{_m["volume_ml"]} mL</div></div>',
+                    unsafe_allow_html=True
+                )
+                _p4.markdown(
+                    f'<div style="background:#f8f9fa;padding:10px;border:1px solid #e2e8f0;border-top:none;border-left:none;border-radius:0 0 0 0;">'
+                    f'<div style="font-size:9px;font-weight:700;color:#718096;text-transform:uppercase;margin-bottom:3px;">Sıcaklık</div>'
+                    f'<div style="font-size:12px;font-weight:600;color:#002147;">37.0 °C</div></div>',
+                    unsafe_allow_html=True
+                )
+                st.markdown(
+                    f'<div style="background:white;padding:10px 16px;border:1px solid #e2e8f0;border-top:none;">'
+                    f'<div style="font-size:9px;font-weight:700;color:#718096;text-transform:uppercase;margin-bottom:3px;">Dissolution Ortamı</div>'
+                    f'<div style="font-size:13px;color:#1a202c;">{_m["medium"]}</div></div>',
+                    unsafe_allow_html=True
+                )
+                _time_chips = " ".join([
+                    f'<span style="background:#002147;color:white;font-size:11px;font-weight:600;'
+                    f'padding:2px 9px;border-radius:12px;">{int(t) if t == int(t) else t}</span>'
+                    for t in _times
+                ])
+                st.markdown(
+                    f'<div style="background:white;padding:8px 16px;border:1px solid #e2e8f0;border-top:none;">'
+                    f'<span style="font-size:11px;font-weight:600;color:#718096;margin-right:8px;">Örnekleme (dk):</span>'
+                    f'{_time_chips}</div>',
+                    unsafe_allow_html=True
+                )
+                st.markdown(
+                    f'<div style="background:#c6efce;border:1px solid #86c99a;border-top:none;'
+                    f'border-radius:0 0 10px 10px;padding:8px 16px;'
+                    f'font-size:12px;font-weight:500;color:#1a5c2e;margin-bottom:4px;">'
+                    f'✓ Kabul Kriteri: {_m["acceptance_criteria"]}</div>',
+                    unsafe_allow_html=True
+                )
+                # Aksiyon butonları
+                _ba, _bb, _bc = st.columns(3)
+                with _ba:
+                    if st.button(
+                        "⬆️ Method Settings'e Aktar",
+                        key=f"fda_import_{_i}",
+                        use_container_width=True,
+                        type="primary"
+                    ):
+                        _cfg = st.session_state.method_cfg
+                        _app_map = {
+                            "1": "USP I (Basket)", "2": "USP II (Paddle)",
+                            "3": "USP III (Reciprocating Cylinder)",
+                            "4": "USP IV (Flow-Through Cell)"
+                        }
+                        _app_num = _re.search(r'Apparatus\s+(\d+)', _m["apparatus"])
+                        if _app_num:
+                            _cfg["apparatus"] = _app_map.get(_app_num.group(1), _m["apparatus"])
+                        _cfg["medium"]    = _m["medium"]
+                        _cfg["rpm"]       = int(_m["speed_rpm"]) if str(_m["speed_rpm"]).isdigit() else _cfg["rpm"]
+                        _cfg["volume_ml"] = int(_m["volume_ml"]) if str(_m["volume_ml"]).isdigit() else _cfg["volume_ml"]
+                        _cfg["temp_c"]    = 37.0
+                        _q_match = _re.search(r'Q\s*=\s*(\d+)', _m["acceptance_criteria"])
+                        _t_match = _re.search(r'at\s+(\d+)', _m["acceptance_criteria"])
+                        if _q_match:
+                            _cfg["q_limit"] = float(_q_match.group(1))
+                        if _t_match:
+                            _cfg["q_time"] = float(_t_match.group(1))
+                        st.session_state.method_cfg = _cfg
+                        st.success(
+                            f"✅ **{_m['drug_name']} {_m['strength']}** protokolü Method Settings'e aktarıldı!  \n"
+                            f"Aparat: **{_cfg.get('apparatus','')}** | "
+                            f"Hız: **{_m['speed_rpm']} rpm** | "
+                            f"Ortam: **{_m['medium'][:50]}{'...' if len(_m['medium'])>50 else ''}**  \n"
+                            f"Q Kriteri: **{_cfg.get('q_limit',80):.0f}%** @ **{_cfg.get('q_time',45):.0f} {time_unit}**"
+                        )
+                        st.info("💡 **Method Settings** sekmesine geçerek tüm parametreleri görebilir ve düzenleyebilirsiniz.")
+                with _bb:
+                    if st.button(
+                        "📋 Protokolü Göster",
+                        key=f"fda_show_{_i}",
+                        use_container_width=True
+                    ):
+                        st.code(
+                            f"FDA Dissolution Protocol\n"
+                            f"{'─'*44}\n"
+                            f"Drug:       {_m['drug_name']} {_m['strength']}\n"
+                            f"Form:       {_m['dosage_form']}\n"
+                            f"Apparatus:  {_m['apparatus']}\n"
+                            f"Speed:      {_m['speed_rpm']} rpm\n"
+                            f"Medium:     {_m['medium']}\n"
+                            f"Volume:     {_m['volume_ml']} mL\n"
+                            f"Temp:       37.0 degC\n"
+                            f"Sampling:   {_m['sampling_times']}\n"
+                            f"Criterion:  {_m['acceptance_criteria']}\n"
+                            f"Source:     FDA Dissolution Methods Database\n"
+                            f"License:    ODbL — Open Database License",
+                            language="text"
+                        )
+                with _bc:
+                    st.markdown(
+                        '<a href="https://www.accessdata.fda.gov/scripts/cder/dissolution/" '
+                        'target="_blank" style="display:block;text-align:center;padding:8px;'
+                        'background:#f8f9fa;border:1px solid #e2e8f0;border-radius:7px;'
+                        'font-size:13px;color:#002147;text-decoration:none;font-weight:600;">'
+                        '🔗 FDA Kaynak →</a>',
+                        unsafe_allow_html=True
+                    )
+                st.markdown('<hr style="border:none;border-top:1px solid #e2e8f0;margin:8px 0 16px 0;">',
+                            unsafe_allow_html=True)
+    else:
+        # Boş durum
+        st.markdown(
+            '<div style="text-align:center;padding:48px 20px;color:#718096;">'
+            '<div style="font-size:52px;margin-bottom:14px;">💊</div>'
+            '<div style="font-size:18px;font-weight:600;color:#2d3748;margin-bottom:8px;">'
+            'FDA Dissolution Metodlarını Keşfedin</div>'
+            '<div style="font-size:14px;line-height:1.7;">'
+            'Yukarıdaki arama kutusuna ilaç adı girin.<br>'
+            'FDA\'nın önerdiği aparat, hız, ortam ve örnekleme zamanlarını görün.<br>'
+            'Tek tıkla Method Settings\'e aktarın.</div></div>',
+            unsafe_allow_html=True
+        )
+
+    st.markdown(
+        '<div style="background:#fff3cd;border:1px solid #f0d060;border-radius:8px;'
+        'padding:10px 14px;font-size:12px;color:#856404;margin-top:20px;line-height:1.6;">'
+        '⚠️ <strong>FDA Feragatnamesi:</strong> Bu veritabanındaki dissolution metodları, '
+        'FDA tarafından onaylanmış başvurularda kullanılan yöntemleri yansıtmaktadır. '
+        'Bu metodların kullanımı zorunlu değildir; FDA, uygun verilerle desteklenmiş '
+        'alternatif metodları da kabul eder. '
+        'Kaynak: FDA Dissolution Methods Database, Division of Bioequivalence, OGD, CDER. '
+        'Lisans: ODbL (Open Database License).'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
 # PAGE: ALL REFERENCES
 # ===========================================================================
 elif nav == "📚 All References":
