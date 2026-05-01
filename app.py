@@ -1616,10 +1616,12 @@ if nav == "Data Input":
 
             with _info_c1:
                 _ro5_color = "#c6efce" if _lipo["druglike"] else "#ffc7ce"
-                _ro5_lines = "".join([
-                    f'<div style="font-size:11px;">{"✅" if ok else "❌"} {rule}: <strong>{val:.2f if isinstance(val,float) else val}</strong></div>'
-                    for rule, (val, lim, ok) in _lipo["rules"].items()
-                ])
+                _ro5_lines = ""
+                for rule, (val, lim, ok) in _lipo["rules"].items():
+                    _icon = "✅" if ok else "❌"
+                    _vstr = f"{val:.2f}" if isinstance(val, float) else str(val)
+                    _ro5_lines += f'<div style="font-size:11px;">{_icon} {rule}: <strong>{_vstr}</strong></div>'
+
                 st.markdown(
                     f'<div style="background:{_ro5_color};border-radius:8px;padding:10px 12px;">'
                     f'<div style="font-size:11px;font-weight:700;color:#002147;margin-bottom:5px;">'
