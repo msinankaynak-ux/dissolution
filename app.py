@@ -4283,17 +4283,52 @@ elif nav == "🏛️ FDA Database":
         except Exception as e:
             return [], f"FDA erişim hatası: {str(e)}", ""
 
-    def _parse_times_fda(s: str) -> list:
-        """'5, 10, 20, 30 and 45 min' → [5, 10, 20, 30, 45]"""
-        return [float(x) for x in _re.findall(r'\d+\.?\d*', s)]
+    def _parse_times_fda(s: str) -> tuple:
+        """
+        FDA örnekleme zamanlarını parse eder, birimi tespit eder.
+        Returns: (times_list, unit_label)
+        Örnek: "5, 10, 20, 30 and 45" → ([5,10,20,30,45], "min")
+                "1, 2, 4, 8, 16 hours" → ([1,2,4,8,16], "hr")
+        """
+        if not s:
+            return [], "min"
+        s_low = s.lower()
+        # Birim tespiti
+        if "hour" in s_low or " hr" in s_low or s_low.strip().endswith("hr"):
+            unit = "hr"
+        elif "min" in s_low:
+            unit = "min"
+        else:
+            # Sayılara bakarak tahmin et:
+            # ER formlar genelde 1-24 saat → saat
+            # IR formlar genelde 5-120 dk → dakika
+            # Eğer en büyük sayı ≤ 24 VE sayılar arasında boşluk büyükse saat
+            nums = [float(x) for x in _re.findall(r'\d+\.?\d*', s)]
+            if nums:
+                mx = max(nums)
+                # 1, 2, 4, 8, 16 gibi → saat
+                # 5, 10, 30, 45 gibi → dakika
+                gaps = [nums[i+1]-nums[i] for i in range(len(nums)-1)] if len(nums)>1 else [0]
+                avg_gap = sum(gaps)/len(gaps) if gaps else 0
+                unit = "hr" if (mx <= 24 and avg_gap >= 1.5) else "min"
+            else:
+                unit = "min"
+        nums = [float(x) for x in _re.findall(r'\d+\.?\d*', s.split(';')[0])]
+        return nums, unit
 
-    def _q_from_sampling(sampling: str) -> tuple:
+    def _q_from_sampling(sampling: str, times=None, unit=None) -> tuple:
         """Örnekleme zamanından Q kriterini tahmin et."""
-        nums = _parse_times_fda(sampling)
-        if not nums:
+        if times is None:
+            times, unit = _parse_times_fda(sampling)
+        if not times:
             return None, None
-        last_t = int(max(nums))
-        return 80.0, float(last_t)
+        last_t = max(times)
+        # Saat ise dakikaya çevir
+        if unit == "hr":
+            last_t_min = last_t * 60
+        else:
+            last_t_min = last_t
+        return 80.0, float(last_t_min)
 
     # ── Sayfa Başlığı ────────────────────────────────────────────────────────
     st.markdown(
@@ -4431,15 +4466,25 @@ elif nav == "🏛️ FDA Database":
 
             for _i, _m in enumerate(_results):
                 _times = _parse_times_fda(_m["sampling_times"])
+                _times, _unit = _parse_times_fda(_m["sampling_times"])
+                _unit_label = "dk" if _unit == "min" else "saat"
                 _time_chips = " ".join([
                     f'<span style="background:#002147;color:white;font-size:11px;'
                     f'font-weight:600;padding:2px 9px;border-radius:12px;">'
                     f'{int(t) if t == int(t) else t}</span>'
                     for t in _times
-                ]) if _times else (
-                    f'<span style="font-size:12px;color:#718096;">'
-                    f'{_m["sampling_times"] or "Refer to USP"}</span>'
-                )
+                ])
+                if _time_chips:
+                    _time_chips += (
+                        f' <span style="font-size:10px;font-weight:600;'
+                        f'color:#FFBF00;background:#002147;padding:2px 7px;'
+                        f'border-radius:10px;">{_unit_label}</span>'
+                    )
+                else:
+                    _time_chips = (
+                        f'<span style="font-size:12px;color:#718096;">'
+                        f'{_m["sampling_times"] or "Refer to USP"}</span>'
+                    )
 
                 _date_str = (
                     f' &nbsp;|&nbsp; Güncelleme: {_m["date_updated"]}'
@@ -4505,7 +4550,7 @@ elif nav == "🏛️ FDA Database":
                 )
 
                 # Kabul kriteri (FDA sitesinde yok ama tahmin edelim)
-                _q_lim, _q_t = _q_from_sampling(_m["sampling_times"])
+                _q_lim, _q_t = _q_from_sampling(_m["sampling_times"], _times, _unit)
                 if _q_lim and _q_t and _m["apparatus"] and "Refer" not in _m["apparatus"]:
                     st.markdown(
                         f'<div style="background:#c6efce;border:1px solid #86c99a;'
