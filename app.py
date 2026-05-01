@@ -4113,21 +4113,38 @@ elif nav == "🏛️ FDA Database":
 
     # ── HTML Parser ──────────────────────────────────────────────────────────
     def _parse_fda_html(html: str) -> list:
-        """FDA arama sonuç sayfasını parse eder."""
+        """FDA arama sonuç sayfasını parse eder.
+        
+        FDA DataTables yapısı:
+        <table id="example" class="table table-striped ...">
+          <thead>...</thead>
+          <tfoot>...</tfoot>  ← tfoot da başlık içeriyor, atlanmalı
+          <tbody>...</tbody>  ← sadece bu satırlar veri
+        </table>
+        """
         soup = _BS(html, "html.parser")
         results = []
 
-        # Tablo bul — FDA sayfasında class="table table-striped" veya ilk tablo
+        # Tablo bul — önce id="example" (FDA DataTables tablosu)
         table = (
-            soup.find("table", {"class": lambda c: c and "table" in c})
+            soup.find("table", id="example")
+            or soup.find("table", {"class": lambda c: c and "table" in c})
             or soup.find("table")
         )
         if not table:
             return results
 
-        rows = table.find_all("tr")
-        # Başlık satırını atla
-        for row in rows[1:]:
+        # KRİTİK: sadece tbody satırlarını al
+        # tfoot ve thead satırları başlık içeriyor → veri değil
+        tbody = table.find("tbody")
+        if tbody:
+            rows = tbody.find_all("tr")
+        else:
+            # tbody yoksa tüm tr'ler, ama ilk satırı atla
+            all_rows = table.find_all("tr")
+            rows = all_rows[1:]  # başlığı atla
+
+        for row in rows:
             cols = [td.get_text(separator=" ", strip=True)
                     for td in row.find_all(["td", "th"])]
             if len(cols) < 5:
@@ -4328,9 +4345,19 @@ elif nav == "🏛️ FDA Database":
                 f'[accessdata.fda.gov](https://www.accessdata.fda.gov/scripts/cder/dissolution/)'
             )
             if _raw_html:
-                with st.expander('🔧 Debug — FDA Ham Yanıt (tablo parse edilemedi)', expanded=True):
-                    st.caption(f'HTML boyutu: {len(_raw_html)} karakter. Tablo yapısını inceleyin.')
-                    st.code(_raw_html[:6000], language='html')
+                with st.expander('🔧 Debug — FDA Yanıt Analizi', expanded=True):
+                    _tbl_idx = _raw_html.lower().find('<table')
+                    _dn_idx  = _raw_html.lower().find('drug name')
+                    st.caption(f'HTML: {len(_raw_html)} karakter | Tablo pos: {_tbl_idx} | Drug Name pos: {_dn_idx}')
+                    if _tbl_idx > 0:
+                        st.success(f'✅ Tablo bulundu ({_tbl_idx}. karakterde)')
+                        st.code(_raw_html[_tbl_idx:_tbl_idx+3000], language='html')
+                    elif _dn_idx > 0:
+                        st.warning('⚠️ Drug Name var ama <table> yok')
+                        st.code(_raw_html[max(0,_dn_idx-100):_dn_idx+2000], language='html')
+                    else:
+                        st.error('❌ Tablo yok — yanlış sayfa gelmiş olabilir')
+                        st.code(_raw_html[:4000], language='html')
         else:
             # Sonuç sayısı başlığı
             st.markdown(
