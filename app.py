@@ -4192,34 +4192,94 @@ elif nav == "🏛️ FDA Database":
     def _fda_search_live(drug_name: str) -> tuple:
         """
         FDA dissolution DB'den canlı veri çeker.
+        FDA formu POST ile submit ediliyor.
         Returns: (results_list, error_message, debug_html)
-        Cache yok — her aramada taze veri.
         """
         if not _FDA_LIVE_OK:
             return [], "requests veya beautifulsoup4 paketi eksik", ""
         try:
             session = _requests.Session()
-            # Önce ana sayfayı ziyaret et (cookie/session için)
-            session.get(
-                "https://www.accessdata.fda.gov/scripts/cder/dissolution/index.cfm",
-                headers=_FDA_HEADERS, timeout=10
-            )
-            # Asıl arama
-            resp = session.get(
+
+            # Adım 1: Ana sayfayı ziyaret et — cookie ve session al
+            _index_url = "https://www.accessdata.fda.gov/scripts/cder/dissolution/index.cfm"
+            r0 = session.get(_index_url, headers=_FDA_HEADERS, timeout=10)
+
+            # Adım 2: POST ile form submit et (FDA formu POST kullanıyor)
+            _post_headers = {**_FDA_HEADERS,
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Origin": "https://www.accessdata.fda.gov",
+                "Referer": _index_url,
+            }
+            _post_data = {
+                "SearchTerm": drug_name,
+                "basic": "1",
+                "action": "Search",
+            }
+            resp_post = session.post(
                 _FDA_SEARCH_URL,
-                params={"SearchTerm": drug_name, "basic": "1"},
+                data=_post_data,
+                headers=_post_headers,
+                timeout=15,
+            )
+
+            # Adım 3: POST sonucu tablo içeriyor mu kontrol et
+            if "<table" in resp_post.text.lower() and "drug name" in resp_post.text.lower():
+                parsed = _parse_fda_html(resp_post.text)
+                return parsed, None, resp_post.text
+
+            # Adım 4: POST çalışmadıysa GET dene
+            resp_get = session.get(
+                _FDA_SEARCH_URL,
+                params={"SearchTerm": drug_name, "basic": "1", "action": "Search"},
                 headers=_FDA_HEADERS,
                 timeout=15,
             )
-            resp.raise_for_status()
-            parsed = _parse_fda_html(resp.text)
-            return parsed, None, resp.text
+            parsed_get = _parse_fda_html(resp_get.text)
+            _debug_html = resp_get.text if not parsed_get else resp_post.text
+            if parsed_get:
+                return parsed_get, None, resp_get.text
+
+            # Adım 5: Her ikisi de boş — CSV endpoint dene
+            _csv_url = "https://www.accessdata.fda.gov/scripts/cder/dissolution/dsp_getSearchResults.cfm"
+            resp_csv = session.get(
+                _csv_url,
+                params={"SearchTerm": drug_name, "format": "csv"},
+                headers=_FDA_HEADERS,
+                timeout=15,
+            )
+            if resp_csv.text and "," in resp_csv.text[:500]:
+                # CSV parse et
+                import io as _io_fda
+                import csv as _csv_fda
+                reader = _csv_fda.DictReader(_io_fda.StringIO(resp_csv.text))
+                results_csv = []
+                for row in reader:
+                    results_csv.append({
+                        "drug_name":      row.get("Drug Name",""),
+                        "dosage_form":    row.get("Dosage Form",""),
+                        "apparatus":      row.get("USP Apparatus",""),
+                        "speed_rpm":      row.get("Speed (RPMs)",""),
+                        "medium":         row.get("Medium",""),
+                        "volume_ml":      row.get("Volume (mL)",""),
+                        "sampling_times": row.get("Recommended Sampling Times (minutes)",""),
+                        "acceptance_criteria": "",
+                        "strength":       "",
+                        "date_updated":   row.get("Date Updated",""),
+                        "source":         "FDA CSV",
+                    })
+                if results_csv:
+                    return results_csv, None, resp_csv.text
+
+            # Hepsi başarısız — debug için en iyi yanıtı döndür
+            _best = max([resp_post, resp_get], key=lambda r: len(r.text))
+            return [], None, _best.text
+
         except _requests.exceptions.Timeout:
             return [], "FDA sunucusuna bağlanılamadı (timeout). Lütfen tekrar deneyin.", ""
         except _requests.exceptions.ConnectionError as e:
             return [], f"İnternet bağlantısı kurulamadı: {e}", ""
         except _requests.exceptions.HTTPError as e:
-            return [], f"FDA HTTP hatası: {e} — FDA sitesi erişimi kısıtlamış olabilir.", ""
+            return [], f"FDA HTTP hatası: {e}", ""
         except Exception as e:
             return [], f"FDA erişim hatası: {str(e)}", ""
 
