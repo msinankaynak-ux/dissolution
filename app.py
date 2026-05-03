@@ -1354,6 +1354,63 @@ def _pubchem_fetch(name: str) -> dict:
 
 
 # BCS sınıflandırması kaldırıldı — deneysel ölçüm gerektirir (FDA 2005, Amidon 1995)
+# BCS renk ve metadata standardı (ICH M9 / FDA Guidance konvansiyonu)
+_BCS_META = {
+    "I":   {"bg":"#c6efce","text":"#1a5c2e","border":"#86c99a",
+            "desc":"Yüksek çözünürlük · Yüksek permeabilite","biowaiver":"Biowaiver adayı"},
+    "II":  {"bg":"#fff3cd","text":"#856404","border":"#f0d060",
+            "desc":"Düşük çözünürlük · Yüksek permeabilite","biowaiver":"Dissolution rate-limiting"},
+    "III": {"bg":"#dbeafe","text":"#185fa5","border":"#93c5fd",
+            "desc":"Yüksek çözünürlük · Düşük permeabilite","biowaiver":"Permeabilite rate-limiting"},
+    "IV":  {"bg":"#ffc7ce","text":"#9c1c1c","border":"#f09595",
+            "desc":"Düşük çözünürlük · Düşük permeabilite","biowaiver":"Zor formülasyon"},
+}
+
+def _extract_bcs_from_scite(text: str) -> list:
+    """
+    Scite/PubMed metninden BCS sınıflarını çıkarır.
+    Birden fazla sınıf dönebilir (örn: asiklovir BCS I ve III).
+    Returns: ["I", "III"] veya ["II"] veya []
+    """
+    import re as _re_bcs
+    found = set()
+    # "BCS class II", "BCS Class I", "Class II", "BCS II" vb.
+    patterns = [
+        r'BCS\s+[Cc]lass\s+([IVX]{1,3})',
+        r'[Cc]lass\s+([IVX]{1,3})\s+(?:drug|compound|according)',
+        r'BCS\s+([IVX]{1,3})',
+        r'[Bb]iopharmaceutics\s+[Cc]lassification.*?[Cc]lass\s+([IVX]{1,3})',
+    ]
+    valid = {"I","II","III","IV"}
+    for p in patterns:
+        for m in _re_bcs.finditer(p, text):
+            cls = m.group(1).upper()
+            if cls in valid:
+                found.add(cls)
+    return sorted(found, key=lambda x: ["I","II","III","IV"].index(x))
+
+
+def _bcs_badge_html(classes: list, source: str = "") -> str:
+    """BCS sınıfı rozetlerini HTML olarak döndürür."""
+    if not classes:
+        return (
+            '<span style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,191,0,0.3);'
+            'border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;color:#FFBF00;'
+            'letter-spacing:0.5px;">BCS SINIFI<br>'
+            '<span style="font-size:9px;font-weight:400;opacity:0.7;">Deneysel ölçüm gerektirir</span>'
+            '</span>'
+        )
+    badges = []
+    for cls in classes:
+        m = _BCS_META.get(cls, _BCS_META["IV"])
+        src_html = (f'<br><span style="font-size:9px;opacity:0.7;">{source}</span>' if source else "")
+        badges.append(
+            f'<span style="background:{m["bg"]};color:{m["text"]};border:1px solid {m["border"]};'
+            f'border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;'
+            f'display:inline-block;text-align:center;">'
+            f'BCS {cls}{src_html}</span>'
+        )
+    return " ".join(badges)
 
 
 def _lipinski_check(pc: dict) -> dict:
@@ -1421,338 +1478,6 @@ if nav == "Data Input":
             })
             st.success(f"Project '{new_proj_name}' saved.")
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # ETKİN MADDE MOTORU — Tüm sayfaları besler
-    # ══════════════════════════════════════════════════════════════════════════
-    st.markdown("---")
-    st.markdown(
-        '<h3 style="color:#002147;margin:0 0 8px;">🔬 Etkin Madde (API)</h3>'
-        '<p style="color:#888;font-size:0.85rem;margin:0 0 12px;">'
-        'Etkin madde adını girin → PubChem + FDA otomatik yüklenir → '
-        'Tüm DissolvA modülleri bu veriyi kullanır.</p>',
-        unsafe_allow_html=True
-    )
-
-    _as = st.session_state["active_substance"]
-    _api_col1, _api_col2 = st.columns([3, 1])
-    with _api_col1:
-        _api_name_input = st.text_input(
-            "Etkin Madde Adı",
-            value=_as.get("name", ""),
-            placeholder="Örn: Ibuprofen, Glipizide, Metformin...",
-            key="api_substance_name",
-            label_visibility="collapsed",
-        )
-    with _api_col2:
-        _api_fetch_btn = st.button(
-            "🔬 Yükle", key="api_fetch_btn",
-            use_container_width=True, type="primary",
-            help="PubChem + FDA verilerini çek"
-        )
-
-    # Fetch tetikleyici
-    _do_fetch = _api_fetch_btn and _api_name_input.strip()
-    _name_changed = _api_name_input.strip().lower() != _as.get("name", "").lower()
-
-    if _do_fetch or (_api_name_input.strip() and not _as.get("fetch_done") and _api_name_input.strip() == _as.get("name","")):
-        _substance = _api_name_input.strip()
-        with st.spinner(f"🔬 {_substance} için PubChem + FDA yükleniyor..."):
-            # PubChem
-            _pc_data = _pubchem_fetch(_substance)
-            # FDA
-            try:
-                import requests as _req_api
-                _fda_sess = _req_api.Session()
-                _fda_idx  = "https://www.accessdata.fda.gov/scripts/cder/dissolution/index.cfm"
-                _fda_srch = "https://www.accessdata.fda.gov/scripts/cder/dissolution/dsp_SearchResults.cfm"
-                _fda_hdrs = {
-                    "User-Agent": "Mozilla/5.0 Chrome/120.0",
-                    "Referer": _fda_idx,
-                    "Accept": "text/html,application/xhtml+xml",
-                }
-                _fda_sess.get(_fda_idx, headers=_fda_hdrs, timeout=8)
-                _fda_resp = _fda_sess.post(
-                    _fda_srch,
-                    data={"SearchTerm": _substance, "basic": "1", "action": "Search"},
-                    headers={**_fda_hdrs, "Content-Type": "application/x-www-form-urlencoded"},
-                    timeout=15,
-                )
-                from bs4 import BeautifulSoup as _BSapi
-                _soup = _BSapi(_fda_resp.text, "html.parser")
-                _tbl  = _soup.find("table", id="example") or _soup.find("table", {"class": lambda c: c and "table" in c})
-                _fda_methods = []
-                if _tbl:
-                    _tbody = _tbl.find("tbody")
-                    _rows  = _tbody.find_all("tr") if _tbody else _tbl.find_all("tr")[1:]
-                    import re as _re_api
-                    _app_map_api = {"I ":"USP I (Basket)","II":"USP II (Paddle)","III":"USP III (Reciprocating Cylinder)","IV":"USP IV (Flow-Through Cell)"}
-                    for _row in _rows:
-                        _cols = [td.get_text(separator=" ", strip=True) for td in _row.find_all(["td","th"])]
-                        if len(_cols) < 5: continue
-                        _app_raw = _cols[2]
-                        _app_clean = _app_raw
-                        for _k, _v in _app_map_api.items():
-                            if _app_raw.upper().startswith(_k.upper()):
-                                _app_clean = _v; break
-                        _fda_methods.append({
-                            "drug_name":     _cols[0],
-                            "dosage_form":   _cols[1],
-                            "apparatus":     _app_clean,
-                            "speed_rpm":     _cols[3],
-                            "medium":        _cols[4],
-                            "volume_ml":     _cols[5] if len(_cols)>5 else "",
-                            "sampling_times":_cols[6] if len(_cols)>6 else "",
-                            "date_updated":  _cols[7] if len(_cols)>7 else "",
-                        })
-            except Exception as _e_fda:
-                _fda_methods = []
-
-        # Session state'e kaydet
-        st.session_state["active_substance"] = {
-            "name":            _substance,
-            "pubchem":         _pc_data,
-            "bcs_class":       None,   # BCS: deneysel ölçüm gerektirir
-            "fda_methods":     _fda_methods,
-            "selected_method": None,
-            "fetch_done":      True,
-        }
-        _as = st.session_state["active_substance"]
-        st.rerun()
-
-    # ── Yüklü API verisi göster ───────────────────────────────────────────────
-    if _as.get("fetch_done") and _as.get("name"):
-        _pc  = _as["pubchem"] or {}
-        _bcs = _as["bcs_class"]
-
-        if "error" in _pc:
-            st.error(f"PubChem hatası: {_pc['error']}")
-        else:
-            # ── Üst satır: Yapı resmi + temel kimlik ─────────────────────────
-            st.markdown(
-                f'<div style="background:linear-gradient(135deg,#002147,#003a7a);'
-                f'border-radius:10px;padding:14px 20px;margin-bottom:12px;">'
-                f'<div style="display:flex;align-items:center;gap:16px;">'
-                f'<img src="{_pc.get("img_url","")}" style="width:90px;height:90px;'
-                f'object-fit:contain;background:white;border-radius:8px;padding:4px;" '
-                f'onerror="this.style.display=\"none\"">'
-                f'<div style="flex:1;">'
-                f'<div style="font-size:20px;font-weight:700;color:white;">{_as["name"]}</div>'
-                f'<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">'
-                f'{_pc.get("formula","")} &nbsp;|&nbsp; CAS: {_pc.get("cas","N/A")} &nbsp;|&nbsp; '
-                f'MW: {_pc.get("mw","")} g/mol</div>'
-                f'<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;">'
-                f'{(_pc.get("name","") or "")[:80]}</div>'
-                f'</div>'
-                + '<div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,191,0,0.3);'
-                  'border-radius:8px;padding:8px 14px;text-align:center;min-width:120px;">'
-                  '<div style="font-size:10px;font-weight:700;color:#FFBF00;letter-spacing:1px;">BCS SINIFI</div>'
-                  '<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;">Deneysel ölçüm<br>gerektirir</div>'
-                  '<div style="font-size:9px;color:rgba(255,191,0,0.5);margin-top:3px;">FDA 2005 · Amidon 1995</div>'
-                  '</div>'
-                f'</div></div>',
-                unsafe_allow_html=True
-            )
-
-            # ── Fizikokimyasal özellikler grid ───────────────────────────────
-            _metrics = [
-                ("MW",        f'{_pc.get("mw","")} g/mol',    "Moleküler Ağırlık"),
-                ("LogP",      f'{_pc.get("xlogp","N/A")}',    "Lipofilite (XLogP)"),
-                ("TPSA",      f'{_pc.get("tpsa","")} Ų',      "Polar Yüzey Alanı"),
-                ("HBD",       f'{_pc.get("hbd","")}',          "H-Bağı Donör"),
-                ("HBA",       f'{_pc.get("hba","")}',          "H-Bağı Akseptör"),
-                ("Rot. Bond", f'{_pc.get("rot_bonds","")}',    "Dönebilir Bağ"),
-            ]
-            _m_cols = st.columns(6)
-            for _ci, (_lbl, _val, _tip) in enumerate(_metrics):
-                with _m_cols[_ci]:
-                    st.markdown(
-                        f'<div style="background:#f8f9fa;border-radius:8px;padding:10px;'
-                        f'text-align:center;border:1px solid #e2e8f0;">'
-                        f'<div style="font-size:9px;font-weight:700;color:#718096;'
-                        f'text-transform:uppercase;">{_lbl}</div>'
-                        f'<div style="font-size:15px;font-weight:700;color:#002147;margin-top:3px;">'
-                        f'{_val}</div>'
-                        f'<div style="font-size:9px;color:#aaa;margin-top:2px;">{_tip}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True
-                    )
-
-            # ── Lipinski RO5 + BCS + Sink ────────────────────────────────────
-            _lipo    = _lipinski_check(_pc)
-            _sink    = _sink_condition(_pc,
-                           float(st.session_state.method_cfg.get("volume_ml", 900)),
-                           float(st.session_state.method_cfg.get("dose_mg", 100)))
-
-            _info_c1, _info_c2, _info_c3 = st.columns(3)
-
-            with _info_c1:
-                _ro5_color = "#c6efce" if _lipo["druglike"] else "#ffc7ce"
-                _ro5_lines = ""
-                for rule, (val, lim, ok) in _lipo["rules"].items():
-                    _icon = "✅" if ok else "❌"
-                    _vstr = f"{val:.2f}" if isinstance(val, float) else str(val)
-                    _ro5_lines += f'<div style="font-size:11px;">{_icon} {rule}: <strong>{_vstr}</strong></div>'
-
-                st.markdown(
-                    f'<div style="background:{_ro5_color};border-radius:8px;padding:10px 12px;">'
-                    f'<div style="font-size:11px;font-weight:700;color:#002147;margin-bottom:5px;">'
-                    f'Lipinski Rule of Five — {"✅ Uygun" if _lipo["druglike"] else "⚠️ İhlal"}</div>'
-                    f'{_ro5_lines}</div>',
-                    unsafe_allow_html=True
-                )
-
-            with _info_c2:
-                st.markdown(
-                    '<div style="background:#f8f9fa;border-radius:8px;padding:10px 12px;'
-                    'border:2px solid #e2e8f0;">' 
-                    '<div style="font-size:11px;font-weight:700;color:#002147;margin-bottom:5px;">'
-                    'BCS Sınıflandırması</div>'
-                    '<div style="font-size:11px;color:#555;line-height:1.6;">'
-                    'Deneysel çözünürlük (pH 1–6.8) ve permeabilite (Caco-2/PAMPA) ölçümü gerektirir.'
-                    '</div>'
-                    '<div style="font-size:10px;color:#888;margin-top:5px;">'
-                    '📖 FDA Guidance 2005 · ICH M9 · Amidon et al. 1995</div>'
-                    '</div>',
-                    unsafe_allow_html=True
-                )
-
-            with _info_c3:
-                _sink_color = "#c6efce" if _sink["sink_ok"] else "#fff3cd"
-                st.markdown(
-                    f'<div style="background:{_sink_color};border-radius:8px;padding:10px 12px;">'
-                    f'<div style="font-size:11px;font-weight:700;color:#002147;margin-bottom:5px;">'
-                    f'Sink Condition — {"✅ Sağlandı" if _sink["sink_ok"] else "⚠️ Kontrol Et"}</div>'
-                    f'<div style="font-size:11px;">Cs (tahmini): {_sink["cs_est_mg_ml"]} mg/mL</div>'
-                    f'<div style="font-size:11px;">Doz/Cs×V: {_sink["ratio"]:.3f} '
-                    f'({"< 1/3 ✓" if _sink["sink_ok"] else "> 1/3 ⚠️"})</div>'
-                    f'<div style="font-size:9px;color:#555;margin-top:3px;">{_sink["note"]}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-
-            # ── Deneysel özellikler (pKa, solubilite vb.) ────────────────────
-            if _pc.get("exp"):
-                with st.expander("📋 PubChem Deneysel Veriler (pKa, Solubilite, MP...)", expanded=False):
-                    _exp_cols = st.columns(2)
-                    for _ei, (_ek, _ev) in enumerate(_pc["exp"].items()):
-                        _exp_cols[_ei % 2].markdown(
-                            f'<div style="background:#f8f9fa;border-radius:6px;'
-                            f'padding:7px 10px;margin-bottom:5px;">'
-                            f'<span style="font-size:10px;font-weight:700;color:#718096;">{_ek}</span><br>'
-                            f'<span style="font-size:12px;color:#002147;">{_ev[:120]}</span></div>',
-                            unsafe_allow_html=True
-                        )
-            # Sinonimler
-            if _pc.get("synonyms"):
-                st.caption(f"Sinonimler: {', '.join(_pc['synonyms'][:6])}")
-
-            # ── FDA Dissolution Metodları ─────────────────────────────────────
-            st.markdown("---")
-            st.markdown(
-                f'<h4 style="color:#002147;margin:0 0 8px;">🏛️ FDA Dissolution Metodları — {_as["name"]}</h4>',
-                unsafe_allow_html=True
-            )
-
-            _fda_methods = _as.get("fda_methods", [])
-            if not _fda_methods:
-                st.info(
-                    f"FDA Dissolution Methods Database'de **{_as['name']}** icin kayitli metod bulunamadi. "
-                    f'"Refer to USP" kaydi olabilir — FDA sitesini kontrol edin: '
-                    f"https://www.accessdata.fda.gov/scripts/cder/dissolution/"
-                )
-            else:
-                st.markdown(
-                    f'<div style="font-size:13px;color:#555;margin-bottom:10px;">'
-                    f'<strong>{len(_fda_methods)}</strong> metod bulundu. '
-                    f'Uygun olani secip <strong>Method Settings Aktar</strong> butonuna tiklayin.</div>',
-                    unsafe_allow_html=True
-                )
-                import re as _re_as
-                for _fi, _fm in enumerate(_fda_methods):
-                    _is_selected = (st.session_state["active_substance"].get("selected_method") == _fi)
-                    _border_color = "#FFBF00" if _is_selected else "#e2e8f0"
-                    _bg_color     = "rgba(255,191,0,0.06)" if _is_selected else "white"
-                    _s_low = _fm.get("sampling_times","").lower()
-                    _unit_label = "saat" if ("hour" in _s_low or " hr" in _s_low) else "dk"
-                    _times_nums = _re_as.findall(r'\d+\.?\d*', _fm.get("sampling_times","").split(";")[0])
-
-                    st.markdown(
-                        f'<div style="background:{_bg_color};border:2px solid {_border_color};'
-                        f'border-radius:10px;padding:12px 16px;margin-bottom:8px;">'
-                        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-                        f'<div>'
-                        f'<span style="font-size:14px;font-weight:700;color:#002147;">{_fm["drug_name"]}</span>'
-                        f'<span style="font-size:12px;color:#718096;margin-left:8px;">{_fm["dosage_form"]}</span>'
-                        f'</div>'
-                        + (f'<span style="background:#FFBF00;color:#002147;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">✓ SEÇİLDİ</span>' if _is_selected else '') +
-                        f'</div>'
-                        f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;">'
-                        + "".join([
-                            f'<div style="background:#f8f9fa;border-radius:5px;padding:6px 8px;">'
-                            f'<div style="font-size:8px;font-weight:700;color:#718096;text-transform:uppercase;">{lbl}</div>'
-                            f'<div style="font-size:11px;font-weight:600;color:#002147;">{val}</div></div>'
-                            for lbl, val in [
-                                ("Aparat", _fm.get("apparatus","") or "Refer to USP"),
-                                ("Hız",    (_fm.get("speed_rpm","") or "—") + " rpm"),
-                                ("Hacim",  (_fm.get("volume_ml","") or "—") + " mL"),
-                                ("Güncelleme", _fm.get("date_updated","—")),
-                            ]
-                        ]) +
-                        f'</div>'
-                        f'<div style="background:#f8f9fa;border-radius:5px;padding:6px 10px;margin-bottom:6px;font-size:11px;color:#1a202c;">'
-                        f'<strong>Ortam:</strong> {_fm.get("medium","") or "Refer to USP"}</div>'
-                        f'<div style="font-size:11px;margin-bottom:6px;">'
-                        f'<strong>Örnekleme:</strong> '
-                        + " ".join([
-                            f'<span style="background:#002147;color:white;font-size:10px;'
-                            f'padding:1px 7px;border-radius:10px;">{int(float(t)) if float(t)==int(float(t)) else t}</span>'
-                            for t in _times_nums
-                        ])
-                        + f' <span style="font-size:10px;color:#FFBF00;background:#002147;padding:1px 6px;border-radius:8px;">{_unit_label}</span>'
-                        f'</div></div>',
-                        unsafe_allow_html=True
-                    )
-                    _fa, _fb = st.columns([2, 1])
-                    with _fa:
-                        if st.button(
-                            f"{'✓ Seçildi' if _is_selected else '⬆️ Bu Metodu Seç ve Aktar'}",
-                            key=f"as_select_{_fi}",
-                            use_container_width=True,
-                            type="primary" if not _is_selected else "secondary",
-                            disabled=bool(_fm.get("apparatus") and "Refer" in _fm.get("apparatus","")),
-                        ):
-                            # Method Settings'e aktar
-                            _cfg = st.session_state.method_cfg
-                            _app_map3 = {"1":"USP I (Basket)","2":"USP II (Paddle)",
-                                         "3":"USP III (Reciprocating Cylinder)","4":"USP IV (Flow-Through Cell)"}
-                            _an = _re_as.search(r'Apparatus\s+(\d+)', _fm.get("apparatus",""))
-                            if _an: _cfg["apparatus"] = _app_map3.get(_an.group(1), _fm["apparatus"])
-                            if _fm.get("medium") and "Refer" not in _fm.get("medium",""):
-                                _cfg["medium"] = _fm["medium"]
-                            if _fm.get("speed_rpm") and str(_fm["speed_rpm"]).isdigit():
-                                _cfg["rpm"] = int(_fm["speed_rpm"])
-                            if _fm.get("volume_ml") and str(_fm["volume_ml"]).isdigit():
-                                _cfg["volume_ml"] = int(_fm["volume_ml"])
-                            _cfg["temp_c"] = 37.0
-                            _t_nums = [float(x) for x in _re_as.findall(r'\d+\.?\d*', _fm.get("sampling_times","").split(";")[0])]
-                            if _t_nums:
-                                _last = max(_t_nums)
-                                _is_hr = "hour" in _fm.get("sampling_times","").lower() or " hr" in _fm.get("sampling_times","").lower()
-                                _cfg["q_time"]  = _last * 60 if _is_hr else _last
-                                _cfg["q_limit"] = 80.0
-                            st.session_state.method_cfg = _cfg
-                            st.session_state["active_substance"]["selected_method"] = _fi
-                            st.success(f"✅ Metod seçildi ve Method Settings'e aktarıldı!")
-                            st.rerun()
-                    with _fb:
-                        if _fm.get("apparatus") and "Refer" in _fm.get("apparatus",""):
-                            st.caption("⚠️ Refer to USP")
-
-        # PubChem bağlantısı
-        if _pc.get("pubchem_url"):
-            st.caption(f"🔗 [PubChem'de gör]({_pc['pubchem_url']})")
-
-    st.markdown("---")
 
     st.markdown(
         "<div class='info-banner'>"
@@ -5390,6 +5115,40 @@ elif nav == "💊 API Information":
         _fda = _as.get("fda_methods", [])
         _sel = _as.get("selected_method")
 
+        # ── BCS sınıfını literatürden çek ────────────────────────────────────
+        _bcs_classes = []
+        _bcs_source  = ""
+        if _as.get("bcs_from_lit"):
+            _bcs_classes = _as["bcs_from_lit"].get("classes", [])
+            _bcs_source  = _as["bcs_from_lit"].get("source", "")
+        else:
+            try:
+                import requests as _req_bcs
+                _sc = _req_bcs.get(
+                    "https://api.scite.ai/search/papers",
+                    params={"term": f"{_as['name']} BCS classification",
+                            "limit": 5},
+                    headers={"User-Agent": "DissolvA/4.0"}, timeout=8
+                )
+                if _sc.status_code == 200:
+                    for _h in _sc.json().get("hits", []):
+                        _txt = (_h.get("abstract","") or "") + " ".join(
+                            [c.get("snippet","") for c in _h.get("citations",[])]
+                        )
+                        _cls = _extract_bcs_from_scite(_txt)
+                        if _cls:
+                            _bcs_classes = _cls
+                            _auth = _h.get("authors",[{}])
+                            _an = _auth[0].get("authorName","").split()[-1] if _auth else ""
+                            _bcs_source = f"{_an} {_h.get('year','')}".strip()
+                            break
+            except Exception:
+                pass
+            st.session_state["active_substance"]["bcs_from_lit"] = {
+                "classes": _bcs_classes, "source": _bcs_source
+            }
+        _bcs_badge = _bcs_badge_html(_bcs_classes, _bcs_source)
+
         # ── Drug header ───────────────────────────────────────────────────────
         st.markdown(
             f'<div style="background:linear-gradient(135deg,#002147,#003a7a);'
@@ -5407,11 +5166,7 @@ elif nav == "💊 API Information":
             f'{(_pc.get("name","") or "")[:90]}</div>'
             f'</div>'
             f'<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">'
-            f'<span style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,191,0,0.3);'
-            f'border-radius:8px;padding:5px 12px;font-size:10px;font-weight:700;color:#FFBF00;'
-            f'letter-spacing:1px;">BCS SINIFI</span>'
-            f'<span style="font-size:10px;color:rgba(255,255,255,0.5);text-align:center;">'
-            f'Deneysel ölçüm<br>gerektirir</span>'
+            f'{_bcs_badge}'
             f'</div>'
             f'</div></div>',
             unsafe_allow_html=True
