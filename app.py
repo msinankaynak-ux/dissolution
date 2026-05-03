@@ -4660,49 +4660,83 @@ elif nav == "💊 API Information":
             except Exception:
                 pass
 
-            # Katman 2: PubMed abstract — Scite cevap vermezse
-            if not _bcs_done:
-                try:
-                    import requests as _req_bcs3
-                    import re as _re_bcs3
-                    from xml.etree import ElementTree as _ET3
+            # Katman 2: PubMed — hem Scite 403 verirse hem de ek makale ekle
+            # Her iki durumda da calistir — _bcs_papers_new listesini zenginlestir
+            try:
+                import requests as _req_bcs3
+                import re as _re_bcs3
+                from xml.etree import ElementTree as _ET3
+                # Genisletilmis sorgu: daha fazla makale bulmak icin
+                for _pm_term in [
+                    f'"{_substance}" BCS classification biopharmaceutics',
+                    f'"{_substance}" biopharmaceutics classification system',
+                ]:
                     _pm_r = _req_bcs3.get(
                         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-                        params={"db":"pubmed",
-                                "term":f'"{_substance}" BCS classification biopharmaceutics',
-                                "retmax":"8","retmode":"json","sort":"relevance"},
+                        params={"db":"pubmed","term":_pm_term,
+                                "retmax":"15","retmode":"json","sort":"relevance"},
                         headers={"User-Agent":"DissolvA/4.0"}, timeout=10
                     )
                     _pm_ids = _pm_r.json().get("esearchresult",{}).get("idlist",[])
-                    if _pm_ids:
-                        _pm_f = _req_bcs3.get(
-                            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
-                            params={"db":"pubmed","id":",".join(_pm_ids[:8]),
-                                    "retmode":"xml","rettype":"abstract"},
-                            headers={"User-Agent":"DissolvA/4.0"}, timeout=15
-                        )
-                        _root3 = _ET3.fromstring(_pm_f.text)
-                        for _art3 in _root3.findall(".//PubmedArticle"):
-                            _ab3 = " ".join(t.text or "" for t in _art3.findall(".//AbstractText"))
-                            _ti3 = _re_bcs3.sub(r"<[^>]+>","",
-                                   _art3.findtext(".//ArticleTitle") or "")
-                            _cls3 = _extract_bcs_from_scite(_ab3 + " " + _ti3, _substance)
-                            if _cls3:
-                                _bcs_classes_new = _cls3
-                                _ln3 = _art3.findtext(".//LastName","")
-                                _fn3 = _art3.findtext(".//Initials","")
-                                _yr3 = (_art3.findtext(".//PubDate/Year") or
-                                        _art3.findtext(".//PubDate/MedlineDate","")[:4])
-                                _bcs_source_new   = f"{_ln3} {_fn3} {_yr3}".strip()
-                                _bcs_abstract_new = _ab3[:400]
-                                _bcs_title_new    = _ti3
-                                _bcs_journal_new  = _art3.findtext(".//Journal/Title","")
-                                for _eid3 in _art3.findall(".//ArticleId"):
-                                    if _eid3.get("IdType") == "doi":
-                                        _bcs_doi_new = _eid3.text or ""
-                                break
-                except Exception:
-                    pass
+                    if not _pm_ids:
+                        continue
+                    _pm_f = _req_bcs3.get(
+                        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
+                        params={"db":"pubmed","id":",".join(_pm_ids[:15]),
+                                "retmode":"xml","rettype":"abstract"},
+                        headers={"User-Agent":"DissolvA/4.0"}, timeout=15
+                    )
+                    _root3 = _ET3.fromstring(_pm_f.text)
+                    _existing_dois = {p.get("doi","") for p in _bcs_papers_new}
+                    for _art3 in _root3.findall(".//PubmedArticle"):
+                        _ab3 = " ".join(t.text or "" for t in _art3.findall(".//AbstractText"))
+                        _ti3 = _re_bcs3.sub(r"<[^>]+>","",
+                               _art3.findtext(".//ArticleTitle") or "")
+                        _cls3 = _extract_bcs_from_scite(_ab3 + " " + _ti3, _substance)
+                        if not _cls3:
+                            continue
+                        _ln3  = _art3.findtext(".//LastName","")
+                        _fn3  = _art3.findtext(".//Initials","")
+                        _yr3  = (_art3.findtext(".//PubDate/Year") or
+                                 _art3.findtext(".//PubDate/MedlineDate","")[:4])
+                        _jnl3 = _art3.findtext(".//Journal/Title","")
+                        _doi3 = ""
+                        for _eid3 in _art3.findall(".//ArticleId"):
+                            if _eid3.get("IdType") == "doi":
+                                _doi3 = _eid3.text or ""
+                        # Kopyayi engelle
+                        if _doi3 and _doi3 in _existing_dois:
+                            continue
+                        _existing_dois.add(_doi3)
+                        # Cite sayisini PubMed'den alamiyoruz, 0 koy
+                        # Tab'da "PubMed" etiketi goster
+                        _bcs_papers_new.append({
+                            "classes":  _cls3,
+                            "title":    _ti3,
+                            "doi":      _doi3,
+                            "journal":  _jnl3,
+                            "year":     _yr3,
+                            "source":   f"{_ln3} {_fn3} {_yr3}".strip(),
+                            "abstract": _ab3[:400],
+                            "tally":    0,
+                            "snippets": [],
+                            "origin":   "PubMed",
+                        })
+            except Exception:
+                pass
+
+            # Papers listesinden ana degerleri guncelle
+            if _bcs_papers_new:
+                # Scite (tally>0) on siraya, PubMed arkayi doldursun
+                _bcs_papers_new.sort(key=lambda x: x.get("tally",0), reverse=True)
+                _first = _bcs_papers_new[0]
+                _bcs_classes_new  = _first["classes"]
+                _bcs_source_new   = _first["source"]
+                _bcs_title_new    = _first["title"]
+                _bcs_abstract_new = _first["abstract"]
+                _bcs_doi_new      = _first["doi"]
+                _bcs_journal_new  = _first["journal"]
+                _bcs_snippets_new = _first.get("snippets",[])
 
         st.session_state["active_substance"] = {
             "name": _substance, "pubchem": _pc_new, "bcs_class": None,
@@ -4988,9 +5022,16 @@ elif nav == "💊 API Information":
                             f'<div style="font-size:12px;font-weight:600;color:#002147;line-height:1.4;flex:1;">'
                             f'{_p.get("title","")[:100]}{"..." if len(_p.get("title",""))>100 else ""}'
                             f'</div>'
-                            f'<span style="background:#f0f0f0;color:#718096;font-size:10px;'
-                            f'padding:2px 7px;border-radius:10px;white-space:nowrap;margin-left:8px;">'
-                            f'{_tally} atif</span>'
+                            f'<div style="display:flex;gap:5px;align-items:center;margin-left:8px;flex-shrink:0;">'
+                            + (f'<span style="background:#dbeafe;color:#185fa5;font-size:9px;font-weight:600;'
+                               f'padding:2px 6px;border-radius:8px;">Scite</span>' 
+                               if _p.get("origin","Scite") == "Scite" and _tally > 0 else
+                               f'<span style="background:#f0e6ff;color:#6b21a8;font-size:9px;font-weight:600;'
+                               f'padding:2px 6px;border-radius:8px;">PubMed</span>') +
+                            (f'<span style="background:#f0f0f0;color:#718096;font-size:10px;'
+                             f'padding:2px 7px;border-radius:10px;">{_tally} atif</span>'
+                             if _tally > 0 else '') +
+                            f'</div>'
                             f'</div>'
                             f'<div style="font-size:10px;color:#718096;">'
                             f'{_p.get("source","")}'
