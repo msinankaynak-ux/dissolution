@@ -1328,60 +1328,7 @@ def _pubchem_fetch(name: str) -> dict:
         return {"error": str(e)}
 
 
-def _bcs_classify(pc: dict) -> dict:
-    """
-    BCS (Biopharmaceutics Classification System) tahmini.
-    Sınıf: I=yüksek çözünürlük+yüksek permeabilite,
-           II=düşük çözünürlük+yüksek permeabilite,
-           III=yüksek çözünürlük+düşük permeabilite,
-           IV=düşük çözünürlük+düşük permeabilite
-    """
-    xlogp = pc.get("xlogp")
-    mw    = float(pc.get("mw", 0))
-    tpsa  = float(pc.get("tpsa", 0))
-    hbd   = int(pc.get("hbd", 0))
-    hba   = int(pc.get("hba", 0))
-
-    # Permeabilite tahmini (Lipinski-based)
-    # Düşük permeabilite göstergeleri: MW>500, LogP>5, HBD>5, HBA>10, TPSA>140
-    perm_score = 0
-    if mw > 500:   perm_score += 1
-    if xlogp and xlogp < 0: perm_score += 2  # çok hidrofilik
-    if tpsa > 140: perm_score += 2
-    if hbd > 5:    perm_score += 1
-    if hba > 10:   perm_score += 1
-    high_perm = perm_score <= 1
-
-    # Çözünürlük tahmini (LogP + MW proxy)
-    sol_score = 0
-    if xlogp and xlogp > 2:   sol_score += 2
-    if xlogp and xlogp > 4:   sol_score += 1
-    if mw > 400:               sol_score += 1
-    high_sol = sol_score <= 1
-
-    if   high_sol and high_perm:  cls, color = "I",   "#c6efce"
-    elif not high_sol and high_perm: cls, color = "II",  "#fff3cd"
-    elif high_sol and not high_perm: cls, color = "III", "#dbeafe"
-    else:                         cls, color = "IV",  "#ffc7ce"
-
-    descs = {
-        "I":   "Yüksek çözünürlük, Yüksek permeabilite — Biyoyararlanım iyi",
-        "II":  "Düşük çözünürlük, Yüksek permeabilite — Dissolution rate-limiting",
-        "III": "Yüksek çözünürlük, Düşük permeabilite — Permeabilite rate-limiting",
-        "IV":  "Düşük çözünürlük, Düşük permeabilite — Formülasyon zorlu",
-    }
-    method_hints = {
-        "I":   "pH 6.8 veya saf su yeterli. USP Apparatus 2, 50 rpm.",
-        "II":  "Surfaktan eklenebilir (0.5% SDS). pH 6.8 veya 7.2 buffer. Sink condition kritik.",
-        "III": "pH 6.8 buffer. Klasik dissolution metodu uygulanabilir.",
-        "IV":  "Özel ortam gerekebilir. Surfaktan + biyolojik ortam (FaSSIF/FeSSIF) düşünülmeli.",
-    }
-    return {
-        "class": cls, "color": color,
-        "description": descs[cls],
-        "method_hint": method_hints[cls],
-        "high_sol": high_sol, "high_perm": high_perm,
-    }
+# BCS sınıflandırması kaldırıldı — deneysel ölçüm gerektirir (FDA 2005, Amidon 1995)
 
 
 def _lipinski_check(pc: dict) -> dict:
@@ -1535,14 +1482,11 @@ if nav == "Data Input":
             except Exception as _e_fda:
                 _fda_methods = []
 
-        # BCS sınıfı
-        _bcs = _bcs_classify(_pc_data) if "error" not in _pc_data else None
-
         # Session state'e kaydet
         st.session_state["active_substance"] = {
             "name":            _substance,
             "pubchem":         _pc_data,
-            "bcs_class":       _bcs,
+            "bcs_class":       None,   # BCS: deneysel ölçüm gerektirir
             "fda_methods":     _fda_methods,
             "selected_method": None,
             "fetch_done":      True,
@@ -1574,10 +1518,12 @@ if nav == "Data Input":
                 f'<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px;">'
                 f'{(_pc.get("name","") or "")[:80]}</div>'
                 f'</div>'
-                + (f'<div style="background:{_bcs["color"]};border-radius:8px;padding:8px 14px;text-align:center;">'
-                   f'<div style="font-size:22px;font-weight:800;color:#002147;">BCS {_bcs["class"]}</div>'
-                   f'<div style="font-size:9px;color:#333;font-weight:600;">SINIF TAHMİNİ</div>'
-                   f'</div>' if _bcs else '') +
+                + '<div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,191,0,0.3);'
+                  'border-radius:8px;padding:8px 14px;text-align:center;min-width:120px;">'
+                  '<div style="font-size:10px;font-weight:700;color:#FFBF00;letter-spacing:1px;">BCS SINIFI</div>'
+                  '<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px;">Deneysel ölçüm<br>gerektirir</div>'
+                  '<div style="font-size:9px;color:rgba(255,191,0,0.5);margin-top:3px;">FDA 2005 · Amidon 1995</div>'
+                  '</div>'
                 f'</div></div>',
                 unsafe_allow_html=True
             )
@@ -1631,16 +1577,19 @@ if nav == "Data Input":
                 )
 
             with _info_c2:
-                if _bcs:
-                    st.markdown(
-                        f'<div style="background:{_bcs["color"]};border-radius:8px;padding:10px 12px;">'
-                        f'<div style="font-size:11px;font-weight:700;color:#002147;margin-bottom:5px;">'
-                        f'BCS Sınıf {_bcs["class"]} (Tahmin)</div>'
-                        f'<div style="font-size:11px;">{_bcs["description"]}</div>'
-                        f'<div style="font-size:10px;color:#555;margin-top:5px;">💡 {_bcs["method_hint"]}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True
-                    )
+                st.markdown(
+                    '<div style="background:#f8f9fa;border-radius:8px;padding:10px 12px;'
+                    'border:2px solid #e2e8f0;">' 
+                    '<div style="font-size:11px;font-weight:700;color:#002147;margin-bottom:5px;">'
+                    'BCS Sınıflandırması</div>'
+                    '<div style="font-size:11px;color:#555;line-height:1.6;">'
+                    'Deneysel çözünürlük (pH 1–6.8) ve permeabilite (Caco-2/PAMPA) ölçümü gerektirir.'
+                    '</div>'
+                    '<div style="font-size:10px;color:#888;margin-top:5px;">'
+                    '📖 FDA Guidance 2005 · ICH M9 · Amidon et al. 1995</div>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
 
             with _info_c3:
                 _sink_color = "#c6efce" if _sink["sink_ok"] else "#fff3cd"
@@ -2407,9 +2356,6 @@ elif nav == "Kinetic Model Fitting":
         _fda_km = _as_km.get("fda_methods", [])
         _sel_fda = _fda_km[_sel_km] if (_sel_km is not None and _sel_km < len(_fda_km)) else None
 
-        _bcs_color = _bcs_km.get("color", "#f8f9fa") if _bcs_km else "#f8f9fa"
-        _bcs_cls   = _bcs_km.get("class", "?") if _bcs_km else "?"
-
         st.markdown(
             f'<div style="background:linear-gradient(90deg,#002147,#003a7a);'
             f'border-radius:8px;padding:10px 18px;margin-bottom:14px;'
@@ -2423,9 +2369,6 @@ elif nav == "Kinetic Model Fitting":
             + (f'<div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:2px;">'
                f'FDA Metod: {_sel_fda["apparatus"]} | {_sel_fda["speed_rpm"]} rpm | '
                f'{_sel_fda["medium"][:50]}</div>' if _sel_fda else '') +
-            f'</div>'
-            f'<div style="background:{_bcs_color};border-radius:6px;padding:5px 12px;text-align:center;">'
-            f'<div style="font-size:16px;font-weight:800;color:#002147;">BCS {_bcs_cls}</div>'
             f'</div></div>',
             unsafe_allow_html=True
         )
@@ -4322,21 +4265,17 @@ elif nav == "Excel Report":
                     ws_api.write(row, 1, str(ev)[:100], fmt_api_v)
                     row += 1
 
-            # BCS sınıfı
+            # BCS sınıfı — deneysel ölçüm gerektirir
             row += 1
             ws_api.write(row, 0, "BCS CLASSIFICATION", fmt_api_h)
             ws_api.write(row, 1, "", fmt_api_h)
             row += 1
-            if _bcs_xl:
-                ws_api.write(row, 0, "Estimated BCS Class", fmt_api_k)
-                ws_api.write(row, 1, f"Class {_bcs_xl.get('class','?')}", fmt_api_bcs)
-                row += 1
-                ws_api.write(row, 0, "Description", fmt_api_k)
-                ws_api.write(row, 1, _bcs_xl.get("description",""), fmt_api_v)
-                row += 1
-                ws_api.write(row, 0, "Method Recommendation", fmt_api_k)
-                ws_api.write(row, 1, _bcs_xl.get("method_hint",""), fmt_api_v)
-                row += 1
+            ws_api.write(row, 0, "BCS Class", fmt_api_k)
+            ws_api.write(row, 1, "Deneysel çözünürlük ve permeabilite ölçümü gerektirir.", fmt_api_v)
+            row += 1
+            ws_api.write(row, 0, "Referans", fmt_api_k)
+            ws_api.write(row, 1, "FDA Guidance for Industry: Waiver of In Vivo Bioavailability (2000); Amidon et al. Pharm Res 1995; ICH M9 (2019)", fmt_api_v)
+            row += 1
 
             # Seçili FDA metod
             if _sel_xl is not None and _sel_xl < len(_fda_xl):
