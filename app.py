@@ -4578,9 +4578,74 @@ elif nav == "💊 API Information":
                         })
             except Exception:
                 _fda_new = []
+            # PubMed'den BCS parse et — yükleme sırasında yap
+            _bcs_classes_new = []
+            _bcs_source_new  = ""
+            _bcs_abstract_new = ""
+            _bcs_title_new   = ""
+            _bcs_doi_new     = ""
+            _bcs_journal_new = ""
+            try:
+                import requests as _req_bcs2
+                import re as _re_bcs2
+                # Sorgu: ilaç adı + BCS — kesin eşleşme için tırnak içinde
+                _bcs_term = f'"{_substance}" BCS classification biopharmaceutics'
+                _pm_bcs = _req_bcs2.get(
+                    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+                    params={"db":"pubmed","term":_bcs_term,
+                            "retmax":"8","retmode":"json","sort":"relevance"},
+                    headers={"User-Agent":"DissolvA/4.0"}, timeout=10
+                )
+                _bcs_pmids = _pm_bcs.json().get("esearchresult",{}).get("idlist",[])
+                if _bcs_pmids:
+                    _pm_fetch = _req_bcs2.get(
+                        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
+                        params={"db":"pubmed","id":",".join(_bcs_pmids[:8]),
+                                "retmode":"xml","rettype":"abstract"},
+                        headers={"User-Agent":"DissolvA/4.0"}, timeout=15
+                    )
+                    from xml.etree import ElementTree as _ET2
+                    _root2 = _ET2.fromstring(_pm_fetch.text)
+                    for _art2 in _root2.findall(".//PubmedArticle"):
+                        _ab2 = " ".join(t.text or "" for t in _art2.findall(".//AbstractText"))
+                        _ti2 = (_art2.findtext(".//ArticleTitle") or "")
+                        _ti2 = _re_bcs2.sub(r"<[^>]+>","", _ti2)
+                        # İlaç adı abstract veya title'da geçiyor mu?
+                        _subst_lower = _substance.lower()
+                        if _subst_lower not in _ab2.lower() and _subst_lower not in _ti2.lower():
+                            continue  # Bu ilaç için değil — atla
+                        _cls2 = _extract_bcs_from_scite(_ab2 + " " + _ti2)
+                        if _cls2:
+                            _bcs_classes_new = _cls2
+                            _ln2  = _art2.findtext(".//LastName","")
+                            _fn2  = _art2.findtext(".//Initials","")
+                            _yr2  = (_art2.findtext(".//PubDate/Year") or
+                                     _art2.findtext(".//PubDate/MedlineDate","")[:4])
+                            _jnl2 = _art2.findtext(".//Journal/Title","")
+                            _doi2 = ""
+                            for _eid2 in _art2.findall(".//ArticleId"):
+                                if _eid2.get("IdType") == "doi":
+                                    _doi2 = _eid2.text or ""
+                            _bcs_source_new  = f"{_ln2} {_fn2} {_yr2}".strip()
+                            _bcs_abstract_new = _ab2[:500]
+                            _bcs_title_new   = _ti2
+                            _bcs_doi_new     = _doi2
+                            _bcs_journal_new = _jnl2
+                            break
+            except Exception:
+                pass
+
         st.session_state["active_substance"] = {
             "name": _substance, "pubchem": _pc_new, "bcs_class": None,
-            "bcs_from_lit": None, "fda_methods": _fda_new,
+            "bcs_from_lit": {
+                "classes":  _bcs_classes_new,
+                "source":   _bcs_source_new,
+                "abstract": _bcs_abstract_new,
+                "title":    _bcs_title_new,
+                "doi":      _bcs_doi_new,
+                "journal":  _bcs_journal_new,
+            },
+            "fda_methods": _fda_new,
             "selected_method": None, "fetch_done": True,
         }
         st.rerun()
@@ -4601,39 +4666,11 @@ elif nav == "💊 API Information":
         _fda = _as.get("fda_methods", [])
         _sel = _as.get("selected_method")
 
-        # ── BCS sınıfını literatürden çek ────────────────────────────────────
-        _bcs_classes = []
-        _bcs_source  = ""
-        if _as.get("bcs_from_lit"):
-            _bcs_classes = _as["bcs_from_lit"].get("classes", [])
-            _bcs_source  = _as["bcs_from_lit"].get("source", "")
-        else:
-            try:
-                import requests as _req_bcs
-                _sc = _req_bcs.get(
-                    "https://api.scite.ai/search/papers",
-                    params={"term": f"{_as['name']} BCS classification",
-                            "limit": 5},
-                    headers={"User-Agent": "DissolvA/4.0"}, timeout=8
-                )
-                if _sc.status_code == 200:
-                    for _h in _sc.json().get("hits", []):
-                        _txt = (_h.get("abstract","") or "") + " ".join(
-                            [c.get("snippet","") for c in _h.get("citations",[])]
-                        )
-                        _cls = _extract_bcs_from_scite(_txt)
-                        if _cls:
-                            _bcs_classes = _cls
-                            _auth = _h.get("authors",[{}])
-                            _an = _auth[0].get("authorName","").split()[-1] if _auth else ""
-                            _bcs_source = f"{_an} {_h.get('year','')}".strip()
-                            break
-            except Exception:
-                pass
-            st.session_state["active_substance"]["bcs_from_lit"] = {
-                "classes": _bcs_classes, "source": _bcs_source
-            }
-        _bcs_badge = _bcs_badge_html(_bcs_classes, _bcs_source)
+        # ── BCS — session state'den oku (yükleme sırasında parse edildi) ─────
+        _bcs_lit     = _as.get("bcs_from_lit") or {}
+        _bcs_classes = _bcs_lit.get("classes", [])
+        _bcs_source  = _bcs_lit.get("source", "")
+        _bcs_badge   = _bcs_badge_html(_bcs_classes, _bcs_source)
 
         # ── Drug header ───────────────────────────────────────────────────────
         st.markdown(
@@ -4826,67 +4863,94 @@ elif nav == "💊 API Information":
 
         # ── TAB 2: Literatür & BCS ────────────────────────────────────────────
         with _t2:
+            # BCS bilgisi — yükleme sırasında PubMed'den çekildi
+            _bcs_lit2 = _as.get("bcs_from_lit") or {}
+            _bcs_cls2 = _bcs_lit2.get("classes", [])
+            _bcs_src2 = _bcs_lit2.get("source", "")
+            _bcs_abs2 = _bcs_lit2.get("abstract", "")
+            _bcs_title2 = _bcs_lit2.get("title", "")
+            _bcs_doi2  = _bcs_lit2.get("doi", "")
+            _bcs_journal2 = _bcs_lit2.get("journal", "")
+
             st.markdown(
-                '<div style="font-size:11px;font-weight:700;color:#718096;'
-                'text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">'
-                'BCS Sınıfı — Peer-reviewed Doğrulama</div>',
+                "<div style='font-size:11px;font-weight:700;color:#718096;"
+                "text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;'>"
+                f"BCS Sınıfı — {_as['name']} için Literatür Taraması (PubMed)</div>",
                 unsafe_allow_html=True
             )
 
-            _quotes = [
-                (
-                    f'"{_as["name"]} belongs to BCS class II, its half-life is 2–4 hrs. '
-                    f'Poor soluble drugs like {_as["name"]} shows variable bioavailability '
-                    f'as their limiting factor is dissolution rate."',
-                    "Alotaibi et al. · PLoS One 2024",
-                    "https://doi.org/10.1371/journal.pone.0297467",
-                    "Open Access"
-                ),
-                (
-                    f'"{_as["name"]} (GPZ) belongs to Class II according to the BCS '
-                    f'with very low, pH dependent water solubility and good permeability."',
-                    "Fael et al. · J Pharm Sci 2018",
-                    "https://doi.org/10.1016/j.xphs.2018.05.015",
-                    ""
-                ),
-                (
-                    '"USP Apparatus II, pH 6.8 at 100 rpm was the most discriminating '
-                    'dissolution method." (Level A IVIVC, r² ≥ 0.9)',
-                    "Ghosh et al. · Biol Pharm Bull 2008",
-                    "https://doi.org/10.1248/bpb.31.1946",
-                    "IVIVC"
-                ),
-                (
-                    '"In the case of low solubility/high permeability drugs (BCS class 2), '
-                    'drug dissolution may be the rate limiting step and an IVIVC may be expected. '
-                    'A dissolution profile in multiple media is recommended."',
-                    "FDA Guidance — Dissolution Testing of IR Products (1997)",
-                    "",
-                    "FDA Guidance"
-                ),
-            ]
-            for _qt, _src, _doi, _badge in _quotes:
-                _badge_html = ""
-                if _badge:
-                    _bc = {"Open Access":"#27ae60","IVIVC":"#185fa5","FDA Guidance":"#856404"}.get(_badge,"#718096")
-                    _bg = {"Open Access":"#c6efce","IVIVC":"#dbeafe","FDA Guidance":"#fff3cd"}.get(_badge,"#f8f9fa")
-                    _badge_html = (f'<span style="background:{_bg};color:{_bc};font-size:9px;'
-                                   f'padding:1px 6px;border-radius:10px;margin-left:6px;">{_badge}</span>')
+            if _bcs_cls2:
+                # Renk rozetleri
+                badges_html = _bcs_badge_html(_bcs_cls2, "")
                 st.markdown(
-                    f'<div style="border-left:2px solid #dbeafe;padding:8px 12px;margin-bottom:8px;'
-                    f'background:#f8fbff;border-radius:0 8px 8px 0;">'
-                    f'<div style="font-size:12px;color:#1a202c;line-height:1.6;margin-bottom:4px;">{_qt}</div>'
-                    f'<div style="font-size:10px;color:#718096;">{_src}'
-                    f'{_badge_html}'
-                    + (f' · <a href="{_doi}" target="_blank" style="color:#185fa5;">DOI ↗</a>' if _doi else '') +
-                    f'</div></div>',
+                    f'<div style="margin-bottom:12px;">{badges_html}</div>',
                     unsafe_allow_html=True
                 )
+                # Kaynak makale
+                if _bcs_title2:
+                    _m = _BCS_META.get(_bcs_cls2[0], _BCS_META["IV"])
+                    st.markdown(
+                        f'<div style="border-left:3px solid {_m["border"]};'
+                        f'padding:10px 14px;margin-bottom:10px;'
+                        f'background:{_m["bg"]}20;border-radius:0 8px 8px 0;">'
+                        f'<div style="font-size:12px;font-weight:600;color:#002147;'
+                        f'margin-bottom:4px;">{_bcs_title2[:120]}'
+                        f'{"..." if len(_bcs_title2)>120 else ""}</div>'
+                        + (f'<div style="font-size:11px;color:#555;line-height:1.6;'
+                           f'margin-bottom:6px;">{_bcs_abs2[:400]}...</div>'
+                           if _bcs_abs2 else '') +
+                        f'<div style="font-size:10px;color:#718096;">'
+                        f'{_bcs_src2}'
+                        f'{" · " + _bcs_journal2 if _bcs_journal2 else ""}'
+                        + (f' · <a href="https://doi.org/{_bcs_doi2}" target="_blank" '
+                           f'style="color:#185fa5;">DOI ↗</a>' if _bcs_doi2 else '') +
+                        f'</div></div>',
+                        unsafe_allow_html=True
+                    )
+                # BCS sınıfına göre dissolution yorumu
+                for _cls_i in _bcs_cls2:
+                    _m_i = _BCS_META.get(_cls_i, {})
+                    st.markdown(
+                        f'<div style="background:#f8f9fa;border:0.5px solid #e2e8f0;'
+                        f'border-radius:8px;padding:10px 14px;margin-bottom:6px;">'
+                        f'<span style="background:{_m_i.get("bg","#eee")};'
+                        f'color:{_m_i.get("text","#333")};font-size:10px;font-weight:700;'
+                        f'padding:2px 8px;border-radius:10px;margin-right:8px;">BCS {_cls_i}</span>'
+                        f'<span style="font-size:12px;color:#002147;">'
+                        f'{_m_i.get("desc","")}</span>'
+                        f'<div style="font-size:11px;color:#718096;margin-top:4px;">'
+                        f'Biowaiver: {_m_i.get("biowaiver","")}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                # FDA Guidance yorumu
+                st.markdown(
+                    '<div style="background:#fff8e1;border:0.5px solid #f0d060;'
+                    'border-radius:8px;padding:10px 14px;margin-top:8px;font-size:11px;'
+                    'color:#556;line-height:1.6;">'
+                    '<strong>FDA Guidance (1713bp1):</strong> BCS II ve IV ilaçlarda '
+                    'dissolution hız kısıtlayıcı adım olabilir. Çoklu ortamda (pH 1.2, '
+                    '4.5, 6.8) dissolution profili önerilir. IVIVC beklentisi yüksektir.'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.info(
+                    f"**{_as['name']}** için PubMed'de BCS sınıfı içeren makale bulunamadı.\n\n"
+                    f"USP monografı veya EMA ürün bilgileri incelenebilir. "
+                    f"Deneysel solubilite (pH 1.2, 4.5, 6.8) ve Caco-2/PAMPA permeabilite "
+                    f"ölçümü ile BCS sınıflandırması yapılabilir (FDA Guidance 2000, ICH M9)."
+                )
+                st.caption("PubMed sorgusu: f'{drug_name} BCS classification biopharmaceutics'")
 
+            # Her zaman gösterilecek kaynak notu
             st.markdown(
-                '<div style="background:#c6efce;border:1px solid #86c99a;border-radius:8px;'
-                'padding:8px 14px;font-size:12px;color:#1a5c2e;font-weight:500;margin-top:8px;">'
-                '✓ BCS II — 3 bağımsız peer-reviewed kaynak tarafından doğrulandı</div>',
+                '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #e2e8f0;'
+                'font-size:10px;color:#aaa;line-height:1.7;">'
+                'Kaynak: PubMed NIH (eutils API) · BCS sınıfı deneysel ölçüm gerektirir '
+                '(FDA Guidance for Industry 2000, ICH M9 2019, Amidon et al. Pharm Res 1995). '
+                'Bu bilgi literatür taramasına dayanmaktadır, klinik karar için doğrulayın.'
+                '</div>',
                 unsafe_allow_html=True
             )
 
