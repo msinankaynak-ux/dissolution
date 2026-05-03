@@ -4445,25 +4445,69 @@ elif nav == "Excel Report":
 elif nav == "💊 API Information":
     import re as _re_api2
 
-    # ── PubMed arama fonksiyonu ───────────────────────────────────────────────
+    # ── PubMed Hybrid Arama Fonksiyonu (DissolvA v4.1) ────────────────────────
+    # Strateji: MeSH (controlled vocabulary) + Title/Abstract (free-text fallback)
+    # Bilimsel temel:
+    #   - MeSH: Kütüphaneci-küratör semantik hassasiyet (~%85-95 alaka oranı)
+    #   - TIAB: Yeni yayınlanmış (henüz indekslenmemiş) makaleleri yakalar
+    #   - [pt] filter: Editöryel/letter/case-report ekarte eder, sinyal artar
+    # Referans: NLM Technical Bulletin (2023), PubMed User Guide
     @st.cache_data(ttl=3600, show_spinner=False)
-    def _pubmed_search(drug_name: str, max_results: int = 17) -> list:
+    def _pubmed_search(drug_name: str, max_results: int = 17) -> tuple:
         try:
             import requests as _req
             base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-            # Arama
+
+            # --- HYBRID QUERY: MeSH + TIAB ---
+            hybrid_query = (
+                f'('
+                f'"{drug_name}"[MeSH Terms] OR "{drug_name}"[Title/Abstract]'
+                f') AND ('
+                f'"Solubility"[MeSH] OR "Biopharmaceutics"[MeSH] '
+                f'OR "Drug Liberation"[MeSH] OR "Permeability"[MeSH] '
+                f'OR dissolution[Title/Abstract] '
+                f'OR "in vitro release"[Title/Abstract] '
+                f'OR bioavailability[Title/Abstract]'
+                f') NOT ('
+                f'editorial[pt] OR letter[pt] OR "case reports"[pt]'
+                f')'
+            )
+
             r1 = _req.get(f"{base}/esearch.fcgi",
-                params={"db":"pubmed","term":f"{drug_name} dissolution method in vitro",
-                        "retmax":max_results,"retmode":"json","sort":"relevance"},
-                headers={"User-Agent":"DissolvA/4.0"}, timeout=10)
-            ids = r1.json().get("esearchresult",{}).get("idlist",[])
-            total = int(r1.json().get("esearchresult",{}).get("count",0))
+                params={
+                    "db": "pubmed",
+                    "term": hybrid_query,
+                    "retmax": max_results,
+                    "retmode": "json",
+                    "sort": "relevance",
+                    "usehistory": "y",
+                },
+                headers={"User-Agent": "DissolvA/4.1"}, timeout=12)
+
+            _json = r1.json().get("esearchresult", {})
+            ids = _json.get("idlist", [])
+            total = int(_json.get("count", 0))
+            query_translation = _json.get("querytranslation", "")
+
+            # --- FALLBACK: Hibrit boş döndüyse pure free-text dene ---
             if not ids:
-                return [], 0
+                r1b = _req.get(f"{base}/esearch.fcgi",
+                    params={"db": "pubmed",
+                            "term": f"{drug_name} dissolution",
+                            "retmax": max_results, "retmode": "json", "sort": "relevance"},
+                    headers={"User-Agent": "DissolvA/4.1"}, timeout=10)
+                _jb = r1b.json().get("esearchresult", {})
+                ids = _jb.get("idlist", [])
+                total = int(_jb.get("count", 0))
+                query_translation = "FALLBACK (free-text): " + _jb.get("querytranslation", "")
+
+            if not ids:
+                return [], 0, query_translation
+
             # Metadata
             r2 = _req.get(f"{base}/efetch.fcgi",
                 params={"db":"pubmed","id":",".join(ids),"retmode":"xml","rettype":"abstract"},
-                headers={"User-Agent":"DissolvA/4.0"}, timeout=15)
+                headers={"User-Agent":"DissolvA/4.1"}, timeout=15)
             # XML parse
             from xml.etree import ElementTree as ET
             root = ET.fromstring(r2.text)
@@ -4502,16 +4546,20 @@ elif nav == "💊 API Information":
                     abstract = " ".join(
                         (_re_api2.sub(r'<[^>]+>', '', t.text or "") for t in ab_texts)
                     )[:300]
+                    # MeSH terimleri (transparency için)
+                    mesh_terms = [m.findtext("DescriptorName", "")
+                                  for m in art.findall(".//MeshHeading")]
                     articles.append({
                         "pmid": pmid, "title": title, "year": year,
                         "journal": journal, "first_author": first_auth,
                         "doi": doi, "pmc": pmc, "abstract": abstract,
+                        "mesh": [m for m in mesh_terms if m][:5],
                     })
                 except Exception:
                     pass
-            return articles, total
+            return articles, total, query_translation
         except Exception as e:
-            return [], 0
+            return [], 0, f"Error: {e}"
 
     # ── Sayfa başlığı ─────────────────────────────────────────────────────────
     st.markdown(
@@ -4660,31 +4708,43 @@ elif nav == "💊 API Information":
             except Exception:
                 pass
 
-            # Katman 2: PubMed — hem Scite 403 verirse hem de ek makale ekle
-            # Her iki durumda da calistir — _bcs_papers_new listesini zenginlestir
+            # Katman 2: PubMed Hybrid (MeSH + TIAB) — BCS sınıf kanıtı odaklı
+            # Strateji #1: MeSH-anchored — "Acyclovir"[MeSH] + Biopharmaceutics[MeSH] + BCS[TIAB]
+            # Strateji #2: Pure TIAB — yeni/indekslenmemiş makaleleri yakalar
+            # Scite başarılı olsa bile çalışır, _bcs_papers_new listesini zenginleştirir
             try:
                 import requests as _req_bcs3
                 import re as _re_bcs3
                 from xml.etree import ElementTree as _ET3
-                # Genisletilmis sorgu: daha fazla makale bulmak icin
+                # Hybrid sorgu çiftleri
                 for _pm_term in [
-                    f'"{_substance}" BCS classification biopharmaceutics',
-                    f'"{_substance}" biopharmaceutics classification system',
+                    # Strateji #1: MeSH-anchored — yüksek hassasiyet
+                    f'(("{_substance}"[MeSH Terms] OR "{_substance}"[Title/Abstract]) '
+                    f'AND ("Biopharmaceutics"[MeSH] OR "Solubility"[MeSH] OR "Permeability"[MeSH]) '
+                    f'AND (BCS[Title/Abstract] OR "biopharmaceutic* classif*"[Title/Abstract] '
+                    f'OR "class I"[Title/Abstract] OR "class II"[Title/Abstract] '
+                    f'OR "class III"[Title/Abstract] OR "class IV"[Title/Abstract])) '
+                    f'NOT (editorial[pt] OR letter[pt])',
+                    # Strateji #2: TIAB-only — fallback / yeni makaleler
+                    f'"{_substance}"[Title/Abstract] AND '
+                    f'("biopharmaceutics classification system"[Title/Abstract] '
+                    f'OR "BCS class"[Title/Abstract] OR "BCS classification"[Title/Abstract])',
                 ]:
                     _pm_r = _req_bcs3.get(
                         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
                         params={"db":"pubmed","term":_pm_term,
-                                "retmax":"15","retmode":"json","sort":"relevance"},
-                        headers={"User-Agent":"DissolvA/4.0"}, timeout=10
+                                "retmax":"20","retmode":"json","sort":"relevance",
+                                "usehistory":"y"},
+                        headers={"User-Agent":"DissolvA/4.1"}, timeout=10
                     )
                     _pm_ids = _pm_r.json().get("esearchresult",{}).get("idlist",[])
                     if not _pm_ids:
                         continue
                     _pm_f = _req_bcs3.get(
                         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
-                        params={"db":"pubmed","id":",".join(_pm_ids[:15]),
+                        params={"db":"pubmed","id":",".join(_pm_ids[:20]),
                                 "retmode":"xml","rettype":"abstract"},
-                        headers={"User-Agent":"DissolvA/4.0"}, timeout=15
+                        headers={"User-Agent":"DissolvA/4.1"}, timeout=15
                     )
                     _root3 = _ET3.fromstring(_pm_f.text)
                     _existing_dois = {p.get("doi","") for p in _bcs_papers_new}
@@ -4709,7 +4769,7 @@ elif nav == "💊 API Information":
                             continue
                         _existing_dois.add(_doi3)
                         # Cite sayisini PubMed'den alamiyoruz, 0 koy
-                        # Tab'da "PubMed" etiketi goster
+                        # Tab'da "PubMed (Hybrid)" etiketi göster
                         _bcs_papers_new.append({
                             "classes":  _cls3,
                             "title":    _ti3,
@@ -4720,7 +4780,7 @@ elif nav == "💊 API Information":
                             "abstract": _ab3[:400],
                             "tally":    0,
                             "snippets": [],
-                            "origin":   "PubMed",
+                            "origin":   "PubMed (MeSH Hybrid)",
                         })
             except Exception:
                 pass
@@ -5157,8 +5217,8 @@ elif nav == "💊 API Information":
 
         # ── TAB 4: PubMed ─────────────────────────────────────────────────────
         with _t4:
-            with st.spinner(f"PubMed araniyor..."):
-                _pm_results, _pm_total = _pubmed_search(_as["name"])
+            with st.spinner(f"PubMed Hybrid (MeSH+TIAB) aranıyor..."):
+                _pm_results, _pm_total, _pm_qtrans = _pubmed_search(_as["name"])
 
             if not _pm_results:
                 st.warning("PubMed sonucu bulunamadi.")
@@ -5167,10 +5227,17 @@ elif nav == "💊 API Information":
 
             else:
                 st.markdown(
-                    f'<div style="font-size:12px;color:#555;margin-bottom:10px;">'
-                    f'PubMed ({_pm_total} makale) — Scite + PubMed NIH · ilk {len(_pm_results)} gösteriliyor</div>',
+                    f'<div style="font-size:12px;color:#555;margin-bottom:6px;">'
+                    f'<strong>{_pm_total}</strong> makale — Hybrid strateji '
+                    f'(MeSH + Title/Abstract) · ilk {len(_pm_results)} gösteriliyor</div>',
                     unsafe_allow_html=True
                 )
+                with st.expander("🔍 PubMed Sorgu Çevirisi (debug)", expanded=False):
+                    st.code(_pm_qtrans or "Sorgu çevirisi alınamadı", language="text")
+                    st.caption(
+                        "Bu, PubMed'in sorgunuzu nasıl yorumladığını gösterir. "
+                        "MeSH terimleri otomatik genişletildi mi kontrol edebilirsiniz."
+                    )
                 for _art in _pm_results:
                     _is_oa = bool(_art.get("pmc"))
                     _tag   = "OA" if _is_oa else _art.get("year","")
