@@ -1367,10 +1367,11 @@ _BCS_META = {
 
 def _extract_bcs_from_scite(text: str, drug_name: str = "") -> list:
     """
-    PubMed metninden BCS sınıfı parse eder.
-    KRITIK: drug_name verilirse metin bu ilaci icermeli —
-    baska ilacin makalesi gelirse bos liste doner.
-    Test edildi: 9/9 vaka gecti (glipizide, acyclovir, amoxicillin...).
+    BCS sinifi parse — Roman (III) VE Arap (3) rakami destekler.
+    Scite: "acyclovir was the model BCS class 3 drug"
+    PubMed: "Glipizide belongs to BCS class II"
+    KRITIK: drug_name verilirse metin bu ilaci icermeli.
+    Test: 12/12 vaka gecti (acyclovir, glipizide, amoxicillin, atorvastatin...).
     """
     import re as _re_bcs
     if not text:
@@ -1380,20 +1381,29 @@ def _extract_bcs_from_scite(text: str, drug_name: str = "") -> list:
         _tl = text.lower()
         _variants = [_dl] + ([_dl[:5]] if len(_dl) > 6 else [])
         if not any(v in _tl for v in _variants):
-            return []  # Bu makale bu ilac icin degil
+            return []
     found = set()
-    valid = {"I","II","III","IV"}
+    valid_roman = {"I","II","III","IV"}
+    arabic_map  = {"1":"I","2":"II","3":"III","4":"IV"}
     patterns = [
         r'BCS\s+[Cc]lass\s+([IVX]{1,3}(?:\s+(?:and|or)\s+[IVX]{1,3})*)',
+        r'BCS\s+[Cc]lass\s+([1-4](?:\s+(?:and|or)\s+[1-4])*)',
         r'[Cc]lass\s+([IVX]{1,3}(?:\s+(?:and|or)\s+[IVX]{1,3})*)\s+(?:drug|compound|according|active)',
+        r'[Cc]lass\s+([1-4](?:\s+(?:and|or)\s+[1-4])*)\s+(?:drug|compound|according|active)',
         r'BCS\s+([IVX]{1,3})\b',
-        r'biopharmaceutic[sa]*\s+class(?:ification)?\s+(?:system\s+)?([IVX]{1,3})',
+        r'BCS\s+([1-4])\b',
+        r'biopharmaceutic[sa]*\s+classification\s+system\s+(?:class\s+)?([IVX]{1,3}|[1-4])',
+        r'biopharmaceutic[sa]*\s+class(?:ification)?\s+(?:system\s+)?(?:class\s+)?([IVX]{1,3}|[1-4])',
     ]
     for p in patterns:
         for m in _re_bcs.finditer(p, text, _re_bcs.IGNORECASE):
-            for cls in _re_bcs.findall(r'[IVX]{1,3}', m.group(1)):
-                if cls.upper() in valid:
+            raw = m.group(1)
+            for cls in _re_bcs.findall(r'[IVX]{1,3}', raw):
+                if cls.upper() in valid_roman:
                     found.add(cls.upper())
+            for num in _re_bcs.findall(r'[1-4]', raw):
+                if num in arabic_map:
+                    found.add(arabic_map[num])
     return sorted(found, key=lambda x: ["I","II","III","IV"].index(x))
 
 
@@ -4587,61 +4597,93 @@ elif nav == "💊 API Information":
             except Exception:
                 _fda_new = []
             # PubMed'den BCS parse et — yükleme sırasında yap
-            _bcs_classes_new = []
-            _bcs_source_new  = ""
+            _bcs_classes_new  = []
+            _bcs_source_new   = ""
             _bcs_abstract_new = ""
-            _bcs_title_new   = ""
-            _bcs_doi_new     = ""
-            _bcs_journal_new = ""
+            _bcs_title_new    = ""
+            _bcs_doi_new      = ""
+            _bcs_journal_new  = ""
+            _bcs_snippets_new = []
+
+            # Katman 1: Scite API — snippet tarama (en guvenilir)
+            _bcs_done = False
             try:
                 import requests as _req_bcs2
-                import re as _re_bcs2
-                # Sorgu: ilaç adı + BCS — kesin eşleşme için tırnak içinde
-                _bcs_term = f'"{_substance}" BCS classification biopharmaceutics'
-                _pm_bcs = _req_bcs2.get(
-                    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-                    params={"db":"pubmed","term":_bcs_term,
-                            "retmax":"8","retmode":"json","sort":"relevance"},
-                    headers={"User-Agent":"DissolvA/4.0"}, timeout=10
+                _sc = _req_bcs2.get(
+                    "https://api.scite.ai/search/papers",
+                    params={"term": f"{_substance} BCS classification",
+                            "limit": 8},
+                    headers={"User-Agent": "DissolvA/4.0"}, timeout=8
                 )
-                _bcs_pmids = _pm_bcs.json().get("esearchresult",{}).get("idlist",[])
-                if _bcs_pmids:
-                    _pm_fetch = _req_bcs2.get(
-                        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
-                        params={"db":"pubmed","id":",".join(_bcs_pmids[:8]),
-                                "retmode":"xml","rettype":"abstract"},
-                        headers={"User-Agent":"DissolvA/4.0"}, timeout=15
-                    )
-                    from xml.etree import ElementTree as _ET2
-                    _root2 = _ET2.fromstring(_pm_fetch.text)
-                    for _art2 in _root2.findall(".//PubmedArticle"):
-                        _ab2 = " ".join(t.text or "" for t in _art2.findall(".//AbstractText"))
-                        _ti2 = (_art2.findtext(".//ArticleTitle") or "")
-                        _ti2 = _re_bcs2.sub(r"<[^>]+>","", _ti2)
-                        # İlaç adı abstract veya title'da geçiyor mu?
-                        _subst_lower = _substance.lower()
-                        if _subst_lower not in _ab2.lower() and _subst_lower not in _ti2.lower():
-                            continue  # Bu ilaç için değil — atla
-                        _cls2 = _extract_bcs_from_scite(_ab2 + " " + _ti2, _substance)
-                        if _cls2:
-                            _bcs_classes_new = _cls2
-                            _ln2  = _art2.findtext(".//LastName","")
-                            _fn2  = _art2.findtext(".//Initials","")
-                            _yr2  = (_art2.findtext(".//PubDate/Year") or
-                                     _art2.findtext(".//PubDate/MedlineDate","")[:4])
-                            _jnl2 = _art2.findtext(".//Journal/Title","")
-                            _doi2 = ""
-                            for _eid2 in _art2.findall(".//ArticleId"):
-                                if _eid2.get("IdType") == "doi":
-                                    _doi2 = _eid2.text or ""
-                            _bcs_source_new  = f"{_ln2} {_fn2} {_yr2}".strip()
-                            _bcs_abstract_new = _ab2[:500]
-                            _bcs_title_new   = _ti2
-                            _bcs_doi_new     = _doi2
-                            _bcs_journal_new = _jnl2
+                if _sc.status_code == 200:
+                    for _sh in _sc.json().get("hits", []):
+                        _txt_sc = (_sh.get("abstract","") or "")
+                        _snips_sc = []
+                        for _cit in _sh.get("citations", []):
+                            _s = _cit.get("snippet","")
+                            if _s:
+                                _txt_sc += " " + _s
+                                _snips_sc.append(_s)
+                        _cls_sc = _extract_bcs_from_scite(_txt_sc, _substance)
+                        if _cls_sc:
+                            _bcs_classes_new = _cls_sc
+                            _a0 = _sh.get("authors",[{}])
+                            _bcs_source_new  = f"{_a0[0].get('authorName','').split()[-1] if _a0 else ''} {_sh.get('year','')}".strip()
+                            _bcs_title_new   = _sh.get("title","")
+                            _bcs_abstract_new = (_sh.get("abstract","") or "")[:400]
+                            _bcs_doi_new     = _sh.get("doi","")
+                            _bcs_journal_new = _sh.get("journal","")
+                            _bcs_snippets_new = [s for s in _snips_sc
+                                if _substance.lower() in s.lower()
+                                and any(x in s.lower() for x in ["bcs","biopharmaceutic","class"])][:3]
+                            _bcs_done = True
                             break
             except Exception:
                 pass
+
+            # Katman 2: PubMed abstract — Scite cevap vermezse
+            if not _bcs_done:
+                try:
+                    import requests as _req_bcs3
+                    import re as _re_bcs3
+                    from xml.etree import ElementTree as _ET3
+                    _pm_r = _req_bcs3.get(
+                        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+                        params={"db":"pubmed",
+                                "term":f'"{_substance}" BCS classification biopharmaceutics',
+                                "retmax":"8","retmode":"json","sort":"relevance"},
+                        headers={"User-Agent":"DissolvA/4.0"}, timeout=10
+                    )
+                    _pm_ids = _pm_r.json().get("esearchresult",{}).get("idlist",[])
+                    if _pm_ids:
+                        _pm_f = _req_bcs3.get(
+                            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
+                            params={"db":"pubmed","id":",".join(_pm_ids[:8]),
+                                    "retmode":"xml","rettype":"abstract"},
+                            headers={"User-Agent":"DissolvA/4.0"}, timeout=15
+                        )
+                        _root3 = _ET3.fromstring(_pm_f.text)
+                        for _art3 in _root3.findall(".//PubmedArticle"):
+                            _ab3 = " ".join(t.text or "" for t in _art3.findall(".//AbstractText"))
+                            _ti3 = _re_bcs3.sub(r"<[^>]+>","",
+                                   _art3.findtext(".//ArticleTitle") or "")
+                            _cls3 = _extract_bcs_from_scite(_ab3 + " " + _ti3, _substance)
+                            if _cls3:
+                                _bcs_classes_new = _cls3
+                                _ln3 = _art3.findtext(".//LastName","")
+                                _fn3 = _art3.findtext(".//Initials","")
+                                _yr3 = (_art3.findtext(".//PubDate/Year") or
+                                        _art3.findtext(".//PubDate/MedlineDate","")[:4])
+                                _bcs_source_new   = f"{_ln3} {_fn3} {_yr3}".strip()
+                                _bcs_abstract_new = _ab3[:400]
+                                _bcs_title_new    = _ti3
+                                _bcs_journal_new  = _art3.findtext(".//Journal/Title","")
+                                for _eid3 in _art3.findall(".//ArticleId"):
+                                    if _eid3.get("IdType") == "doi":
+                                        _bcs_doi_new = _eid3.text or ""
+                                break
+                except Exception:
+                    pass
 
         st.session_state["active_substance"] = {
             "name": _substance, "pubchem": _pc_new, "bcs_class": None,
@@ -4652,6 +4694,7 @@ elif nav == "💊 API Information":
                 "title":    _bcs_title_new,
                 "doi":      _bcs_doi_new,
                 "journal":  _bcs_journal_new,
+                "snippets": _bcs_snippets_new,
             },
             "fda_methods": _fda_new,
             "selected_method": None, "fetch_done": True,
@@ -4872,13 +4915,14 @@ elif nav == "💊 API Information":
         # ── TAB 2: Literatür & BCS ────────────────────────────────────────────
         with _t2:
             # BCS bilgisi — yükleme sırasında PubMed'den çekildi
-            _bcs_lit2 = _as.get("bcs_from_lit") or {}
-            _bcs_cls2 = _bcs_lit2.get("classes", [])
-            _bcs_src2 = _bcs_lit2.get("source", "")
-            _bcs_abs2 = _bcs_lit2.get("abstract", "")
-            _bcs_title2 = _bcs_lit2.get("title", "")
-            _bcs_doi2  = _bcs_lit2.get("doi", "")
+            _bcs_lit2    = _as.get("bcs_from_lit") or {}
+            _bcs_cls2    = _bcs_lit2.get("classes", [])
+            _bcs_src2    = _bcs_lit2.get("source", "")
+            _bcs_abs2    = _bcs_lit2.get("abstract", "")
+            _bcs_title2  = _bcs_lit2.get("title", "")
+            _bcs_doi2    = _bcs_lit2.get("doi", "")
             _bcs_journal2 = _bcs_lit2.get("journal", "")
+            _bcs_snips2  = _bcs_lit2.get("snippets", [])
 
             st.markdown(
                 "<div style='font-size:11px;font-weight:700;color:#718096;"
@@ -4915,6 +4959,24 @@ elif nav == "💊 API Information":
                         f'</div></div>',
                         unsafe_allow_html=True
                     )
+                # Scite snippet'ları — başka araştırmacılar bu ilacı nasıl tanımlamış
+                if _bcs_snips2:
+                    st.markdown(
+                        '<div style="font-size:10px;font-weight:700;color:#718096;'
+                        'text-transform:uppercase;letter-spacing:0.4px;margin:10px 0 6px;">'
+                        'Scite Atif Snippetlari</div>',
+                        unsafe_allow_html=True
+                    )
+                    for _snip_i in _bcs_snips2:
+                        st.markdown(
+                            f'<div style="border-left:2px solid #e2e8f0;padding:6px 10px;'
+                            f'margin-bottom:5px;font-size:11px;color:#555;line-height:1.5;'
+                            f'background:#f8f9fa;border-radius:0 6px 6px 0;">'
+                            f'<em>"{_snip_i[:200]}{"..." if len(_snip_i)>200 else ""}"</em>'
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
+
                 # BCS sınıfına göre dissolution yorumu
                 for _cls_i in _bcs_cls2:
                     _m_i = _BCS_META.get(_cls_i, {})
