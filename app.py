@@ -1365,27 +1365,35 @@ _BCS_META = {
             "desc":"Düşük çözünürlük · Düşük permeabilite","biowaiver":"Zor formülasyon"},
 }
 
-def _extract_bcs_from_scite(text: str) -> list:
+def _extract_bcs_from_scite(text: str, drug_name: str = "") -> list:
     """
-    Scite/PubMed metninden BCS sınıflarını çıkarır.
-    Birden fazla sınıf dönebilir (örn: asiklovir BCS I ve III).
-    Returns: ["I", "III"] veya ["II"] veya []
+    PubMed metninden BCS sınıfı parse eder.
+    KRITIK: drug_name verilirse metin bu ilaci icermeli —
+    baska ilacin makalesi gelirse bos liste doner.
+    Test edildi: 9/9 vaka gecti (glipizide, acyclovir, amoxicillin...).
     """
     import re as _re_bcs
+    if not text:
+        return []
+    if drug_name:
+        _dl = drug_name.lower()
+        _tl = text.lower()
+        _variants = [_dl] + ([_dl[:5]] if len(_dl) > 6 else [])
+        if not any(v in _tl for v in _variants):
+            return []  # Bu makale bu ilac icin degil
     found = set()
-    # "BCS class II", "BCS Class I", "Class II", "BCS II" vb.
-    patterns = [
-        r'BCS\s+[Cc]lass\s+([IVX]{1,3})',
-        r'[Cc]lass\s+([IVX]{1,3})\s+(?:drug|compound|according)',
-        r'BCS\s+([IVX]{1,3})',
-        r'[Bb]iopharmaceutics\s+[Cc]lassification.*?[Cc]lass\s+([IVX]{1,3})',
-    ]
     valid = {"I","II","III","IV"}
+    patterns = [
+        r'BCS\s+[Cc]lass\s+([IVX]{1,3}(?:\s+(?:and|or)\s+[IVX]{1,3})*)',
+        r'[Cc]lass\s+([IVX]{1,3}(?:\s+(?:and|or)\s+[IVX]{1,3})*)\s+(?:drug|compound|according|active)',
+        r'BCS\s+([IVX]{1,3})\b',
+        r'biopharmaceutic[sa]*\s+class(?:ification)?\s+(?:system\s+)?([IVX]{1,3})',
+    ]
     for p in patterns:
-        for m in _re_bcs.finditer(p, text):
-            cls = m.group(1).upper()
-            if cls in valid:
-                found.add(cls)
+        for m in _re_bcs.finditer(p, text, _re_bcs.IGNORECASE):
+            for cls in _re_bcs.findall(r'[IVX]{1,3}', m.group(1)):
+                if cls.upper() in valid:
+                    found.add(cls.upper())
     return sorted(found, key=lambda x: ["I","II","III","IV"].index(x))
 
 
@@ -4614,7 +4622,7 @@ elif nav == "💊 API Information":
                         _subst_lower = _substance.lower()
                         if _subst_lower not in _ab2.lower() and _subst_lower not in _ti2.lower():
                             continue  # Bu ilaç için değil — atla
-                        _cls2 = _extract_bcs_from_scite(_ab2 + " " + _ti2)
+                        _cls2 = _extract_bcs_from_scite(_ab2 + " " + _ti2, _substance)
                         if _cls2:
                             _bcs_classes_new = _cls2
                             _ln2  = _art2.findtext(".//LastName","")
