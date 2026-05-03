@@ -461,7 +461,6 @@ with st.sidebar:
     nav = st.radio("", [
         "Data Input", "Kinetic Model Fitting", "Statistical Analysis",
         "f1 and f2 Similarity", "Bootstrap f2 Analysis", "IVIVC Analysis",
-        "🏛️ FDA Database",
         "Excel Report", "Method Settings", "Analytical Settings",
         "💊 API Information",
         "📚 All References",
@@ -4423,593 +4422,6 @@ elif nav == "Excel Report":
         )
 
 # ===========================================================================
-# PAGE: FDA DATABASE
-# ===========================================================================
-elif nav == "🏛️ FDA Database":
-    import re as _re
-
-    # ── Bağımlılık kontrolü ──────────────────────────────────────────────────
-    try:
-        import requests as _requests
-        from bs4 import BeautifulSoup as _BS
-        _FDA_LIVE_OK = True
-    except ImportError:
-        _FDA_LIVE_OK = False
-
-    # ── Sabitler ─────────────────────────────────────────────────────────────
-    _FDA_SEARCH_URL = (
-        "https://www.accessdata.fda.gov/scripts/cder/dissolution/"
-        "dsp_SearchResults.cfm"
-    )
-    _FDA_HEADERS = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
-        ),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Referer": "https://www.accessdata.fda.gov/scripts/cder/dissolution/",
-        "Connection": "keep-alive",
-    }
-
-    # ── HTML Parser ──────────────────────────────────────────────────────────
-    def _parse_fda_html(html: str) -> list:
-        """FDA arama sonuç sayfasını parse eder.
-        
-        FDA DataTables yapısı:
-        <table id="example" class="table table-striped ...">
-          <thead>...</thead>
-          <tfoot>...</tfoot>  ← tfoot da başlık içeriyor, atlanmalı
-          <tbody>...</tbody>  ← sadece bu satırlar veri
-        </table>
-        """
-        soup = _BS(html, "html.parser")
-        results = []
-
-        # Tablo bul — önce id="example" (FDA DataTables tablosu)
-        table = (
-            soup.find("table", id="example")
-            or soup.find("table", {"class": lambda c: c and "table" in c})
-            or soup.find("table")
-        )
-        if not table:
-            return results
-
-        # KRİTİK: sadece tbody satırlarını al
-        # tfoot ve thead satırları başlık içeriyor → veri değil
-        tbody = table.find("tbody")
-        if tbody:
-            rows = tbody.find_all("tr")
-        else:
-            # tbody yoksa tüm tr'ler, ama ilk satırı atla
-            all_rows = table.find_all("tr")
-            rows = all_rows[1:]  # başlığı atla
-
-        for row in rows:
-            cols = [td.get_text(separator=" ", strip=True)
-                    for td in row.find_all(["td", "th"])]
-            if len(cols) < 5:
-                continue
-
-            # FDA sütun sırası:
-            # 0: Drug Name | 1: Dosage Form | 2: USP Apparatus
-            # 3: Speed (RPMs) | 4: Medium | 5: Volume (mL)
-            # 6: Recommended Sampling Times | 7: Date Updated
-
-            app_raw = cols[2] if len(cols) > 2 else ""
-            # "II (Paddle)" → "USP Apparatus 2 (Paddle)"
-            app_clean = app_raw
-            if app_raw and "Refer" not in app_raw:
-                app_map = {
-                    "I ": "USP Apparatus 1 (Basket)",
-                    "II": "USP Apparatus 2 (Paddle)",
-                    "III": "USP Apparatus 3 (Reciprocating Cylinder)",
-                    "IV": "USP Apparatus 4 (Flow-Through Cell)",
-                }
-                for k, v in app_map.items():
-                    if app_raw.upper().startswith(k.upper()):
-                        app_clean = v
-                        break
-
-            sampling = cols[6] if len(cols) > 6 else ""
-            date_upd  = cols[7] if len(cols) > 7 else ""
-
-            results.append({
-                "drug_name":          cols[0],
-                "dosage_form":        cols[1] if len(cols) > 1 else "",
-                "apparatus":          app_clean,
-                "speed_rpm":          cols[3] if len(cols) > 3 else "",
-                "medium":             cols[4] if len(cols) > 4 else "",
-                "volume_ml":          cols[5] if len(cols) > 5 else "",
-                "sampling_times":     sampling,
-                "acceptance_criteria": "",   # FDA sitesinde ayrı sütun yok
-                "strength":           "",    # FDA sitesinde yok
-                "date_updated":       date_upd,
-                "source":             "FDA Live",
-            })
-        return results
-
-    # ── Canlı Arama Fonksiyonu (Streamlit cache ile) ─────────────────────────
-    def _fda_search_live(drug_name: str) -> tuple:
-        """
-        FDA dissolution DB'den canlı veri çeker.
-        FDA formu POST ile submit ediliyor.
-        Returns: (results_list, error_message, debug_html)
-        """
-        if not _FDA_LIVE_OK:
-            return [], "requests veya beautifulsoup4 paketi eksik", ""
-        try:
-            session = _requests.Session()
-
-            # Adım 1: Ana sayfayı ziyaret et — cookie ve session al
-            _index_url = "https://www.accessdata.fda.gov/scripts/cder/dissolution/index.cfm"
-            r0 = session.get(_index_url, headers=_FDA_HEADERS, timeout=10)
-
-            # Adım 2: POST ile form submit et (FDA formu POST kullanıyor)
-            _post_headers = {**_FDA_HEADERS,
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Origin": "https://www.accessdata.fda.gov",
-                "Referer": _index_url,
-            }
-            _post_data = {
-                "SearchTerm": drug_name,
-                "basic": "1",
-                "action": "Search",
-            }
-            resp_post = session.post(
-                _FDA_SEARCH_URL,
-                data=_post_data,
-                headers=_post_headers,
-                timeout=15,
-            )
-
-            # Adım 3: POST sonucu tablo içeriyor mu kontrol et
-            if "<table" in resp_post.text.lower() and "drug name" in resp_post.text.lower():
-                parsed = _parse_fda_html(resp_post.text)
-                return parsed, None, resp_post.text
-
-            # Adım 4: POST çalışmadıysa GET dene
-            resp_get = session.get(
-                _FDA_SEARCH_URL,
-                params={"SearchTerm": drug_name, "basic": "1", "action": "Search"},
-                headers=_FDA_HEADERS,
-                timeout=15,
-            )
-            parsed_get = _parse_fda_html(resp_get.text)
-            _debug_html = resp_get.text if not parsed_get else resp_post.text
-            if parsed_get:
-                return parsed_get, None, resp_get.text
-
-            # Adım 5: Her ikisi de boş — CSV endpoint dene
-            _csv_url = "https://www.accessdata.fda.gov/scripts/cder/dissolution/dsp_getSearchResults.cfm"
-            resp_csv = session.get(
-                _csv_url,
-                params={"SearchTerm": drug_name, "format": "csv"},
-                headers=_FDA_HEADERS,
-                timeout=15,
-            )
-            if resp_csv.text and "," in resp_csv.text[:500]:
-                # CSV parse et
-                import io as _io_fda
-                import csv as _csv_fda
-                reader = _csv_fda.DictReader(_io_fda.StringIO(resp_csv.text))
-                results_csv = []
-                for row in reader:
-                    results_csv.append({
-                        "drug_name":      row.get("Drug Name",""),
-                        "dosage_form":    row.get("Dosage Form",""),
-                        "apparatus":      row.get("USP Apparatus",""),
-                        "speed_rpm":      row.get("Speed (RPMs)",""),
-                        "medium":         row.get("Medium",""),
-                        "volume_ml":      row.get("Volume (mL)",""),
-                        "sampling_times": row.get("Recommended Sampling Times (minutes)",""),
-                        "acceptance_criteria": "",
-                        "strength":       "",
-                        "date_updated":   row.get("Date Updated",""),
-                        "source":         "FDA CSV",
-                    })
-                if results_csv:
-                    return results_csv, None, resp_csv.text
-
-            # Hepsi başarısız — debug için en iyi yanıtı döndür
-            _best = max([resp_post, resp_get], key=lambda r: len(r.text))
-            return [], None, _best.text
-
-        except _requests.exceptions.Timeout:
-            return [], "FDA sunucusuna bağlanılamadı (timeout). Lütfen tekrar deneyin.", ""
-        except _requests.exceptions.ConnectionError as e:
-            return [], f"İnternet bağlantısı kurulamadı: {e}", ""
-        except _requests.exceptions.HTTPError as e:
-            return [], f"FDA HTTP hatası: {e}", ""
-        except Exception as e:
-            return [], f"FDA erişim hatası: {str(e)}", ""
-
-    def _parse_times_fda(s: str) -> tuple:
-        """
-        FDA örnekleme zamanlarını parse eder, birimi tespit eder.
-        Returns: (times_list, unit_label)
-        Örnek: "5, 10, 20, 30 and 45" → ([5,10,20,30,45], "min")
-                "1, 2, 4, 8, 16 hours" → ([1,2,4,8,16], "hr")
-        """
-        if not s:
-            return [], "min"
-        s_low = s.lower()
-        # Birim tespiti
-        if "hour" in s_low or " hr" in s_low or s_low.strip().endswith("hr"):
-            unit = "hr"
-        elif "min" in s_low:
-            unit = "min"
-        else:
-            # Sayılara bakarak tahmin et:
-            # ER formlar genelde 1-24 saat → saat
-            # IR formlar genelde 5-120 dk → dakika
-            # Eğer en büyük sayı ≤ 24 VE sayılar arasında boşluk büyükse saat
-            nums = [float(x) for x in _re.findall(r'\d+\.?\d*', s)]
-            if nums:
-                mx = max(nums)
-                # 1, 2, 4, 8, 16 gibi → saat
-                # 5, 10, 30, 45 gibi → dakika
-                gaps = [nums[i+1]-nums[i] for i in range(len(nums)-1)] if len(nums)>1 else [0]
-                avg_gap = sum(gaps)/len(gaps) if gaps else 0
-                unit = "hr" if (mx <= 24 and avg_gap >= 1.5) else "min"
-            else:
-                unit = "min"
-        nums = [float(x) for x in _re.findall(r'\d+\.?\d*', s.split(';')[0])]
-        return nums, unit
-
-    def _q_from_sampling(sampling: str, times=None, unit=None) -> tuple:
-        """Örnekleme zamanından Q kriterini tahmin et."""
-        if times is None:
-            times, unit = _parse_times_fda(sampling)
-        if not times:
-            return None, None
-        last_t = max(times)
-        # Saat ise dakikaya çevir
-        if unit == "hr":
-            last_t_min = last_t * 60
-        else:
-            last_t_min = last_t
-        return 80.0, float(last_t_min)
-
-    # ── Sayfa Başlığı ────────────────────────────────────────────────────────
-    st.markdown(
-        '<h2 style="color:#002147;margin:0 0 4px;">🏛️ FDA Dissolution Methods Database</h2>'
-        '<p style="color:#888;font-size:0.88rem;margin:0 0 14px;">'
-        'FDA Office of Generic Drugs — Canlı bağlantı. '
-        'Arama her seferinde FDA\'nın kendi sunucusundan gerçek zamanlı çeker.</p>',
-        unsafe_allow_html=True
-    )
-
-    # Hero banner
-    _live_badge = (
-        '<span style="background:#27ae60;color:white;font-size:10px;'
-        'font-weight:700;padding:3px 10px;border-radius:20px;margin-left:10px;">'
-        '🟢 CANLI BAĞLANTI</span>'
-        if _FDA_LIVE_OK else
-        '<span style="background:#e74c3c;color:white;font-size:10px;'
-        'font-weight:700;padding:3px 10px;border-radius:20px;margin-left:10px;">'
-        '⚠️ requests paketi eksik</span>'
-    )
-    st.markdown(
-        f'<div style="background:linear-gradient(135deg,#002147 0%,#003a7a 100%);'
-        f'border-radius:10px;padding:18px 24px;margin-bottom:16px;">'
-        f'<div style="display:flex;align-items:center;gap:20px;">'
-        f'<div style="font-size:42px;">🏛️</div>'
-        f'<div style="flex:1;">'
-        f'<div style="font-size:17px;font-weight:700;color:white;">'
-        f'FDA Dissolution Methods Database {_live_badge}</div>'
-        f'<div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:5px;">'
-        f'Division of Bioequivalence, Office of Generic Drugs, CDER &nbsp;|&nbsp; '
-        f'1,388+ onaylı metod &nbsp;|&nbsp; Gerçek zamanlı FDA verisi</div>'
-        f'</div>'
-        f'<div style="text-align:right;">'
-        f'<div style="font-size:26px;font-weight:800;color:#FFBF00;">1,388+</div>'
-        f'<div style="font-size:10px;color:rgba(255,255,255,0.6);">FDA onaylı metod</div>'
-        f'</div></div></div>',
-        unsafe_allow_html=True
-    )
-
-    if not _FDA_LIVE_OK:
-        st.error(
-            "**Eksik paket:** `requests` ve `beautifulsoup4` kurulu değil.\n\n"
-            "`requirements.txt` dosyanıza şu satırları ekleyin:\n"
-            "```\nrequests>=2.31.0\nbeautifulsoup4>=4.12.0\n```"
-        )
-
-    # ── Arama Arayüzü ────────────────────────────────────────────────────────
-    # Data Input'taki etkin madde ile önyükle
-    _as_prefill = st.session_state.get("active_substance", {}).get("name", "")
-    _sc1, _sc2 = st.columns([3, 1])
-    with _sc1:
-        fda_query = st.text_input(
-            "İlaç adı",
-            value=_as_prefill,
-            placeholder="Herhangi bir ilaç adı — Glipizid, Metoprolol, Warfarin...",
-            key="fda_search_input",
-            label_visibility="collapsed",
-        )
-    with _sc2:
-        fda_btn = st.button("🔍 FDA'da Ara", key="fda_search_btn",
-                            use_container_width=True, type="primary")
-
-    # Hızlı etiketler
-    st.markdown(
-        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'
-        '<span style="font-size:12px;color:#718096;padding-top:4px;">Hızlı:</span>'
-        + "".join([
-            f'<span style="background:#dbeafe;color:#185fa5;border-radius:20px;'
-            f'padding:3px 11px;font-size:12px;font-weight:500;">{d}</span>'
-            for d in ["Ibuprofen","Glipizide","Metoprolol","Warfarin",
-                      "Metformin","Atorvastatin","Amlodipine","Omeprazole",
-                      "Lisinopril","Ciprofloxacin","Aspirin","Furosemide"]
-        ])
-        + '</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="info-banner" style="font-size:0.82rem;">'
-        '💡 <strong>Nasıl çalışır:</strong> İlaç adını girin → '
-        'DissolvA FDA\'nın kendi sunucusundan <em>gerçek zamanlı</em> veri çeker → '
-        'Sonuçları görün → <strong>Method Settings\'e Aktar</strong> ile '
-        'aparat/hız/ortam/Q kriteri otomatik dolar. '
-        '(Aynı sorgu 1 saat cache\'lenir, hız için.)'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    # ── Arama Yürüt ──────────────────────────────────────────────────────────
-    _do_search = bool(fda_query) and (fda_btn or True)
-
-    if fda_query and _FDA_LIVE_OK:
-        with st.spinner(f'FDA sunucusundan "{fda_query}" aranıyor...'):
-            _results, _err, _raw_html = _fda_search_live(fda_query.strip())
-
-        if _err:
-            st.error(
-                f"**FDA bağlantı hatası:** {_err}\n\n"
-                f"Doğrudan FDA sitesini ziyaret edebilirsiniz: "
-                f"[accessdata.fda.gov/scripts/cder/dissolution]"
-                f"(https://www.accessdata.fda.gov/scripts/cder/dissolution/)"
-            )
-            if _raw_html:
-                with st.expander("🔧 Debug — FDA Ham Yanıt", expanded=False):
-                    st.code(_raw_html[:3000], language="html")
-        elif not _results:
-            st.warning(
-                f'**"{fda_query}"** için FDA Dissolution Methods Database\'de '
-                f'kayıtlı metod bulunamadı.\n\n'
-                f'Bu ilaç için "Refer to USP" kaydı olabilir — '
-                f'FDA sitesini doğrudan kontrol edin: '
-                f'[accessdata.fda.gov](https://www.accessdata.fda.gov/scripts/cder/dissolution/)'
-            )
-            if _raw_html:
-                with st.expander('🔧 Debug — FDA Yanıt Analizi', expanded=True):
-                    _tbl_idx = _raw_html.lower().find('<table')
-                    _dn_idx  = _raw_html.lower().find('drug name')
-                    st.caption(f'HTML: {len(_raw_html)} karakter | Tablo pos: {_tbl_idx} | Drug Name pos: {_dn_idx}')
-                    if _tbl_idx > 0:
-                        st.success(f'✅ Tablo bulundu ({_tbl_idx}. karakterde)')
-                        st.code(_raw_html[_tbl_idx:_tbl_idx+3000], language='html')
-                    elif _dn_idx > 0:
-                        st.warning('⚠️ Drug Name var ama <table> yok')
-                        st.code(_raw_html[max(0,_dn_idx-100):_dn_idx+2000], language='html')
-                    else:
-                        st.error('❌ Tablo yok — yanlış sayfa gelmiş olabilir')
-                        st.code(_raw_html[:4000], language='html')
-        else:
-            # Sonuç sayısı başlığı
-            st.markdown(
-                f'<div style="font-size:14px;color:#555;margin-bottom:12px;">'
-                f'<strong>{len(_results)}</strong> metod bulundu — '
-                f'<em>{_results[0]["drug_name"]}</em> &nbsp;'
-                f'<span style="font-size:11px;color:#27ae60;">● Canlı FDA verisi</span>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-
-            for _i, _m in enumerate(_results):
-                _times = _parse_times_fda(_m["sampling_times"])
-                _times, _unit = _parse_times_fda(_m["sampling_times"])
-                _unit_label = "dk" if _unit == "min" else "saat"
-                _time_chips = " ".join([
-                    f'<span style="background:#002147;color:white;font-size:11px;'
-                    f'font-weight:600;padding:2px 9px;border-radius:12px;">'
-                    f'{int(t) if t == int(t) else t}</span>'
-                    for t in _times
-                ])
-                if _time_chips:
-                    _time_chips += (
-                        f' <span style="font-size:10px;font-weight:600;'
-                        f'color:#FFBF00;background:#002147;padding:2px 7px;'
-                        f'border-radius:10px;">{_unit_label}</span>'
-                    )
-                else:
-                    _time_chips = (
-                        f'<span style="font-size:12px;color:#718096;">'
-                        f'{_m["sampling_times"] or "Refer to USP"}</span>'
-                    )
-
-                _date_str = (
-                    f' &nbsp;|&nbsp; Güncelleme: {_m["date_updated"]}'
-                    if _m.get("date_updated") else ""
-                )
-
-                # Kart header
-                st.markdown(
-                    f'<div style="background:#002147;padding:10px 16px;'
-                    f'border-radius:10px 10px 0 0;margin-top:8px;'
-                    f'display:flex;align-items:center;justify-content:space-between;">'
-                    f'<div>'
-                    f'<span style="font-size:14px;font-weight:700;color:white;">'
-                    f'{_m["drug_name"]}'
-                    f'{" — " + _m["strength"] if _m.get("strength") else ""}'
-                    f'</span>'
-                    f'<span style="font-size:11px;color:rgba(255,255,255,0.6);margin-left:10px;">'
-                    f'{_m["dosage_form"]}{_date_str}</span>'
-                    f'</div>'
-                    f'<span style="background:#FFBF00;color:#002147;font-size:10px;'
-                    f'font-weight:800;padding:2px 10px;border-radius:20px;">🏛️ FDA</span>'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-
-                # Parametreler grid
-                _p1, _p2, _p3, _p4 = st.columns(4)
-                for _col, _lbl, _val in [
-                    (_p1, "Aparat",    _m["apparatus"] or "Refer to USP"),
-                    (_p2, "Hız",       (_m["speed_rpm"] + " rpm") if _m["speed_rpm"] else "—"),
-                    (_p3, "Hacim",     (_m["volume_ml"] + " mL")  if _m["volume_ml"] else "—"),
-                    (_p4, "Sıcaklık", "37.0 °C"),
-                ]:
-                    _col.markdown(
-                        f'<div style="background:#f8f9fa;padding:9px 12px;'
-                        f'border:1px solid #e2e8f0;border-top:none;">'
-                        f'<div style="font-size:9px;font-weight:700;color:#718096;'
-                        f'text-transform:uppercase;margin-bottom:2px;">{_lbl}</div>'
-                        f'<div style="font-size:12px;font-weight:600;color:#002147;">'
-                        f'{_val}</div></div>',
-                        unsafe_allow_html=True
-                    )
-
-                # Ortam
-                st.markdown(
-                    f'<div style="background:white;padding:9px 16px;'
-                    f'border:1px solid #e2e8f0;border-top:none;">'
-                    f'<span style="font-size:9px;font-weight:700;color:#718096;'
-                    f'text-transform:uppercase;">Dissolution Ortamı &nbsp;</span>'
-                    f'<span style="font-size:13px;color:#1a202c;">'
-                    f'{_m["medium"] or "Refer to USP"}</span></div>',
-                    unsafe_allow_html=True
-                )
-
-                # Örnekleme zamanları
-                st.markdown(
-                    f'<div style="background:white;padding:8px 16px;'
-                    f'border:1px solid #e2e8f0;border-top:none;">'
-                    f'<span style="font-size:10px;font-weight:700;color:#718096;'
-                    f'text-transform:uppercase;margin-right:8px;">Örnekleme:</span>'
-                    f'{_time_chips}</div>',
-                    unsafe_allow_html=True
-                )
-
-                # Kabul kriteri (FDA sitesinde yok ama tahmin edelim)
-                _q_lim, _q_t = _q_from_sampling(_m["sampling_times"], _times, _unit)
-                if _q_lim and _q_t and _m["apparatus"] and "Refer" not in _m["apparatus"]:
-                    st.markdown(
-                        f'<div style="background:#c6efce;border:1px solid #86c99a;'
-                        f'border-top:none;border-radius:0 0 0 0;padding:7px 16px;'
-                        f'font-size:12px;color:#1a5c2e;font-weight:500;">'
-                        f'ℹ️ USP/FDA tipik kriter: NLT {_q_lim:.0f}% (Q) at {_q_t:.0f} min '
-                        f'<em>(kesin kriter için USP monografını kontrol edin)</em></div>',
-                        unsafe_allow_html=True
-                    )
-
-                # Butonlar
-                _ba, _bb, _bc = st.columns(3)
-                with _ba:
-                    if st.button(
-                        "⬆️ Method Settings'e Aktar",
-                        key=f"fda_import_{_i}",
-                        use_container_width=True,
-                        type="primary",
-                        disabled=bool(_m["apparatus"] and "Refer" in _m["apparatus"])
-                    ):
-                        _cfg = st.session_state.method_cfg
-                        _app_map2 = {
-                            "1": "USP I (Basket)",
-                            "2": "USP II (Paddle)",
-                            "3": "USP III (Reciprocating Cylinder)",
-                            "4": "USP IV (Flow-Through Cell)",
-                        }
-                        _app_num = _re.search(r'Apparatus\s+(\d+)', _m["apparatus"])
-                        if _app_num:
-                            _cfg["apparatus"] = _app_map2.get(
-                                _app_num.group(1), _m["apparatus"])
-                        if _m["medium"] and "Refer" not in _m["medium"]:
-                            _cfg["medium"] = _m["medium"]
-                        if _m["speed_rpm"] and str(_m["speed_rpm"]).isdigit():
-                            _cfg["rpm"] = int(_m["speed_rpm"])
-                        if _m["volume_ml"] and str(_m["volume_ml"]).isdigit():
-                            _cfg["volume_ml"] = int(_m["volume_ml"])
-                        _cfg["temp_c"] = 37.0
-                        if _q_lim and _q_t:
-                            _cfg["q_limit"] = _q_lim
-                            _cfg["q_time"]  = _q_t
-                        st.session_state.method_cfg = _cfg
-                        st.success(
-                            f"✅ **{_m['drug_name']}** protokolü Method Settings'e aktarıldı!  \n"
-                            f"Aparat: **{_cfg.get('apparatus','')}** | "
-                            f"Hız: **{_m['speed_rpm']} rpm** | "
-                            f"Ortam: **{(_m['medium'] or '')[:50]}**"
-                        )
-                        st.info("💡 Sidebar'dan **Method Settings** sekmesine geçin.")
-
-                with _bb:
-                    if st.button(
-                        "📋 Protokolü Göster",
-                        key=f"fda_show_{_i}",
-                        use_container_width=True
-                    ):
-                        st.code(
-                            f"FDA Dissolution Protocol\n"
-                            f"{'─'*44}\n"
-                            f"Drug:       {_m['drug_name']}\n"
-                            f"Form:       {_m['dosage_form']}\n"
-                            f"Apparatus:  {_m['apparatus'] or 'Refer to USP'}\n"
-                            f"Speed:      {_m['speed_rpm'] or '—'} rpm\n"
-                            f"Medium:     {_m['medium'] or 'Refer to USP'}\n"
-                            f"Volume:     {_m['volume_ml'] or '—'} mL\n"
-                            f"Temp:       37.0 degC\n"
-                            f"Sampling:   {_m['sampling_times'] or 'See USP'}\n"
-                            f"Updated:    {_m.get('date_updated','—')}\n"
-                            f"Source:     FDA Dissolution Methods Database (Live)\n"
-                            f"URL:        accessdata.fda.gov/scripts/cder/dissolution/",
-                            language="text"
-                        )
-
-                with _bc:
-                    st.markdown(
-                        '<a href="https://www.accessdata.fda.gov/scripts/cder/dissolution/" '
-                        'target="_blank" style="display:block;text-align:center;'
-                        'padding:8px;background:#f8f9fa;border:1px solid #e2e8f0;'
-                        'border-radius:7px;font-size:13px;color:#002147;'
-                        'text-decoration:none;font-weight:600;">🔗 FDA Kaynak →</a>',
-                        unsafe_allow_html=True
-                    )
-                st.markdown(
-                    '<div style="border-top:1px solid #e2e8f0;margin:10px 0 16px;'
-                    'border-radius:0 0 10px 10px;"></div>',
-                    unsafe_allow_html=True
-                )
-
-    elif not fda_query:
-        st.markdown(
-            '<div style="text-align:center;padding:52px 20px;color:#718096;">'
-            '<div style="font-size:52px;margin-bottom:14px;">🏛️</div>'
-            '<div style="font-size:18px;font-weight:600;color:#2d3748;margin-bottom:8px;">'
-            'Tüm FDA Metodlarına Erişin</div>'
-            '<div style="font-size:14px;line-height:1.8;">'
-            'İlaç adı girerek FDA\'nın 1,388+ dissolution metoduna<br>'
-            'gerçek zamanlı erişin. Glipizid, Warfarin, Metoprolol —<br>'
-            'listede olmayan hiçbir ilaç yok.</div></div>',
-            unsafe_allow_html=True
-        )
-
-    # Disclaimer
-    st.markdown(
-        '<div style="background:#fff3cd;border:1px solid #f0d060;border-radius:8px;'
-        'padding:10px 14px;font-size:12px;color:#856404;margin-top:20px;line-height:1.6;">'
-        '⚠️ <strong>FDA Feragatnamesi:</strong> Bu veritabanındaki dissolution metodları '
-        'FDA tarafından onaylanmış başvurularda kullanılan yöntemleri yansıtmaktadır. '
-        'Kullanımı zorunlu değildir. Veri doğrudan FDA sunucusundan çekilmektedir: '
-        '<a href="https://www.accessdata.fda.gov/scripts/cder/dissolution/" target="_blank">'
-        'accessdata.fda.gov</a>. Lisans: ODbL.</div>',
-        unsafe_allow_html=True
-    )
-
-
 # PAGE: API INFORMATION
 # ===========================================================================
 elif nav == "💊 API Information":
@@ -5094,22 +4506,96 @@ elif nav == "💊 API Information":
 
     _as = st.session_state.get("active_substance", {})
 
-    # Etkin madde yüklü değilse
+    # ── Kaynak bilgisi banner ────────────────────────────────────────────────
+    st.markdown(
+        '<div style="background:#f8f9fa;border:0.5px solid #e2e8f0;border-radius:8px;'
+        'padding:10px 16px;margin-bottom:14px;font-size:12px;color:#555;line-height:1.7;">'
+        '<strong>Kaynaklar:</strong> &nbsp;'
+        '<span style="background:#dbeafe;color:#185fa5;padding:1px 7px;border-radius:10px;'
+        'font-size:11px;margin-right:4px;">PubChem NIH</span> fizikokimyasal parametreler · '
+        '<span style="background:#c6efce;color:#1a5c2e;padding:1px 7px;border-radius:10px;'
+        'font-size:11px;margin-right:4px;">FDA Dissolution DB</span> dissolution metodları · '
+        '<span style="background:#fff3cd;color:#856404;padding:1px 7px;border-radius:10px;'
+        'font-size:11px;margin-right:4px;">Scite</span> BCS sınıfı için alıntı taraması · '
+        '<span style="background:#f0e6ff;color:#6b21a8;padding:1px 7px;border-radius:10px;'
+        'font-size:11px;">PubMed NIH</span> dissolution literatürü</div>',
+        unsafe_allow_html=True
+    )
+
+    # ── Etkin madde arama kutusu ──────────────────────────────────────────────
+    _search_col1, _search_col2 = st.columns([4, 1])
+    with _search_col1:
+        _api_query = st.text_input(
+            "Etkin madde adı",
+            value=_as.get("name", ""),
+            placeholder="Ibuprofen, Glipizide, Olanzapine, Metformin...",
+            key="api_info_search",
+            label_visibility="collapsed"
+        )
+    with _search_col2:
+        _api_load_btn = st.button(
+            "🔬 Yükle", key="api_info_load",
+            use_container_width=True, type="primary"
+        )
+
+    if _api_load_btn and _api_query.strip():
+        _substance = _api_query.strip()
+        with st.spinner(f"{_substance} — PubChem + FDA + Scite yükleniyor..."):
+            _pc_new = _pubchem_fetch(_substance)
+            try:
+                import requests as _req_load
+                _fda_s = _req_load.Session()
+                _fda_idx_url = "https://www.accessdata.fda.gov/scripts/cder/dissolution/index.cfm"
+                _fda_srch_url = "https://www.accessdata.fda.gov/scripts/cder/dissolution/dsp_SearchResults.cfm"
+                _fda_h = {"User-Agent":"Mozilla/5.0 Chrome/120.0","Referer":_fda_idx_url,"Accept":"text/html"}
+                _fda_s.get(_fda_idx_url, headers=_fda_h, timeout=8)
+                _fda_r = _fda_s.post(_fda_srch_url,
+                    data={"SearchTerm":_substance,"basic":"1","action":"Search"},
+                    headers={**_fda_h,"Content-Type":"application/x-www-form-urlencoded"},
+                    timeout=15)
+                from bs4 import BeautifulSoup as _BS2
+                import re as _re_load
+                _soup2 = _BS2(_fda_r.text, "html.parser")
+                _tbl2 = _soup2.find("table", id="example") or _soup2.find("table", {"class": lambda c: c and "table" in c})
+                _fda_new = []
+                if _tbl2:
+                    _tbody2 = _tbl2.find("tbody")
+                    _rows2 = _tbody2.find_all("tr") if _tbody2 else _tbl2.find_all("tr")[1:]
+                    _amap2 = {"I ":"USP I (Basket)","II":"USP II (Paddle)",
+                              "III":"USP III (Reciprocating Cylinder)","IV":"USP IV (Flow-Through Cell)"}
+                    for _row2 in _rows2:
+                        _cols2 = [td.get_text(separator=" ", strip=True) for td in _row2.find_all(["td","th"])]
+                        if len(_cols2) < 5: continue
+                        _app2 = _cols2[2]
+                        for _k2, _v2 in _amap2.items():
+                            if _app2.upper().startswith(_k2.upper()): _app2 = _v2; break
+                        _fda_new.append({
+                            "drug_name":_cols2[0],"dosage_form":_cols2[1],"apparatus":_app2,
+                            "speed_rpm":_cols2[3],"medium":_cols2[4],
+                            "volume_ml":_cols2[5] if len(_cols2)>5 else "",
+                            "sampling_times":_cols2[6] if len(_cols2)>6 else "",
+                            "date_updated":_cols2[7] if len(_cols2)>7 else "",
+                        })
+            except Exception:
+                _fda_new = []
+        st.session_state["active_substance"] = {
+            "name": _substance, "pubchem": _pc_new, "bcs_class": None,
+            "bcs_from_lit": None, "fda_methods": _fda_new,
+            "selected_method": None, "fetch_done": True,
+        }
+        st.rerun()
+
+    # Etkin madde yüklü değilse boş ekran
     if not _as.get("fetch_done") or not _as.get("name"):
         st.markdown(
-            '<div style="text-align:center;padding:52px 20px;color:#718096;">'
-            '<div style="font-size:48px;margin-bottom:14px;">💊</div>'
-            '<div style="font-size:17px;font-weight:600;color:#2d3748;margin-bottom:8px;">'
-            'Etkin Madde Yüklenmedi</div>'
-            '<div style="font-size:13px;color:#888;line-height:1.8;">'
-            'Data Input sekmesine gidin →<br>'
-            '"Etkin Madde (API)" alanına ilaç adını yazın → "Yükle" butonuna basın.<br>'
-            'Veriler otomatik olarak bu sayfaya yansır.</div></div>',
+            '<div style="text-align:center;padding:40px 20px;color:#718096;">'
+            '<div style="font-size:44px;margin-bottom:12px;">💊</div>'
+            '<div style="font-size:16px;font-weight:500;color:#2d3748;margin-bottom:6px;">'
+            'Etkin madde adını girin ve Yükle butonuna basın</div>'
+            '<div style="font-size:12px;color:#aaa;line-height:1.8;">'
+            'PubChem · FDA Dissolution DB · Scite · PubMed</div></div>',
             unsafe_allow_html=True
         )
-        if st.button("→ Data Input'a Git", type="primary"):
-            st.session_state["nav_override"] = "Data Input"
-            st.rerun()
     else:
         _pc  = _as.get("pubchem") or {}
         _fda = _as.get("fda_methods", [])
@@ -5502,8 +4988,9 @@ elif nav == "💊 API Information":
 
             else:
                 st.markdown(
-                    f'<div style="font-size:12px;color:#555;margin-bottom:10px;">'  
-                    f'PubMed: {_pm_total} makale, {len(_pm_results)} gosteriliyor</div>',
+                    f'<div style="font-size:12px;color:#555;margin-bottom:10px;">'
+                    f'PubMed ({_pm_total} makale) — Scite + PubMed NIH · ilk {len(_pm_results)} gösteriliyor</div>',
+                    unsafe_allow_html=True
                 )
                 for _art in _pm_results:
                     _is_oa = bool(_art.get("pmc"))
