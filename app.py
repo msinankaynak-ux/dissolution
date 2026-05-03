@@ -4605,14 +4605,15 @@ elif nav == "💊 API Information":
             _bcs_journal_new  = ""
             _bcs_snippets_new = []
 
-            # Katman 1: Scite API — snippet tarama (en guvenilir)
+            # Katman 1: Scite API — tüm eşleşmeleri topla, cite sayısına göre sırala
             _bcs_done = False
+            _bcs_papers_new = []  # [{title,doi,journal,year,source,abstract,tally,snippets,classes}]
             try:
                 import requests as _req_bcs2
                 _sc = _req_bcs2.get(
                     "https://api.scite.ai/search/papers",
                     params={"term": f"{_substance} BCS classification",
-                            "limit": 8},
+                            "limit": 15},
                     headers={"User-Agent": "DissolvA/4.0"}, timeout=8
                 )
                 if _sc.status_code == 200:
@@ -4625,19 +4626,37 @@ elif nav == "💊 API Information":
                                 _txt_sc += " " + _s
                                 _snips_sc.append(_s)
                         _cls_sc = _extract_bcs_from_scite(_txt_sc, _substance)
-                        if _cls_sc:
-                            _bcs_classes_new = _cls_sc
-                            _a0 = _sh.get("authors",[{}])
-                            _bcs_source_new  = f"{_a0[0].get('authorName','').split()[-1] if _a0 else ''} {_sh.get('year','')}".strip()
-                            _bcs_title_new   = _sh.get("title","")
-                            _bcs_abstract_new = (_sh.get("abstract","") or "")[:400]
-                            _bcs_doi_new     = _sh.get("doi","")
-                            _bcs_journal_new = _sh.get("journal","")
-                            _bcs_snippets_new = [s for s in _snips_sc
-                                if _substance.lower() in s.lower()
-                                and any(x in s.lower() for x in ["bcs","biopharmaceutic","class"])][:3]
-                            _bcs_done = True
-                            break
+                        if not _cls_sc:
+                            continue
+                        _a0 = _sh.get("authors",[{}])
+                        _auth_name = _a0[0].get("authorName","").split()[-1] if _a0 else ""
+                        _tally_total = _sh.get("tally",{}).get("total",0)
+                        _rel_snips = [s for s in _snips_sc
+                            if _substance.lower() in s.lower()
+                            and any(x in s.lower() for x in ["bcs","biopharmaceutic","class"])]
+                        _bcs_papers_new.append({
+                            "classes":  _cls_sc,
+                            "title":    _sh.get("title",""),
+                            "doi":      _sh.get("doi",""),
+                            "journal":  _sh.get("journal",""),
+                            "year":     str(_sh.get("year","")),
+                            "source":   f"{_auth_name} {_sh.get('year','')}".strip(),
+                            "abstract": (_sh.get("abstract","") or "")[:400],
+                            "tally":    _tally_total,
+                            "snippets": _rel_snips[:3],
+                        })
+                    if _bcs_papers_new:
+                        # En çok atıflıdan aza sırala
+                        _bcs_papers_new.sort(key=lambda x: x["tally"], reverse=True)
+                        _first = _bcs_papers_new[0]
+                        _bcs_classes_new  = _first["classes"]
+                        _bcs_source_new   = _first["source"]
+                        _bcs_title_new    = _first["title"]
+                        _bcs_abstract_new = _first["abstract"]
+                        _bcs_doi_new      = _first["doi"]
+                        _bcs_journal_new  = _first["journal"]
+                        _bcs_snippets_new = _first["snippets"]
+                        _bcs_done = True
             except Exception:
                 pass
 
@@ -4695,6 +4714,7 @@ elif nav == "💊 API Information":
                 "doi":      _bcs_doi_new,
                 "journal":  _bcs_journal_new,
                 "snippets": _bcs_snippets_new,
+                "papers":   _bcs_papers_new,
             },
             "fda_methods": _fda_new,
             "selected_method": None, "fetch_done": True,
@@ -4891,135 +4911,119 @@ elif nav == "💊 API Information":
                                 unsafe_allow_html=True
                             )
                     else:
+                        pass
                         # Refer to USP kartı
-                        st.markdown(
-                            f'<div style="background:#fffbf0;border:0.5px solid #f0d060;'
-                            f'border-radius:8px;padding:10px 14px;margin-bottom:8px;opacity:0.85;">'
-                            f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">'
-                            f'<span style="font-size:12px;font-weight:600;color:#002147;">'
-                            f'{_fm["drug_name"]} — {_fm["dosage_form"]}</span>'
-                            f'<span style="background:#fff3cd;color:#856404;font-size:10px;'
-                            f'padding:2px 8px;border-radius:20px;">⚠️ Refer to USP</span>'
-                            f'</div>'
-                            f'<div style="font-size:11px;color:#718096;margin-bottom:4px;">'
-                            f'FDA bu form için USP monografına yönlendiriyor.</div>'
-                            f'<div style="font-size:11px;color:#555;">'
-                            f'📖 Literatür önerisi (Ghosh et al. 2008 — Level A IVIVC): '
-                            f'<strong>USP II · 100 rpm · pH 6.8 phosphate buffer · 900 mL · 37°C</strong></div>'
-                            f'<div style="font-size:10px;color:#888;margin-top:2px;">'
-                            f'Örnekleme: <strong>5, 10, 15, 30, 45, 60 dk</strong> · r² ≥ 0.9</div>'
-                            f'</div>',
-                            unsafe_allow_html=True
-                        )
-
         # ── TAB 2: Literatür & BCS ────────────────────────────────────────────
         with _t2:
-            # BCS bilgisi — yükleme sırasında PubMed'den çekildi
             _bcs_lit2    = _as.get("bcs_from_lit") or {}
             _bcs_cls2    = _bcs_lit2.get("classes", [])
+            _bcs_papers2 = _bcs_lit2.get("papers", [])
+            _bcs_snips2  = _bcs_lit2.get("snippets", [])
             _bcs_src2    = _bcs_lit2.get("source", "")
-            _bcs_abs2    = _bcs_lit2.get("abstract", "")
             _bcs_title2  = _bcs_lit2.get("title", "")
             _bcs_doi2    = _bcs_lit2.get("doi", "")
             _bcs_journal2 = _bcs_lit2.get("journal", "")
-            _bcs_snips2  = _bcs_lit2.get("snippets", [])
 
             st.markdown(
                 "<div style='font-size:11px;font-weight:700;color:#718096;"
                 "text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;'>"
-                f"BCS Sınıfı — {_as['name']} için Literatür Taraması (PubMed)</div>",
+                f"BCS Sinifi — {_as['name']} icin Literatur Taramasi "
+                f"(Scite + PubMed)</div>",
                 unsafe_allow_html=True
             )
 
             if _bcs_cls2:
-                # Renk rozetleri
-                badges_html = _bcs_badge_html(_bcs_cls2, "")
+                # BCS rozet(ler)i
+                _badges = _bcs_badge_html(_bcs_cls2, "")
                 st.markdown(
-                    f'<div style="margin-bottom:12px;">{badges_html}</div>',
+                    f'<div style="margin-bottom:12px;">{_badges}</div>',
                     unsafe_allow_html=True
                 )
-                # Kaynak makale
-                if _bcs_title2:
-                    _m = _BCS_META.get(_bcs_cls2[0], _BCS_META["IV"])
-                    st.markdown(
-                        f'<div style="border-left:3px solid {_m["border"]};'
-                        f'padding:10px 14px;margin-bottom:10px;'
-                        f'background:{_m["bg"]}20;border-radius:0 8px 8px 0;">'
-                        f'<div style="font-size:12px;font-weight:600;color:#002147;'
-                        f'margin-bottom:4px;">{_bcs_title2[:120]}'
-                        f'{"..." if len(_bcs_title2)>120 else ""}</div>'
-                        + (f'<div style="font-size:11px;color:#555;line-height:1.6;'
-                           f'margin-bottom:6px;">{_bcs_abs2[:400]}...</div>'
-                           if _bcs_abs2 else '') +
-                        f'<div style="font-size:10px;color:#718096;">'
-                        f'{_bcs_src2}'
-                        f'{" · " + _bcs_journal2 if _bcs_journal2 else ""}'
-                        + (f' · <a href="https://doi.org/{_bcs_doi2}" target="_blank" '
-                           f'style="color:#185fa5;">DOI ↗</a>' if _bcs_doi2 else '') +
-                        f'</div></div>',
-                        unsafe_allow_html=True
-                    )
-                # Scite snippet'ları — başka araştırmacılar bu ilacı nasıl tanımlamış
-                if _bcs_snips2:
-                    st.markdown(
-                        '<div style="font-size:10px;font-weight:700;color:#718096;'
-                        'text-transform:uppercase;letter-spacing:0.4px;margin:10px 0 6px;">'
-                        'Scite Atif Snippetlari</div>',
-                        unsafe_allow_html=True
-                    )
-                    for _snip_i in _bcs_snips2:
-                        st.markdown(
-                            f'<div style="border-left:2px solid #e2e8f0;padding:6px 10px;'
-                            f'margin-bottom:5px;font-size:11px;color:#555;line-height:1.5;'
-                            f'background:#f8f9fa;border-radius:0 6px 6px 0;">'
-                            f'<em>"{_snip_i[:200]}{"..." if len(_snip_i)>200 else ""}"</em>'
-                            f'</div>',
-                            unsafe_allow_html=True
-                        )
 
-                # BCS sınıfına göre dissolution yorumu
+                # BCS sinifina gore kisa aciklama
                 for _cls_i in _bcs_cls2:
                     _m_i = _BCS_META.get(_cls_i, {})
                     st.markdown(
                         f'<div style="background:#f8f9fa;border:0.5px solid #e2e8f0;'
-                        f'border-radius:8px;padding:10px 14px;margin-bottom:6px;">'
+                        f'border-radius:8px;padding:8px 14px;margin-bottom:6px;'
+                        f'display:flex;align-items:center;gap:10px;">'
                         f'<span style="background:{_m_i.get("bg","#eee")};'
                         f'color:{_m_i.get("text","#333")};font-size:10px;font-weight:700;'
-                        f'padding:2px 8px;border-radius:10px;margin-right:8px;">BCS {_cls_i}</span>'
-                        f'<span style="font-size:12px;color:#002147;">'
-                        f'{_m_i.get("desc","")}</span>'
-                        f'<div style="font-size:11px;color:#718096;margin-top:4px;">'
-                        f'Biowaiver: {_m_i.get("biowaiver","")}</div>'
+                        f'padding:2px 8px;border-radius:10px;white-space:nowrap;">BCS {_cls_i}</span>'
+                        f'<span style="font-size:12px;color:#002147;">{_m_i.get("desc","")}</span>'
+                        f'<span style="font-size:11px;color:#718096;margin-left:auto;">'
+                        f'Biowaiver: {_m_i.get("biowaiver","")}</span>'
                         f'</div>',
                         unsafe_allow_html=True
                     )
-                # FDA Guidance yorumu
-                st.markdown(
-                    '<div style="background:#fff8e1;border:0.5px solid #f0d060;'
-                    'border-radius:8px;padding:10px 14px;margin-top:8px;font-size:11px;'
-                    'color:#556;line-height:1.6;">'
-                    '<strong>FDA Guidance (1713bp1):</strong> BCS II ve IV ilaçlarda '
-                    'dissolution hız kısıtlayıcı adım olabilir. Çoklu ortamda (pH 1.2, '
-                    '4.5, 6.8) dissolution profili önerilir. IVIVC beklentisi yüksektir.'
-                    '</div>',
-                    unsafe_allow_html=True
+
+                st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+
+                # Makale listesi — en cok atifliudan aza
+                _papers_to_show = _bcs_papers2 if _bcs_papers2 else (
+                    [{"title":_bcs_title2,"doi":_bcs_doi2,"journal":_bcs_journal2,
+                      "source":_bcs_src2,"tally":0,"snippets":_bcs_snips2,
+                      "classes":_bcs_cls2,"abstract":""}]
+                    if _bcs_title2 else []
                 )
+
+                if _papers_to_show:
+                    st.markdown(
+                        f'<div style="font-size:11px;font-weight:700;color:#718096;'
+                        f'text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">'
+                        f'Kaynaklar ({len(_papers_to_show)} makale — atif sayisina gore)</div>',
+                        unsafe_allow_html=True
+                    )
+                    for _pi, _p in enumerate(_papers_to_show):
+                        _p_cls   = _p.get("classes", _bcs_cls2)
+                        _p_m     = _BCS_META.get(_p_cls[0], {}) if _p_cls else {}
+                        _tally   = _p.get("tally", 0)
+                        _snips_p = _p.get("snippets", [])
+
+                        st.markdown(
+                            f'<div style="border-left:3px solid {_p_m.get("border","#e2e8f0")};'
+                            f'padding:10px 14px;margin-bottom:8px;'
+                            f'background:{_p_m.get("bg","#f8f9fa")}20;border-radius:0 8px 8px 0;">'
+                            f'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">'
+                            f'<div style="font-size:12px;font-weight:600;color:#002147;line-height:1.4;flex:1;">'
+                            f'{_p.get("title","")[:100]}{"..." if len(_p.get("title",""))>100 else ""}'
+                            f'</div>'
+                            f'<span style="background:#f0f0f0;color:#718096;font-size:10px;'
+                            f'padding:2px 7px;border-radius:10px;white-space:nowrap;margin-left:8px;">'
+                            f'{_tally} atif</span>'
+                            f'</div>'
+                            f'<div style="font-size:10px;color:#718096;">'
+                            f'{_p.get("source","")}'
+                            f'{" · " + _p.get("journal","")[:40] if _p.get("journal") else ""}'
+                            + (f' · <a href="https://doi.org/{_p.get("doi")}" target="_blank" '
+                               f'style="color:#185fa5;">DOI ↗</a>' if _p.get("doi") else "") +
+                            f'</div>'
+                            + ("".join([
+                                f'<div style="margin-top:5px;padding:5px 8px;'
+                                f'background:rgba(255,255,255,0.7);border-radius:5px;'
+                                f'font-size:11px;color:#555;line-height:1.5;'
+                                f'border-left:2px solid {_p_m.get("border","#ddd")};">'
+                                f'<em>"{s[:200]}{"..." if len(s)>200 else ""}"</em>'
+                                f'</div>'
+                                for s in _snips_p
+                            ]) if _snips_p else "") +
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
+
             else:
                 st.info(
-                    f"**{_as['name']}** için PubMed'de BCS sınıfı içeren makale bulunamadı.\n\n"
-                    f"USP monografı veya EMA ürün bilgileri incelenebilir. "
-                    f"Deneysel solubilite (pH 1.2, 4.5, 6.8) ve Caco-2/PAMPA permeabilite "
-                    f"ölçümü ile BCS sınıflandırması yapılabilir (FDA Guidance 2000, ICH M9)."
+                    f"**{_as['name']}** icin BCS sinifi iceren makale bulunamadi.\n\n"
+                    f"Deneysel cozunurluk (pH 1.2, 4.5, 6.8) ve Caco-2/PAMPA permeabilite "
+                    f"olcumu ile BCS siniflandirmasi yapilabilir (FDA Guidance 2000, ICH M9)."
                 )
-                st.caption("PubMed sorgusu: f'{drug_name} BCS classification biopharmaceutics'")
 
-            # Her zaman gösterilecek kaynak notu
+            # Kaynak notu — kisaltilmis
             st.markdown(
                 '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #e2e8f0;'
-                'font-size:10px;color:#aaa;line-height:1.7;">'
-                'Kaynak: PubMed NIH (eutils API) · BCS sınıfı deneysel ölçüm gerektirir '
-                '(FDA Guidance for Industry 2000, ICH M9 2019, Amidon et al. Pharm Res 1995). '
-                'Bu bilgi literatür taramasına dayanmaktadır, klinik karar için doğrulayın.'
+                'font-size:10px;color:#aaa;line-height:1.6;">'
+                'Kaynak: Scite (Smart Citations) · PubMed NIH (eutils API)\n'
+                'BCS sinifi deneysel olcum gerektirir — FDA Guidance 2000, ICH M9 2019, Amidon 1995.'
                 '</div>',
                 unsafe_allow_html=True
             )
