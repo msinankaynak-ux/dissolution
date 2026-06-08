@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat .next/dev/build/chunks/'[root-of-the-server]__1grfj2f._.js' 2>/dev/null | head -30; echo \"---PARENT TREE---\"; ls -la /Users/msk/Projects/ 2>/dev/null)",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)"
+    ]
+  }
+}

@@ -1,0 +1,245 @@
+"""DissolvA kinetic model library: 62 dissolution models, the MODEL_DEFS registry,
+statistical metrics (R2/AIC/MSC), MDT/DE and the fit_model curve-fitting engine.
+Extracted from app.py (Phase 1.4 modularization)."""
+import numpy as np
+from scipy.optimize import curve_fit, root
+from scipy.stats import norm as sp_norm
+from scipy.integrate import trapezoid
+
+def _nz(x): return np.where(x > 0, x, 1e-9)
+
+# -- 62 kinetic model functions --
+def m_zero_order(t, k0): return k0 * t
+def m_first_order(t, k1): return 100.0*(1-np.exp(-k1*t))
+def m_higuchi(t, kH): return kH*np.sqrt(np.abs(t))
+def m_hixson_crowell(t, ks):
+    inner = 1.0 - ks*t/3.0
+    return np.clip(100.0*(1 - np.sign(inner)*np.abs(inner)**3), 0, 100)
+def m_korsmeyer_peppas(t, k, n): return k*np.abs(t)**n
+def m_hopfenberg(t, kHB, n_HB): return np.clip(100.0*(1-(1-kHB*t)**n_HB), 0, 100)
+def m_baker_lonsdale(t, kBL):
+    res = []
+    for ti in np.atleast_1d(t):
+        rhs = float(kBL*ti)
+        def eq(F): return [1.5*(1-(1-F[0])**(2/3))-F[0]-rhs]
+        try:
+            sol = root(eq, [0.5], method="hybr")
+            res.append(float(np.clip(sol.x[0]*100, 0, 100)) if sol.success else np.nan)
+        except: res.append(np.nan)
+    return np.array(res)
+def m_makoid_banakar(t, kMB, nMB, bMB): return kMB*np.abs(t)**nMB*np.exp(-bMB*t)
+def m_peppas_sahlin(t, k1, k2, m): return k1*np.abs(t)**m + k2*np.abs(t)**(2*m)
+def m_weibull(t, a, b, Td): return 100.0*(1-np.exp(-(np.clip(t-Td,0,None)**b)/a))
+def m_gompertz(t, A, b, k): return A*np.exp(-b*np.exp(-k*t))
+def m_logistic(t, A, k, t50): return A/(1+np.exp(-k*(t-t50)))
+def m_quadratic(t, a, b, c): return a*t**2 + b*t + c
+def m_probit(t, mu, sigma, A): return A*sp_norm.cdf(t, mu, abs(sigma))
+def m_weibull_no_lag(t, a, b): return 100.0*(1-np.exp(-(t**b)/a))
+def m_modified_gompertz(t, Amax, mu, lam):
+    return Amax*np.exp(-np.exp(mu*np.e/Amax*(lam-t)+1))
+def m_richards(t, A, k, n, t50): return A*(1+np.exp(-k*(t-t50)))**(-1/n)
+def m_korsmeyer_peppas_lag(t, k, n, tlag): return k*np.clip(t-tlag,0,None)**n
+def m_first_order_lag(t, k1, tlag): return 100.0*(1-np.exp(-k1*np.clip(t-tlag,0,None)))
+def m_zero_order_lag(t, k0, tlag): return k0*np.clip(t-tlag,0,None)
+def m_higuchi_lag(t, kH, tlag): return kH*np.sqrt(np.clip(t-tlag,0,None))
+def m_double_exp(t, A1, k1, A2, k2): return A1*(1-np.exp(-k1*t))+A2*(1-np.exp(-k2*t))
+def m_triple_exp(t, A1, k1, A2, k2, A3, k3):
+    return A1*(1-np.exp(-k1*t))+A2*(1-np.exp(-k2*t))+A3*(1-np.exp(-k3*t))
+def m_power_exp(t, A, k, n): return A*(1-np.exp(-k*t**n))
+def m_brody(t, A, k, b): return A*(1-b*np.exp(-k*t))
+def m_bertalanffy(t, A, k, n): return A*(1-np.exp(-k*t))**n
+def m_gallagher_corrigan(t, Amax, k1, k2, tmax):
+    return Amax*(1-np.exp(-k1*t))-(Amax-100)*(1-np.exp(-k2*np.clip(t-tmax,0,None)))
+def m_logistic_4p(t, A, B, k, t50): return A+(B-A)/(1+np.exp(-k*(t-t50)))
+def m_log_normal(t, mu, sigma, A): return A*sp_norm.cdf(np.log(_nz(t)), mu, abs(sigma))
+def m_hill(t, Amax, k, n):
+    tn = np.abs(t)**n; return Amax*tn/(k**n+tn)
+def m_weibull_3p(t, alpha, beta, gamma):
+    return 100.0*(1-np.exp(-((np.clip(t-gamma,0,None)/alpha)**beta)))
+def m_exp_assoc(t, A, k): return A*(1-np.exp(-k*t))
+def m_hyperbolic(t, Amax, k): return Amax*t/(k+t)
+def m_linear_exp(t, A, k, b): return A*t*np.exp(-k*t)+b
+def m_dose_response(t, Emin, Emax, EC50, n):
+    tn = np.abs(t)**n; return Emin+(Emax-Emin)*tn/(EC50**n+tn)
+def m_combined(t, kH, k1, alpha):
+    return alpha*kH*np.sqrt(np.abs(t))+(1-alpha)*100*(1-np.exp(-k1*t))
+def m_pade(t, a0, a1, b1): return (a0+a1*t)/(1+b1*t)
+def m_hPLC(t, A, B, n): return 100*(1-(1+A*t**n)**(-B))
+def m_compreg(t, k, n, m): return 100*(1-np.exp(-k*t**n))**m
+def m_biexp_abs(t, F, ka, k):
+    return F*100*(ka/(ka-k+1e-9))*(np.exp(-k*t)-np.exp(-ka*t))
+def m_mb_mod(t, k, n, b, c): return k*np.abs(t)**n*np.exp(-b*t)+c
+def m_probit_log(t, mu, sigma, A): return A*sp_norm.cdf(np.log10(_nz(t)), mu, abs(sigma))
+def m_henriksen(t, A, k1, k2): return A*(np.exp(-k1*t)-np.exp(-k2*t))
+def m_kpmod(t, k, n, b): return k*np.abs(t)**n/(1+b*t)
+def m_fractal_fo(t, k, alpha): return 100.0*(1-np.exp(-k*t**alpha))
+def m_stretched_exp(t, A, beta, tau): return A*(1-np.exp(-((t/tau)**beta)))
+def m_weibull_sig(t, A, k, t50, b): return A/(1+np.exp(-k*(t-t50)))*(1-np.exp(-(t/b)**2))
+
+# ── New models added from DDSolver / KinetDS ──────────────────────────────
+# Zero-order with F0 (burst release): F = F0 + k0*t
+def m_zero_order_f0(t, k0, F0): return F0 + k0 * t
+
+# First-order with Fmax: F = Fmax*(1-exp(-k1*t))
+def m_first_order_fmax(t, k1, Fmax): return Fmax*(1-np.exp(-k1*t))
+
+# First-order with Tlag and Fmax: F = Fmax*(1-exp(-k1*(t-Tlag)))
+def m_first_order_tlag_fmax(t, k1, tlag, Fmax):
+    return Fmax*(1-np.exp(-k1*np.clip(t-tlag,0,None)))
+
+# Higuchi with F0 (burst): F = F0 + kH*sqrt(t)
+def m_higuchi_f0(t, kH, F0): return F0 + kH*np.sqrt(np.abs(t))
+
+# Korsmeyer-Peppas with F0: F = F0 + kKP*t^n
+def m_kp_f0(t, k, n, F0): return F0 + k*np.abs(t)**n
+
+# Peppas-Sahlin 2: F = k1*t^0.5 + k2*t
+def m_peppas_sahlin2(t, k1, k2): return k1*np.sqrt(np.abs(t)) + k2*t
+
+# Second-order: F = k*t^2
+def m_second_order(t, k): return k * t**2
+
+# Third-order: F = k*t^3
+def m_third_order(t, k): return k * t**3
+
+# Michaelis-Menten: F = Qmax*t/(k+t)  [same as hyperbolic, explicit reference]
+def m_michaelis_menten(t, Qmax, km): return Qmax*t/(km+t)
+
+# Hixson-Crowell with Tlag
+def m_hixson_tlag(t, ks, tlag):
+    tc = np.clip(t-tlag,0,None)
+    inner = 1.0 - ks*tc/3.0
+    return np.clip(100.0*(1-np.sign(inner)*np.abs(inner)**3), 0, 100)
+
+# Logistic 1 (DDSolver #332): F = 100*exp(a+b*log(t))/(1+exp(a+b*log(t)))
+def m_logistic1_dds(t, alpha, beta):
+    x = alpha + beta*np.log(_nz(t))
+    return 100.0*np.exp(x)/(1+np.exp(x))
+
+# Logistic 2 (DDSolver #333): F = Fmax*exp(a+b*log(t))/(1+exp(a+b*log(t)))
+def m_logistic2_dds(t, alpha, beta, Fmax):
+    x = alpha + beta*np.log(_nz(t))
+    return Fmax*np.exp(x)/(1+np.exp(x))
+
+# Gompertz 1 (DDSolver #335): F = 100*exp(-exp(a-b*log(t)))
+def m_gompertz1_dds(t, alpha, beta):
+    return 100.0*np.exp(-np.exp(alpha - beta*np.log(_nz(t))))
+
+# Gompertz 2 (DDSolver #336): F = Fmax*exp(-exp(a-b*log(t)))
+def m_gompertz2_dds(t, alpha, beta, Fmax):
+    return Fmax*np.exp(-np.exp(alpha - beta*np.log(_nz(t))))
+
+# Probit 1 (DDSolver #339): F = 100*Phi(a + b*log(t))
+def m_probit1_dds(t, alpha, beta):
+    return 100.0*sp_norm.cdf(alpha + beta*np.log10(_nz(t)))
+
+# -- Statistics & metrics --
+def r2s(y,yp):
+    ss_res=np.sum((y-yp)**2); ss_tot=np.sum((y-np.mean(y))**2)
+    return float(1-ss_res/ss_tot) if ss_tot>0 else 0.0
+def r2adj(y,yp,p):
+    n=len(y); r2=r2s(y,yp)
+    return float(1-(1-r2)*(n-1)/(n-p-1)) if n>p+1 else r2
+def aic_fn(y,yp,p):
+    n=len(y); sse=max(np.sum((y-yp)**2),1e-12)
+    return float(n*np.log(sse/n)+2*p)
+def msc_fn(y,yp,p):
+    n=len(y); sse=max(np.sum((y-yp)**2),1e-12); sst=max(np.sum((y-np.mean(y))**2),1e-12)
+    return float(np.log(sst/sse)-2*p/n)
+def compute_mdt(t,r):
+    f=np.array(r)/100.0; df=np.gradient(f,t)
+    num=trapezoid(t*df,t); den=trapezoid(df,t)
+    return float(num/den) if abs(den)>1e-12 else np.nan
+def compute_de(t,r):
+    auc=trapezoid(r,t)
+    return float(auc/(t[-1]*100)*100) if t[-1]>0 else np.nan
+
+# -- Model registry --
+MODEL_DEFS = {
+    "Zero Order":            (m_zero_order,       [1.0],                      ["k0"],                   "F=k0*t",                         "Wagner 1969",          "Basic"),
+    "First Order":           (m_first_order,      [0.05],                     ["k1"],                   "F=100*(1-exp(-k1*t))",           "Wagner 1969",          "Basic"),
+    "Higuchi":               (m_higuchi,          [10.0],                     ["kH"],                   "F=kH*sqrt(t)",                   "Higuchi 1961",         "Basic"),
+    "Hixson-Crowell":        (m_hixson_crowell,   [0.05],                     ["ks"],                   "M0^(1/3)-M^(1/3)=ks*t",         "Hixson 1931",          "Basic"),
+    "Korsmeyer-Peppas":      (m_korsmeyer_peppas, [10.0, 0.5],                ["k","n"],                "F=k*t^n",                        "Korsmeyer 1983",       "Basic"),
+    "Hopfenberg":            (m_hopfenberg,       [0.02, 2.0],                ["kHB","n"],              "F=100*[1-(1-kHB*t)^n]",          "Hopfenberg 1976",      "Basic"),
+    "Baker-Lonsdale":        (m_baker_lonsdale,   [0.001],                    ["kBL"],                  "3/2*[1-(1-F)^(2/3)]-F=kBL*t",   "Baker 1974",           "Basic"),
+    "Makoid-Banakar":        (m_makoid_banakar,   [10.0, 0.5, 0.01],          ["kMB","nMB","bMB"],      "F=kMB*t^nMB*exp(-bMB*t)",        "Makoid 1993",          "Basic"),
+    "Peppas-Sahlin":         (m_peppas_sahlin,    [5.0, 1.0, 0.5],            ["k1","k2","m"],          "F=k1*t^m + k2*t^2m",             "Peppas 1989",          "Basic"),
+    "Weibull":               (m_weibull,          [50.0, 1.0, 0.0],           ["a","b","Td"],           "F=100*(1-exp(-((t-Td)^b)/a))",   "Weibull 1951",         "Basic"),
+    "Gompertz":              (m_gompertz,         [100.0, 5.0, 0.1],          ["A","b","k"],            "F=A*exp(-b*exp(-k*t))",           "Gompertz 1825",        "Basic"),
+    "Logistic":              (m_logistic,         [100.0, 0.1, 30.0],         ["A","k","t50"],          "F=A/(1+exp(-k*(t-t50)))",         "Pressman 1994",        "Basic"),
+    "Quadratic":             (m_quadratic,        [-0.01, 1.0, 0.0],          ["a","b","c"],            "F=a*t^2 + b*t + c",              "Polli 1997",           "Basic"),
+    "Probit":                (m_probit,           [30.0, 15.0, 100.0],        ["mu","sigma","A"],       "F=A*Phi((t-mu)/sigma)",           "Shah 1998",            "Basic"),
+    "Weibull (No Lag)":      (m_weibull_no_lag,   [50.0, 1.0],                ["a","b"],                "F=100*(1-exp(-t^b/a))",           "Weibull 1951",         "Lag-Time"),
+    "KP + Lag":              (m_korsmeyer_peppas_lag,[10.0,0.5,5.0],          ["k","n","tlag"],         "F=k*(t-tlag)^n",                  "Modified KP",          "Lag-Time"),
+    "First Order + Lag":     (m_first_order_lag,  [0.05, 5.0],                ["k1","tlag"],            "F=100*(1-exp(-k1*(t-tlag)))",     "Modified FO",          "Lag-Time"),
+    "Zero Order + Lag":      (m_zero_order_lag,   [1.0, 5.0],                 ["k0","tlag"],            "F=k0*(t-tlag)",                   "Modified ZO",          "Lag-Time"),
+    "Higuchi + Lag":         (m_higuchi_lag,      [10.0, 5.0],                ["kH","tlag"],            "F=kH*sqrt(t-tlag)",               "Modified Higuchi",     "Lag-Time"),
+    "Probit Log":            (m_probit_log,       [1.5, 0.5, 100.0],          ["mu","sigma","A"],       "F=A*Phi((log10(t)-mu)/sigma)",    "Shah 1998",            "Lag-Time"),
+    "Double Exponential":    (m_double_exp,       [60.0,0.05,40.0,0.005],     ["A1","k1","A2","k2"],    "F=A1*(1-e^-k1t)+A2*(1-e^-k2t)", "Empirical",            "Multi-Phase"),
+    "Triple Exponential":    (m_triple_exp,       [40.0,0.1,40.0,0.02,20.0,0.005],["A1","k1","A2","k2","A3","k3"],"F=sum Ai*(1-e^-kit)","Empirical",             "Multi-Phase"),
+    "Power-Exponential":     (m_power_exp,        [100.0,0.05,1.2],           ["A","k","n"],            "F=A*(1-exp(-k*t^n))",             "Zhang 2010",           "Multi-Phase"),
+    "Biexp. Absorption":     (m_biexp_abs,        [1.0,0.2,0.05],             ["F","ka","k"],           "F=F*100*ka/(ka-k)*(e^-kt-e^-kat)","PK-based",            "Multi-Phase"),
+    "Gallagher-Corrigan":    (m_gallagher_corrigan,[100.0,0.05,0.02,60.0],    ["Amax","k1","k2","tmax"],"Biphasic burst+slow",             "Gallagher 2000",       "Multi-Phase"),
+    "Combined Higuchi+FO":   (m_combined,         [10.0,0.05,0.5],            ["kH","k1","alpha"],      "F=alpha*kH*sqrt(t)+(1-alpha)*FO","Empirical",            "Multi-Phase"),
+    "Henriksen":             (m_henriksen,        [80.0,0.1,0.5],             ["A","k1","k2"],          "F=A*(exp(-k1*t)-exp(-k2*t))",     "Henriksen et al.",     "Multi-Phase"),
+    "Modified Gompertz":     (m_modified_gompertz,[100.0,0.1,10.0],           ["Amax","mu","lambda"],   "F=Amax*exp(-exp(mu*e/Amax*(lam-t)+1))","Zwietering 1990", "Sigmoid"),
+    "Richards":              (m_richards,         [100.0,0.05,1.0,30.0],      ["A","k","n","t50"],      "F=A*(1+exp(-k*(t-t50)))^(-1/n)", "Richards 1959",        "Sigmoid"),
+    "4-Parameter Logistic":  (m_logistic_4p,      [0.0,100.0,0.1,30.0],       ["A","B","k","t50"],      "F=A+(B-A)/(1+exp(-k*(t-t50)))",   "4PL",                  "Sigmoid"),
+    "Log-Normal":            (m_log_normal,       [3.5,0.5,100.0],            ["mu","sigma","A"],       "F=A*Phi((ln(t)-mu)/sigma)",       "Statistical",          "Sigmoid"),
+    "Hill Equation":         (m_hill,             [100.0,30.0,1.5],           ["Amax","k","n"],         "F=Amax*t^n/(k^n+t^n)",           "Hill 1910",            "Sigmoid"),
+    "Dose-Response":         (m_dose_response,    [0.0,100.0,30.0,1.0],       ["Emin","Emax","EC50","n"],"F=Emin+(Emax-Emin)*t^n/(EC50^n+t^n)","Pharmacological", "Sigmoid"),
+    "Fractal First Order":   (m_fractal_fo,       [0.05, 0.8],                ["k","alpha"],            "F=100*(1-exp(-k*t^alpha))",       "Macheras 1995",        "Fractal"),
+    "Stretched Exponential": (m_stretched_exp,    [100.0,0.8,30.0],           ["A","beta","tau"],       "F=A*(1-exp(-(t/tau)^beta))",      "Kohlrausch 1854",      "Fractal"),
+    "Fractal Weibull":       (m_weibull_3p,       [30.0,1.2,0.0],             ["alpha","beta","gamma"], "F=100*(1-exp(-((t-gamma)/alpha)^beta))","Weibull 3P",      "Fractal"),
+    "Exponential Assoc.":    (m_exp_assoc,        [100.0, 0.05],              ["A","k"],                "F=A*(1-exp(-k*t))",               "Empirical",            "Empirical"),
+    "Hyperbolic":            (m_hyperbolic,       [100.0, 20.0],              ["Amax","k"],             "F=Amax*t/(k+t)",                  "Empirical",            "Empirical"),
+    "Linear-Exponential":    (m_linear_exp,       [2.0, 0.02, 0.0],           ["A","k","b"],            "F=A*t*exp(-k*t)+b",               "Empirical",            "Empirical"),
+    "Brody Growth":          (m_brody,            [120.0,0.05,0.8],           ["A","k","b"],            "F=A*(1-b*exp(-k*t))",             "Brody 1945",           "Empirical"),
+    "Bertalanffy":           (m_bertalanffy,      [100.0,0.05,3.0],           ["A","k","n"],            "F=A*(1-exp(-k*t))^n",             "von Bertalanffy",      "Empirical"),
+    "Pade Approximation":    (m_pade,             [0.0, 2.0, 0.02],           ["a0","a1","b1"],         "F=(a0+a1*t)/(1+b1*t)",           "Pade",                 "Empirical"),
+    "hPLC Model":            (m_hPLC,             [0.05, 1.5, 1.0],           ["A","B","n"],            "F=100*(1-(1+A*t^n)^(-B))",       "Zuo 2014",             "Empirical"),
+    "Compreg Model":         (m_compreg,          [0.05, 1.0, 2.0],           ["k","n","m"],            "F=100*(1-exp(-k*t^n))^m",         "Compressed release",   "Empirical"),
+    "KP Modified":           (m_kpmod,            [10.0, 0.5, 0.01],          ["k","n","b"],            "F=k*t^n/(1+b*t)",                 "Modified KP",          "Empirical"),
+    "Makoid-Banakar Mod.":   (m_mb_mod,           [10.0,0.5,0.01,0.0],        ["k","n","b","c"],        "F=k*t^n*exp(-b*t)+c",             "Extended MB",          "Empirical"),
+    "Weibull-Sigmoid":       (m_weibull_sig,      [100.0,0.1,30.0,60.0],      ["A","k","t50","b"],      "Weibull x Logistic hybrid",       "Hybrid",               "Empirical"),
+    # ── DDSolver / KinetDS models ─────────────────────────────────────────
+    "Zero Order + F0":       (m_zero_order_f0,    [1.0, 5.0],                 ["k0","F0"],              "F=F0+k0*t (burst+linear)",        "DDSolver #303",        "Burst Release"),
+    "First Order + Fmax":    (m_first_order_fmax, [0.05, 100.0],              ["k1","Fmax"],            "F=Fmax*(1-exp(-k1*t))",           "DDSolver #306",        "Burst Release"),
+    "First Order + Tlag + Fmax": (m_first_order_tlag_fmax, [0.05,5.0,100.0], ["k1","tlag","Fmax"],     "F=Fmax*(1-exp(-k1*(t-tlag)))",    "DDSolver #307",        "Burst Release"),
+    "Higuchi + F0":          (m_higuchi_f0,       [10.0, 5.0],                ["kH","F0"],              "F=F0+kH*sqrt(t)",                 "DDSolver #310",        "Burst Release"),
+    "KP + F0":               (m_kp_f0,            [10.0, 0.5, 5.0],           ["k","n","F0"],           "F=F0+k*t^n",                      "DDSolver #313",        "Burst Release"),
+    "Peppas-Sahlin 2":       (m_peppas_sahlin2,   [5.0, 1.0],                 ["k1","k2"],              "F=k1*sqrt(t)+k2*t",               "Peppas & Sahlin 1989", "Basic"),
+    "Second Order":          (m_second_order,     [0.1],                      ["k"],                    "F=k*t^2",                         "DDSolver #302",        "Basic"),
+    "Third Order":           (m_third_order,      [0.01],                     ["k"],                    "F=k*t^3",                         "DDSolver",             "Basic"),
+    "Michaelis-Menten":      (m_michaelis_menten, [100.0, 20.0],              ["Qmax","km"],            "F=Qmax*t/(km+t)",                 "KinetDS 2012",         "Basic"),
+    "Hixson-Crowell + Lag":  (m_hixson_tlag,      [0.05, 5.0],                ["ks","tlag"],            "M0^(1/3)-M^(1/3)=ks*(t-tlag)",   "DDSolver #315",        "Lag-Time"),
+    "Logistic 1 (DDSolver)": (m_logistic1_dds,    [1.0, 1.0],                 ["alpha","beta"],         "F=100*exp(a+b*log(t))/(1+...)",   "DDSolver #332",        "Sigmoid"),
+    "Logistic 2 (DDSolver)": (m_logistic2_dds,    [1.0, 1.0, 100.0],          ["alpha","beta","Fmax"],  "F=Fmax*exp(a+b*log(t))/(1+...)",  "DDSolver #333",        "Sigmoid"),
+    "Gompertz 1 (DDSolver)": (m_gompertz1_dds,    [2.0, 1.0],                 ["alpha","beta"],         "F=100*exp(-exp(a-b*log(t)))",     "DDSolver #335",        "Sigmoid"),
+    "Gompertz 2 (DDSolver)": (m_gompertz2_dds,    [2.0, 1.0, 100.0],          ["alpha","beta","Fmax"],  "F=Fmax*exp(-exp(a-b*log(t)))",    "DDSolver #336",        "Sigmoid"),
+    "Probit 1 (DDSolver)":   (m_probit1_dds,      [1.5, 0.5],                 ["alpha","beta"],         "F=100*Phi(a+b*log10(t))",         "DDSolver #339",        "Sigmoid"),
+}
+
+CATEGORIES = ["Basic","Lag-Time","Burst Release","Multi-Phase","Sigmoid","Fractal","Empirical"]
+
+# -- Curve-fitting engine --
+def fit_model(t, y, name):
+    func, p0, pnames, eq, ref, cat = MODEL_DEFS[name]
+    try:
+        popt,_ = curve_fit(func, t, y, p0=p0, maxfev=25000)
+        yp = np.array(func(t,*popt), dtype=float)
+        valid = ~np.isnan(yp)
+        if valid.sum() < 3: raise ValueError("Too few valid predictions")
+        tv,yv,ypv = t[valid],y[valid],yp[valid]
+        return {"success":True,"name":name,"category":cat,
+                "r2":r2s(yv,ypv),"r2adj":r2adj(yv,ypv,len(popt)),
+                "aic":aic_fn(yv,ypv,len(popt)),"msc":msc_fn(yv,ypv,len(popt)),
+                "params":dict(zip(pnames,popt)),"yp":yp,
+                "n_params":len(popt),"equation":eq,"reference":ref,"error":None}
+    except Exception as e:
+        return {"success":False,"name":name,"category":cat,
+                "r2":np.nan,"r2adj":np.nan,"aic":np.nan,"msc":np.nan,
+                "params":{},"yp":np.full(len(t),np.nan),
+                "n_params":len(p0),"equation":MODEL_DEFS[name][3],
+                "reference":MODEL_DEFS[name][4],"error":str(e)}

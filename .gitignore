@@ -1,0 +1,21 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.Python
+# Env / secrets
+.env
+.env.*
+*.key
+# OS / editor
+.DS_Store
+__MACOSX/
+.idea/
+.vscode/
+# Streamlit
+.streamlit/secrets.toml
+# Build / cache
+*.log
+.pytest_cache/

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dissolva",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd dissolution-app && .venv/bin/streamlit run app.py --server.port 8765 --server.headless true --browser.gatherUsageStats false"],
+      "port": 8765
+    }
+  ]
+}
