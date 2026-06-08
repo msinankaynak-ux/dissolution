@@ -109,7 +109,7 @@ with st.sidebar:
     # Logical flow: Setup -> Analysis -> Report -> Reference.
     # Returned value is the canonical key; the displayed label is decorated via _nav_label (routing intact).
     _NAV_LABELS = {
-        "IVIVC Analysis": "IVIVC Analysis  ⓑ",   # beta
+        "IVIVC Analysis": "IVIVC Analysis  🚧",   # geçici devre dışı (yeniden yapımda)
     }
     def _nav_label(key: str) -> str:
         return _NAV_LABELS.get(key, key)

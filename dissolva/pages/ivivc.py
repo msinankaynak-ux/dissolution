@@ -39,15 +39,27 @@ def render():
         '</div>',
         unsafe_allow_html=True
     )
+    # ── TEMPORARILY DISABLED — under reconstruction ──────────────────────────
+    # Level A (Wagner-Nelson) plazma verisi yerine dissolüsyona uygulanıyordu
+    # (dairesel/anlamsız korelasyon); Multiple Level C sabit x'e regresyon yapıp
+    # çöküyordu. Yanlış-güvenilir sonuç üretmemesi için modül geçici kapatıldı.
+    # Düzgün yeniden yazım (plazma Cp'den gerçek Fa, doğru Multiple-C veri modeli)
+    # planlandı. Aşağıdaki tüm hesaplama kodu sonraki sürüm için korunuyor.
     st.markdown(
-        '<div style="background:#c0392b;border:1px solid #a93226;'
-        'border-left:4px solid #922b21;border-radius:4px;padding:10px 14px;margin-bottom:12px;color:white;">'
-        '⚠️ <strong>Beta Feature — FDA/EMA 5-Level IVIVC Engine:</strong> '
-        'Results must be validated against approved IVIVC software (DDSolver, WinNonlin). '
-        'Level A and Multiple Level C are marked as Professional features.'
+        '<div style="background:#fff3cd;border:1px solid #ffe69c;'
+        'border-left:5px solid #d39e00;border-radius:6px;padding:16px 20px;margin:8px 0 4px;color:#664d03;">'
+        '🚧 <strong>IVIVC modülü şu an yeniden yapım aşamasında — geçici olarak devre dışı.</strong><br><br>'
+        'İç denetimde bu modülde bilimsel doğruluk hataları tespit edildi '
+        '(Level A Wagner-Nelson dekonvolüsyonu ve Multiple Level C korelasyonu). '
+        'Yanlış ama güven veren sonuçlar üretmemesi için, doğru biçimde yeniden yazılana kadar '
+        'kapatıldı.<br><br>'
+        '<strong>Lütfen IVIVC analizini hiçbir karar/regülasyon amacıyla kullanmayın.</strong> '
+        'Diğer tüm modüller (Kinetik model, f1/f2, Bootstrap f2, Excel rapor) tam çalışır durumdadır.'
         '</div>',
         unsafe_allow_html=True
     )
+    st.info("Bu bölüm yakında plazma konsantrasyonu tabanlı gerçek Level A dekonvolüsyonu ile geri gelecek.")
+    st.stop()
 
     if not st.session_state.profiles:
         st.warning("⚠️ No dissolution profiles loaded. Please go to Data Input first.")
