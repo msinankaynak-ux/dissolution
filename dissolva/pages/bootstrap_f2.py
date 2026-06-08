@@ -17,72 +17,17 @@ from scipy.integrate import trapezoid
 from scipy.interpolate import interp1d
 from dissolva.theme import OXFORD, AMBER, PALETTE, style_ax
 from dissolva.models import (MODEL_DEFS, CATEGORIES, fit_model, compute_mdt,
-    compute_de, r2s, r2adj, aic_fn, msc_fn, _nz)
+    compute_de, r2s, r2adj, aic_fn, msc_fn, _nz, fda_f2_mask, f2_score, bootstrap_f2)
 from dissolva.state import (current_tier, require_tier, _safe_profile_names,
     _get_index, _rename_profile, _clear_all)
-from dissolva.content import show_literature, show_all_references, analyze_profile_shape
+from dissolva.content import (show_literature, show_all_references,
+    analyze_profile_shape, bootstrap_recommendation)
 
 
 def render():
     _PLOTLY_OK = _PLOTLY_AVAILABLE
     cfg = st.session_state.method_cfg
     time_unit = cfg["time_unit"]
-
-    # ---- Bootstrap engine (uses only numpy — no plotly import needed here) --
-    def run_bootstrap_f2(ref_raw, test_raw, iterations=5000, seed=42):
-        """
-        ref_raw / test_raw : 2-D np.array  (n_timepoints  x  n_vessels)
-        Returns: (f2_array, f2_lower_90pct)
-        """
-        rng = np.random.default_rng(seed if seed > 0 else None)
-        n_v_ref  = ref_raw.shape[1]
-        n_v_test = test_raw.shape[1]
-        f2_results = []
-        for _ in range(iterations):
-            ref_sample  = ref_raw[:,  rng.integers(0, n_v_ref,  size=n_v_ref)]
-            test_sample = test_raw[:, rng.integers(0, n_v_test, size=n_v_test)]
-            R_bar = np.mean(ref_sample,  axis=1)
-            T_bar = np.mean(test_sample, axis=1)
-            # FDA 85% rule: all ref<85 + first point exceeding 85
-            _below_b = R_bar <= 85
-            _above_b = R_bar > 85
-            mask = _below_b.copy()
-            if np.any(_above_b):
-                mask[np.where(_above_b)[0][0]] = True
-            if np.any(mask):
-                R_f, T_f = R_bar[mask], T_bar[mask]
-                mse = np.mean((R_f - T_f) ** 2)
-                f2  = 50 * np.log10(100 / np.sqrt(1 + mse))
-                f2_results.append(f2)
-        f2_arr = np.array(f2_results)
-        f2_low90 = float(np.percentile(f2_arr, 5))
-        return f2_arr, f2_low90
-
-    # ── Nonparametric bootstrap function ───────────────────────────────────
-    def run_nonparametric_bootstrap_f2(ref_raw, test_raw, iterations=5000, seed=42):
-        """Shah 1998 original — nonparametric bootstrap. No distribution assumption."""
-        rng = np.random.default_rng(seed if seed > 0 else None)
-        n_v_ref  = ref_raw.shape[1]
-        n_v_test = test_raw.shape[1]
-        results = []
-        chunk = max(1, iterations // 100)
-        for i in range(iterations):
-            idx_ref  = rng.integers(0, n_v_ref,  size=n_v_ref)
-            idx_test = rng.integers(0, n_v_test, size=n_v_test)
-            ref_s  = ref_raw[:,  idx_ref]
-            test_s = test_raw[:, idx_test]
-            R_bar = np.mean(ref_s,  axis=1)
-            T_bar = np.mean(test_s, axis=1)
-            # FDA 85% rule: all ref<85 + first point exceeding 85
-            _below_b = R_bar <= 85
-            _above_b = R_bar > 85
-            mask = _below_b.copy()
-            if np.any(_above_b):
-                mask[np.where(_above_b)[0][0]] = True
-            if np.any(mask):
-                mse = np.mean((R_bar[mask] - T_bar[mask]) ** 2)
-                results.append(50 * np.log10(100 / np.sqrt(1 + mse)))
-        return np.array(results)
 
     # ---- Page header --------------------------------------------------------
     st.markdown(
@@ -172,6 +117,32 @@ def render():
         n_test = st.session_state.profiles[test_bs].get("n", 0)
         st.caption(f"{test_bs} — {n_test} vessels")
 
+    # ---- Pre-run diagnostic: is bootstrap warranted for THIS data? ----------
+    _rec = bootstrap_recommendation(st.session_state.profiles, ref_bs, test_bs)
+    if not _rec["has_cv"]:
+        st.info(
+            "ℹ️ **CV/RSD verisi yok** — bu profillerde vessel-bazlı değişkenlik (CV%) bilgisi "
+            "bulunamadı, bu yüzden FDA CV kriterleri otomatik kontrol edilemiyor. Bootstrap yine "
+            "de ham vessel verisiyle çalışır; sonucu yorumlarken değişkenliği elle değerlendirin."
+        )
+    elif _rec["needs_boot"]:
+        st.warning(
+            "⚠️ **Verinize göre Bootstrap f2 ÖNERİLİYOR** — standart tek-nokta f2 testi yetersiz:\n\n"
+            + "\n".join(f"- {r}" for r in _rec["reasons"])
+            + f"\n\n**Önerilen yöntem: {_rec['recommended_method']} Bootstrap.** "
+            + ("CV% > 15 olduğu için Nonparametric daha güvenilir CI verir. "
+               if _rec["cv_max"] > 15 else "CV% ≤ 15 olduğundan Parametric yeterli. ")
+            + "📌 *Shah VP ve ark. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
+        )
+    else:
+        _f2txt = f"f2 = {_rec['f2']:.2f} (sınır bölgesi dışında), " if _rec["f2"] is not None else ""
+        st.success(
+            "✅ **Bootstrap zorunlu değil — standart f2 testi yeterli.** FDA kriterleri sağlanıyor: "
+            f"{_f2txt}n = {_rec['n_vessels']} vessel, "
+            f"erken CV% ≤ {_rec['cv_early_max']:.1f} (≤20 ✓), geç CV% ≤ {_rec['cv_late_max']:.1f} (≤10 ✓). "
+            "Yine de doğrulama amacıyla bootstrap çalıştırabilirsiniz."
+        )
+
     st.markdown("---")
 
     # ---- Parameters ---------------------------------------------------------
@@ -211,21 +182,15 @@ def render():
         if len(t_common) == 0:
             st.error("No common time points between the two profiles."); st.stop()
 
-        # Observed f2 (mean profiles)
+        # Observed f2 (mean profiles) — FDA 85% rule (first point exceeding 85% included)
         rr_obs = np.array([raw_ref[np.where(t_ref_arr == ti)[0][0], :].mean()
                            for ti in t_common])
         rt_obs = np.array([raw_test[np.where(t_test_arr == ti)[0][0], :].mean()
                            for ti in t_common])
-        mask_obs = rr_obs <= 85
-        _above_obs = np.where(rr_obs > 85)[0]
-        if len(_above_obs) > 0:
-            mask_obs[_above_obs[0]] = True  # First point exceeding 85% included
-        if not np.any(mask_obs):
+        mask_obs = fda_f2_mask(rr_obs)
+        if not mask_obs.any():
             st.error("No valid time points where reference release ≤ 85%."); st.stop()
-
-        f2_obs = float(50 * np.log10(
-            100 / np.sqrt(1 + np.mean((rr_obs[mask_obs] - rt_obs[mask_obs]) ** 2))
-        ))
+        f2_obs = f2_score(rr_obs[mask_obs], rt_obs[mask_obs])
 
         # Subset raw matrices to common time points
         ref_idx  = [np.where(t_ref_arr  == ti)[0][0] for ti in t_common]
@@ -233,53 +198,17 @@ def render():
         raw_ref_common  = raw_ref[ref_idx,  :]
         raw_test_common = raw_test[test_idx, :]
 
-        # Run bootstrap
+        # Run bootstrap over FIXED observed evaluation points (mask_obs) — gözlem
+        # ile bootstrap aynı noktaları kullanır (Shah 1998 / EMA yöntemi).
+        _method = "nonparametric" if "Nonparametric" in bs_method else "parametric"
         prog = st.progress(0, text="Running bootstrap simulation…")
-
-        def _bootstrap_with_progress(ref_raw, test_raw, iterations, seed):
-            rng = np.random.default_rng(seed if seed > 0 else None)
-            n_v_ref  = ref_raw.shape[1]
-            n_v_test = test_raw.shape[1]
-            results = []
-            chunk = max(1, iterations // 100)
-            for i in range(iterations):
-                ref_s  = ref_raw[:,  rng.integers(0, n_v_ref,  size=n_v_ref)]
-                test_s = test_raw[:, rng.integers(0, n_v_test, size=n_v_test)]
-                R_bar  = np.mean(ref_s,  axis=1)
-                T_bar  = np.mean(test_s, axis=1)
-                mask   = R_bar <= 85
-                if np.any(mask):
-                    mse = np.mean((R_bar[mask] - T_bar[mask]) ** 2)
-                    results.append(50 * np.log10(100 / np.sqrt(1 + mse)))
-                if (i + 1) % chunk == 0:
-                    prog.progress((i + 1) / iterations,
-                                  text=f"Iteration {i+1:,} / {iterations:,}…")
-            return np.array(results)
-
-        if "Nonparametric" in bs_method:
-            prog2 = st.progress(0, text="Running nonparametric bootstrap…")
-            def _nonparam_progress(ref_raw, test_raw, iterations, seed):
-                rng2 = np.random.default_rng(seed if seed > 0 else None)
-                n_v_r = ref_raw.shape[1]; n_v_t = test_raw.shape[1]
-                res2 = []; chunk2 = max(1, iterations // 100)
-                for ii in range(iterations):
-                    ir = rng2.integers(0, n_v_r, size=n_v_r)
-                    it = rng2.integers(0, n_v_t, size=n_v_t)
-                    R2 = np.mean(ref_raw[:, ir], axis=1)
-                    T2 = np.mean(test_raw[:, it], axis=1)
-                    m2 = R2 <= 85
-                    if np.any(m2):
-                        mse2 = np.mean((R2[m2]-T2[m2])**2)
-                        res2.append(50*np.log10(100/np.sqrt(1+mse2)))
-                    if (ii+1) % chunk2 == 0:
-                        prog2.progress((ii+1)/iterations, text=f"Iteration {ii+1:,}/{iterations:,}…")
-                return np.array(res2)
-            f2_boot = _nonparam_progress(raw_ref_common, raw_test_common, int(n_iter), int(seed_val))
-            prog2.empty()
-        else:
-            f2_boot = _bootstrap_with_progress(
-                raw_ref_common, raw_test_common, int(n_iter), int(seed_val)
-            )
+        def _prog(frac, i):
+            prog.progress(frac, text=f"Iteration {i:,} / {int(n_iter):,}…")
+        f2_boot = bootstrap_f2(
+            raw_ref_common, raw_test_common, mask_obs,
+            iterations=int(n_iter), seed=int(seed_val),
+            method=_method, progress=_prog,
+        )
         prog.empty()
 
         f2_boot    = f2_boot[~np.isnan(f2_boot)]

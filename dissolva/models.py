@@ -168,6 +168,66 @@ def compute_de(t,r):
     auc=trapezoid(r,t)
     return float(auc/(t[-1]*100)*100) if t[-1]>0 else np.nan
 
+# -- f1 / f2 similarity factors & FDA 85% point rule --
+def fda_f2_mask(ref_mean):
+    """FDA 1997 / Shah 1998 nokta kuralı: ref ≤ 85% olan TÜM noktalar +
+    85'i İLK aşan nokta dahil; sonraki >85% noktalar dışlanır.
+    Boolean mask döndürür (ref_mean ile aynı uzunlukta)."""
+    ref_mean = np.asarray(ref_mean, dtype=float)
+    mask = ref_mean <= 85.0
+    above = np.where(ref_mean > 85.0)[0]
+    if len(above) > 0:
+        mask[above[0]] = True
+    return mask
+
+def f2_score(rr, rt):
+    """f2 = 50·log10(100/sqrt(1 + (1/n)Σ(Rt-Tt)²)). rr/rt: maskeli ortalama profiller."""
+    rr = np.asarray(rr, dtype=float); rt = np.asarray(rt, dtype=float)
+    return float(50*np.log10(100/np.sqrt(1+np.mean((rr-rt)**2))))
+
+def f1_score(rr, rt):
+    """f1 = Σ|Rt-Tt| / ΣRt × 100."""
+    rr = np.asarray(rr, dtype=float); rt = np.asarray(rt, dtype=float)
+    s = np.sum(rr)
+    return float(np.sum(np.abs(rr-rt))/s*100) if s != 0 else np.nan
+
+def bootstrap_f2(ref_raw, test_raw, point_mask, iterations=5000, seed=42,
+                 method="nonparametric", progress=None):
+    """Vessel-düzeyi f2 bootstrap'ı. Değerlendirme noktaları SABİT (point_mask,
+    gözlem profilinden belirlenir) — her iterasyonda aynı noktalar kullanılır.
+
+    ref_raw / test_raw : 2-D (n_timepoint × n_vessel)
+    point_mask         : boolean (n_timepoint,) — fda_f2_mask(gözlem_ref_ortalaması)
+    method             : 'nonparametric' (vessel resampling, Shah 1998) |
+                         'parametric' (MVN(ortalama, kovaryans)'den örnekleme)
+    progress           : opsiyonel callback(frac, i) ilerleme için
+    Döndürür: f2 dağılımı (np.array)."""
+    rng = np.random.default_rng(seed if (seed and seed > 0) else None)
+    ref_raw = np.asarray(ref_raw, float); test_raw = np.asarray(test_raw, float)
+    pm = np.asarray(point_mask, bool)
+    nvr = ref_raw.shape[1]; nvt = test_raw.shape[1]
+    if method == "parametric":
+        mu_r = ref_raw.mean(axis=1); mu_t = test_raw.mean(axis=1)
+        ntp = ref_raw.shape[0]
+        eye = np.eye(ntp) * 1e-9  # tekil kovaryansa karşı ufak ridge
+        cov_r = (np.cov(ref_raw)  if nvr > 1 else np.zeros((ntp, ntp))) + eye
+        cov_t = (np.cov(test_raw) if nvt > 1 else np.zeros((test_raw.shape[0],)*2)) + np.eye(test_raw.shape[0])*1e-9
+    out = []
+    chunk = max(1, iterations // 100)
+    for i in range(iterations):
+        if method == "parametric":
+            R = rng.multivariate_normal(mu_r, cov_r, size=nvr).T.mean(axis=1)
+            T = rng.multivariate_normal(mu_t, cov_t, size=nvt).T.mean(axis=1)
+        else:
+            R = ref_raw[:,  rng.integers(0, nvr, nvr)].mean(axis=1)
+            T = test_raw[:, rng.integers(0, nvt, nvt)].mean(axis=1)
+        if pm.any():
+            mse = np.mean((R[pm] - T[pm])**2)
+            out.append(50*np.log10(100/np.sqrt(1+mse)))
+        if progress is not None and (i+1) % chunk == 0:
+            progress((i+1)/iterations, i+1)
+    return np.array(out)
+
 # -- Model registry --
 MODEL_DEFS = {
     "Zero Order":            (m_zero_order,       [1.0],                      ["k0"],                   "F=k0*t",                         "Wagner 1969",          "Basic"),

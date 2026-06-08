@@ -2,6 +2,82 @@
 Extracted from app.py (Phase 3a modularization)."""
 import streamlit as st
 import numpy as np
+from dissolva.models import fda_f2_mask, f2_score
+
+
+# ── Bootstrap f2 gereklilik kontrolü (paylaşılan tek kaynak) ─────────────────
+def bootstrap_recommendation(profiles, ref_nm, test_nm):
+    """Kullanıcının verisine göre Bootstrap f2 gerekli mi kararı.
+    f1/f2 ve Bootstrap sayfaları ortak kullanır. Döndürdüğü dict:
+      needs_boot, fda_cv_ok, reasons[], recommended_method, n_vessels,
+      cv_max, cv_early_max, cv_late_max, f2 (hesaplanabiliyorsa)
+    FDA (1997) CV kriteri (zaman bazlı): t ≤ 15 dk → CV ≤ 20%, t > 15 dk → CV ≤ 10%.
+    Ek tetikleyiciler: f2 sınır bölgesi (45–55), n < 12 (FDA n ≥ 12 önerir)."""
+    d_ref = profiles.get(ref_nm, {}) or {}
+    d_tst = profiles.get(test_nm, {}) or {}
+
+    # Vessel sayısı
+    n_vessels = min(d_ref.get("n", 6) or 6, d_tst.get("n", 6) or 6)
+
+    # CV (RSD) toplama — genel + FDA zaman bazlı (erken/geç)
+    rsd_all, rsd_early, rsd_late = [], [], []
+    for d in (d_ref, d_tst):
+        rsd = d.get("rsd"); tt = d.get("time")
+        if rsd:
+            rsd_all.extend([x for x in rsd if x is not None])
+            if tt and len(tt) == len(rsd):
+                _t = np.asarray(tt, float); _r = np.asarray(rsd, float)
+                rsd_early.extend(_r[_t <= 15.0].tolist())
+                rsd_late.extend(_r[_t > 15.0].tolist())
+    cv_max       = max(rsd_all)   if rsd_all   else 0.0
+    cv_early_max = max(rsd_early) if rsd_early else 0.0
+    cv_late_max  = max(rsd_late)  if rsd_late  else 0.0
+    has_cv = bool(rsd_all)
+
+    # Gözlemlenen f2 (ortak zaman noktalarında, FDA 85% kuralıyla)
+    f2_val = None
+    try:
+        t_ref = np.asarray(d_ref.get("time", []), float)
+        r_ref = np.asarray(d_ref.get("release", []), float)
+        t_tst = np.asarray(d_tst.get("time", []), float)
+        r_tst = np.asarray(d_tst.get("release", []), float)
+        common = np.intersect1d(t_ref, t_tst)
+        if len(common) > 0:
+            rr = np.array([r_ref[np.where(t_ref == ti)[0][0]] for ti in common])
+            rt = np.array([r_tst[np.where(t_tst == ti)[0][0]] for ti in common])
+            m = fda_f2_mask(rr)
+            if m.any():
+                f2_val = f2_score(rr[m], rt[m])
+    except Exception:
+        f2_val = None
+
+    is_boundary = (f2_val is not None) and (45.0 <= f2_val <= 55.0)
+    low_n       = n_vessels < 12
+    high_cv     = cv_max > 15.0
+    fda_cv_ok   = (cv_early_max <= 20.0) and (cv_late_max <= 10.0)
+
+    reasons = []
+    if is_boundary:
+        reasons.append(f"f2 = {f2_val:.2f} → 45–55 sınır bölgesinde (istatistiksel olarak güvenilmez)")
+    if not fda_cv_ok:
+        if cv_early_max > 20.0:
+            reasons.append(f"Erken nokta CV% = {cv_early_max:.1f}% → > 20% (FDA t≤15 dk kriteri aşıldı)")
+        if cv_late_max > 10.0:
+            reasons.append(f"Geç nokta CV% = {cv_late_max:.1f}% → > 10% (FDA t>15 dk kriteri aşıldı)")
+    elif high_cv:
+        reasons.append(f"Maks CV% = {cv_max:.1f}% → > 15% (FDA eşiği)")
+    if low_n:
+        reasons.append(f"n = {n_vessels} vessel → FDA n ≥ 12 önerir")
+
+    needs_boot = is_boundary or high_cv or (not fda_cv_ok) or low_n
+    recommended_method = "Nonparametric (Shah 1998)" if cv_max > 15.0 else "Parametric"
+
+    return {
+        "needs_boot": needs_boot, "fda_cv_ok": fda_cv_ok, "reasons": reasons,
+        "recommended_method": recommended_method, "n_vessels": n_vessels,
+        "cv_max": cv_max, "cv_early_max": cv_early_max, "cv_late_max": cv_late_max,
+        "has_cv": has_cv, "f2": f2_val,
+    }
 
 # ── Literature references ────────────────────────────────────────────────────
 LITERATURE = {

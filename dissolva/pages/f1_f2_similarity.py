@@ -17,10 +17,11 @@ from scipy.integrate import trapezoid
 from scipy.interpolate import interp1d
 from dissolva.theme import OXFORD, AMBER, PALETTE, style_ax
 from dissolva.models import (MODEL_DEFS, CATEGORIES, fit_model, compute_mdt,
-    compute_de, r2s, r2adj, aic_fn, msc_fn, _nz)
+    compute_de, r2s, r2adj, aic_fn, msc_fn, _nz, fda_f2_mask, f1_score, f2_score)
 from dissolva.state import (current_tier, require_tier, _safe_profile_names,
     _get_index, _rename_profile, _clear_all)
-from dissolva.content import show_literature, show_all_references, analyze_profile_shape
+from dissolva.content import (show_literature, show_all_references,
+    analyze_profile_shape, bootstrap_recommendation)
 
 
 def render():
@@ -65,7 +66,7 @@ def render():
         st.session_state.selected_ref_id = ref_nm
         st.caption(f"This is the product you compare AGAINST: {ref_nm}")
     with col2:
-        st.markdown("**Test Profile** *(your formulation)*)")
+        st.markdown("**Test Profile** *(your formulation)*")
         test_options_f2 = [n for n in names if n != ref_nm]
         test_nm = st.selectbox(
             "Test", names,
@@ -92,18 +93,8 @@ def render():
     rr=np.array([r_ref[np.where(t_ref==ti)[0][0]] for ti in common])
     rt=np.array([r_tst[np.where(t_tst==ti)[0][0]] for ti in common])
 
-    # FDA Guidance (1997): <=85% points + first point exceeding 85% included, later ones excluded
-    _below = rr <= 85
-    _above_idx = np.where(~_below)[0]
-    if len(_above_idx) > 0:
-        # Include the first exceeding point, exclude subsequent ones
-        _cutoff = _above_idx[0]
-        _valid_mask = np.zeros(len(rr), dtype=bool)
-        _valid_mask[:_cutoff] = True       # All points below 85%
-        _valid_mask[_cutoff] = True        # First point exceeding 85%
-    else:
-        _valid_mask = _below  # Profile never exceeding 85%
-    mask = _valid_mask
+    # FDA Guidance (1997): ref ≤85% noktaları + 85'i ilk aşan nokta dahil (paylaşılan kural)
+    mask = fda_f2_mask(rr)
     rrf, rtf = rr[mask], rt[mask]
     n_points_above85 = int(np.sum(rr > 85))
     n_points_excluded = max(0, n_points_above85 - 1)
@@ -111,8 +102,8 @@ def render():
     if len(rrf)==0:
         st.error("No valid time points (reference <= 85%)."); st.stop()
 
-    f1=float(np.sum(np.abs(rrf-rtf))/np.sum(rrf)*100)
-    f2=float(50*np.log10(100/np.sqrt(1+np.mean((rrf-rtf)**2))))
+    f1=f1_score(rrf,rtf)
+    f2=f2_score(rrf,rtf)
 
     mc1,mc2,mc3,mc4,mc5=st.columns(5)
     mc1.metric("f1 (Difference)", f"{f1:.2f}",
@@ -133,98 +124,33 @@ def render():
             f"*(FDA Guidance 1997, Section V.B)*"
         )
 
-    # Bootstrap warning system
-    _n_vessels = min(st.session_state.profiles[nm].get("n", 6)
-                     for nm in [ref_nm, test_nm])
-    _rsd_vals = []
-    for _nm in [ref_nm, test_nm]:
-        _d = st.session_state.profiles[_nm]
-        if _d.get("rsd"):
-            _rsd_vals.extend(_d["rsd"])
-    _cv_max = max(_rsd_vals) if _rsd_vals else 0.0
-
-    _bswarn = []
-    if 45 <= f2 <= 55:
-        _bswarn.append(f"**Boundary zone:** f2 = {f2:.2f} (45–55 range). f2 in this range is statistically unreliable.")
-    if _n_vessels <= 6:
-        _bswarn.append(f"**Low sample size:** n = {_n_vessels} vessels/profile. FDA recommends n ≥ 12; for smaller n, Bootstrap is more reliable.")
-    if _cv_max > 15:
-        _bswarn.append(f"**High variability:** Max CV = {_cv_max:.1f}% > 15%. FDA (1997): When CV > 15%, Bootstrap f2 or Multivariate CI is recommended.")
-
-    # ── Is Bootstrap Required? Box ─────────────────────────────────────────
+    # ── Is Bootstrap Required? — paylaşılan şart kontrolü (Bootstrap sayfası ile aynı) ──
     st.markdown("---")
     st.markdown("#### 🔍 Is Bootstrap f2 Required?")
-
-    # All evaluation criteria
-    _is_boundary  = 45 <= f2 <= 55
-    _low_n        = _n_vessels <= 6
-    _high_cv      = _cv_max > 15
-    _needs_boot   = _is_boundary or _low_n or _high_cv
-
-    # Recommend nonparametric if CV > 15, otherwise parametric
-    _recommended_method = "Nonparametric (Shah 1998)" if _cv_max > 15 else "Parametric"
-
-    # Are FDA CV criteria met?
-    # FDA CV criterion - TIME-BASED (approved 14-04-2026):
-    # t ≤ 15 min → early (CV ≤ 20%) | t > 15 min → late (CV ≤ 10%)
-    _rsd_early_vals = []
-    _rsd_late_vals  = []
-    for _nm2 in [ref_nm, test_nm]:
-        _d2 = st.session_state.profiles[_nm2]
-        if _d2.get("rsd") and _d2.get("time"):
-            _t2   = np.array(_d2["time"])
-            _rsd2 = np.array(_d2["rsd"])
-            _rsd_early_vals.extend(_rsd2[_t2 <= 15.0].tolist())
-            _rsd_late_vals.extend(_rsd2[_t2 > 15.0].tolist())
-    _cv_early_max = max(_rsd_early_vals) if _rsd_early_vals else 0.0
-    _cv_late_max  = max(_rsd_late_vals)  if _rsd_late_vals  else 0.0
-    _fda_cv_ok    = _cv_early_max <= 20.0 and _cv_late_max <= 10.0
-
-    if not _needs_boot and _fda_cv_ok:
+    _rec = bootstrap_recommendation(st.session_state.profiles, ref_nm, test_nm)
+    if not _rec["needs_boot"] and _rec["fda_cv_ok"]:
         st.success(
             f"**✅ Bootstrap f2 Analysis Not Required — Standard f2 Test is Sufficient.**\n\n"
-            f"The following FDA criteria are met:\n\n"
+            f"FDA criteria are met:\n\n"
             f"- f2 = **{f2:.2f}** — outside the 45–55 boundary zone\n"
-            f"- n = **{_n_vessels}** vessels — adequate sample size\n"
-            f"- Max CV% (t ≤ 15 min, FDA early) = **{_cv_early_max:.1f}%** ≤ 20% ✓\n"
-            f"- Max CV% (t > 15 min, FDA late) = **{_cv_late_max:.1f}%** ≤ 10% ✓\n\n"
-            f"**Single-point f2 test** is conclusive per FDA (1997) Guidance. "
-            f"*(FDA Guidance for Industry: Dissolution Testing of Immediate Release Solid Oral "
-            f"Dosage Forms, 1997, Section V)*"
+            f"- n = **{_rec['n_vessels']}** vessels\n"
+            f"- Max CV% (t ≤ 15 min) = **{_rec['cv_early_max']:.1f}%** ≤ 20% ✓\n"
+            f"- Max CV% (t > 15 min) = **{_rec['cv_late_max']:.1f}%** ≤ 10% ✓\n\n"
+            f"Single-point f2 test is conclusive per FDA (1997) Guidance, Section V."
         )
     else:
-        _criteria_list = []
-        if _is_boundary:
-            _criteria_list.append(f"f2 = {f2:.2f} → **in 45–55 boundary zone** (statistically unreliable)")
-        if _low_n:
-            _criteria_list.append(f"n = {_n_vessels} vessels → **FDA recommends n ≥ 12**")
-        if _high_cv:
-            _criteria_list.append(f"Max CV% = {_cv_max:.1f}% → **> 15% (FDA threshold)**")
-        if not _fda_cv_ok:
-            if _cv_early_max > 20:
-                _criteria_list.append(f"Early-point CV% = {_cv_early_max:.1f}% → **> 20% (FDA criterion exceeded)**")
-            if _cv_late_max > 10:
-                _criteria_list.append(f"Late-point CV% = {_cv_late_max:.1f}% → **> 10% (FDA criterion exceeded)**")
-
-        _criteria_text = "\n".join([f"- {c}" for c in _criteria_list])
+        _criteria_text = "\n".join([f"- {c}" for c in _rec["reasons"]]) or "- (kriterler)"
         st.warning(
             f"**⚠️ Bootstrap f2 Analysis Recommended**\n\n"
-            f"Standard f2 test is insufficient for the following reasons:\n\n"
-            f"{_criteria_text}\n\n"
-            f"**Recommended method: {_recommended_method} Bootstrap**\n"
-            f"{'Because CV% > 15%, **Nonparametric Bootstrap** provides more reliable results. ' if _cv_max > 15 else 'CV% ≤ 15%, **Parametric Bootstrap** is sufficient. '}"
-            f"For Bootstrap f2 analysis → go to the **Bootstrap f2 Analysis** page.\n\n"
+            f"Standard f2 test is insufficient:\n\n{_criteria_text}\n\n"
+            f"**Recommended method: {_rec['recommended_method']} Bootstrap.** "
+            f"{'Because CV% > 15%, Nonparametric is more reliable. ' if _rec['cv_max'] > 15 else 'CV% ≤ 15%, Parametric is sufficient. '}"
+            f"→ Go to the **Bootstrap f2 Analysis** page.\n\n"
             f"📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
         )
-
-    if _needs_boot or not _fda_cv_ok:
-        _warn_md = ""
-        if _bswarn:
-            pass  # Already shown in the box above
-    if _bswarn:
-        _warn_md = "⚠️ **Bootstrap f2 Analysis Recommended**\n\n"
-        _warn_md += "\n\n".join([f"{i+1}. {w}" for i, w in enumerate(_bswarn)])
-        _warn_md += "\n\n📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
+    if not _rec["has_cv"]:
+        st.caption("Not: Profillerde CV/RSD verisi yok; CV kriterleri otomatik kontrol edilemedi. "
+                   "Vessel-bazlı veri yüklenirse kontrol tam çalışır.")
 
     vf1="PASS - f1 <= 15: Profiles have acceptable difference" if f1<=15 else "FAIL - f1 > 15: Significant difference detected"
     vf2="SIMILAR - f2 >= 50: Profiles are bioequivalent (FDA)" if f2>=50 else "DISSIMILAR - f2 < 50: Profiles are NOT similar"
