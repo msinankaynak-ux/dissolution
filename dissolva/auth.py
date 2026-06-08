@@ -47,7 +47,7 @@ def render_sidebar_auth():
     if not auth_configured():
         st.markdown(
             '<div style="padding:8px 12px;font-size:0.7rem;color:#7a8aa0;">'
-            '🔓 Açık mod — giriş yapılandırılmamış'
+            '🔓 Open mode — sign-in not configured'
             '</div>',
             unsafe_allow_html=True,
         )
@@ -64,26 +64,26 @@ def render_sidebar_auth():
             f'{_pic}'
             f'<div style="line-height:1.2;overflow:hidden;">'
             f'<div style="font-size:12px;font-weight:600;color:white;'
-            f'white-space:nowrap;text-overflow:ellipsis;overflow:hidden;">{u.get("name") or "Kullanıcı"}</div>'
+            f'white-space:nowrap;text-overflow:ellipsis;overflow:hidden;">{u.get("name") or "User"}</div>'
             f'<div style="font-size:10px;color:rgba(255,255,255,0.55);'
             f'white-space:nowrap;text-overflow:ellipsis;overflow:hidden;">{u.get("email") or ""}</div>'
             f'</div></div>',
             unsafe_allow_html=True,
         )
-        if st.button("Çıkış yap", use_container_width=True, key="_logout_btn"):
+        if st.button("Log out", use_container_width=True, key="_logout_btn"):
             st.logout()
     else:
-        if st.button("🔑 Google ile giriş yap", use_container_width=True, key="_login_btn"):
+        if st.button("🔑 Sign in with Google", use_container_width=True, key="_login_btn"):
             st.login("google")
 
 
-def require_login(feature: str = "Bu bölüm"):
+def require_login(feature: str = "This feature"):
     """İleride kullanılacak: bir özelliği giriş şartına bağlamak için.
     Şu an HİÇBİR YERDE çağrılmıyor (tier enforcement kapalı kararı).
     Giriş yapılmamışsa uyarı gösterir ve False döner."""
     if not auth_configured():
-        return True  # açık mod
+        return True  # open mode
     if is_authenticated():
         return True
-    st.warning(f"🔒 {feature} için giriş gerekiyor. Sol menüden Google ile giriş yapın.")
+    st.warning(f"🔒 {feature} requires sign-in. Use the sidebar to sign in with Google.")
     return False

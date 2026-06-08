@@ -61,16 +61,16 @@ def bootstrap_recommendation(profiles, ref_nm, test_nm):
 
     reasons = []
     if is_boundary:
-        reasons.append(f"f2 = {f2_val:.2f} → 45–55 sınır bölgesinde (istatistiksel olarak güvenilmez)")
+        reasons.append(f"f2 = {f2_val:.2f} → within the 45–55 boundary zone (statistically unreliable)")
     if not fda_cv_ok:
         if cv_early_max > 20.0:
-            reasons.append(f"Erken nokta CV% = {cv_early_max:.1f}% → > 20% (FDA t≤15 dk kriteri aşıldı)")
+            reasons.append(f"Early-point CV% = {cv_early_max:.1f}% → > 20% (FDA early-point criterion exceeded)")
         if cv_late_max > 10.0:
-            reasons.append(f"Geç nokta CV% = {cv_late_max:.1f}% → > 10% (FDA t>15 dk kriteri aşıldı)")
+            reasons.append(f"Late-point CV% = {cv_late_max:.1f}% → > 10% (FDA late-point criterion exceeded)")
     elif high_cv:
-        reasons.append(f"Maks CV% = {cv_max:.1f}% → > 15% (FDA eşiği)")
+        reasons.append(f"Max CV% = {cv_max:.1f}% → > 15% (FDA threshold)")
     if low_n:
-        reasons.append(f"n = {n_vessels} vessel → FDA n ≥ 12 önerir")
+        reasons.append(f"n = {n_vessels} vessels → FDA recommends n ≥ 12")
 
     needs_boot = is_boundary or high_cv or (not fda_cv_ok) or low_n
     recommended_method = "Nonparametric (Shah 1998)" if cv_max > 15.0 else "Parametric"

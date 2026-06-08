@@ -130,8 +130,8 @@ def render():
         }
         rank_choice = st.selectbox(
             "Rank models by", list(_RANK_META.keys()), index=0,
-            help="AICc = küçük örneklem düzeltmeli AIC; az zaman noktalı dissolüsyon için önerilir. "
-                 "AIC/AICc/BIC/RMSE: küçük daha iyi. R2adj/MSC: büyük daha iyi."
+            help="AICc = small-sample-corrected AIC; recommended for dissolution with few time points. "
+                 "AIC/AICc/BIC/RMSE: lower is better. R2adj/MSC: higher is better."
         )
         _rank_key, _rank_asc = _RANK_META[rank_choice]
         rows=[{"Model":v["name"],"Category":v["category"],

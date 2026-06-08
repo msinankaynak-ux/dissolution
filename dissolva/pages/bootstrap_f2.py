@@ -121,26 +121,26 @@ def render():
     _rec = bootstrap_recommendation(st.session_state.profiles, ref_bs, test_bs)
     if not _rec["has_cv"]:
         st.info(
-            "ℹ️ **CV/RSD verisi yok** — bu profillerde vessel-bazlı değişkenlik (CV%) bilgisi "
-            "bulunamadı, bu yüzden FDA CV kriterleri otomatik kontrol edilemiyor. Bootstrap yine "
-            "de ham vessel verisiyle çalışır; sonucu yorumlarken değişkenliği elle değerlendirin."
+            "ℹ️ **No CV/RSD data** — these profiles have no vessel-level variability (CV%), so the "
+            "FDA CV criteria cannot be checked automatically. Bootstrap still runs from the raw "
+            "vessel data; assess variability manually when interpreting the result."
         )
     elif _rec["needs_boot"]:
         st.warning(
-            "⚠️ **Verinize göre Bootstrap f2 ÖNERİLİYOR** — standart tek-nokta f2 testi yetersiz:\n\n"
+            "⚠️ **Bootstrap f2 is RECOMMENDED for your data** — the standard single-point f2 test is insufficient:\n\n"
             + "\n".join(f"- {r}" for r in _rec["reasons"])
-            + f"\n\n**Önerilen yöntem: {_rec['recommended_method']} Bootstrap.** "
-            + ("CV% > 15 olduğu için Nonparametric daha güvenilir CI verir. "
-               if _rec["cv_max"] > 15 else "CV% ≤ 15 olduğundan Parametric yeterli. ")
-            + "📌 *Shah VP ve ark. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
+            + f"\n\n**Recommended method: {_rec['recommended_method']} Bootstrap.** "
+            + ("Because CV% > 15, Nonparametric gives a more reliable CI. "
+               if _rec["cv_max"] > 15 else "CV% ≤ 15, so Parametric is sufficient. ")
+            + "📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
         )
     else:
-        _f2txt = f"f2 = {_rec['f2']:.2f} (sınır bölgesi dışında), " if _rec["f2"] is not None else ""
+        _f2txt = f"f2 = {_rec['f2']:.2f} (outside the boundary zone), " if _rec["f2"] is not None else ""
         st.success(
-            "✅ **Bootstrap zorunlu değil — standart f2 testi yeterli.** FDA kriterleri sağlanıyor: "
-            f"{_f2txt}n = {_rec['n_vessels']} vessel, "
-            f"erken CV% ≤ {_rec['cv_early_max']:.1f} (≤20 ✓), geç CV% ≤ {_rec['cv_late_max']:.1f} (≤10 ✓). "
-            "Yine de doğrulama amacıyla bootstrap çalıştırabilirsiniz."
+            "✅ **Bootstrap not required — the standard f2 test is sufficient.** FDA criteria are met: "
+            f"{_f2txt}n = {_rec['n_vessels']} vessels, "
+            f"early CV% ≤ {_rec['cv_early_max']:.1f} (≤20 ✓), late CV% ≤ {_rec['cv_late_max']:.1f} (≤10 ✓). "
+            "You may still run bootstrap for confirmation."
         )
 
     st.markdown("---")

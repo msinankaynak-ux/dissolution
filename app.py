@@ -206,17 +206,17 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    # Veri gizliliği — net ve dürüst ifade (api_information incelemesine dayanır)
-    with st.expander("🔒 Veri gizliliği"):
+    # Data privacy — clear, honest statement (based on the api_information review)
+    with st.expander("🔒 Data privacy"):
         st.markdown(
-            "**DissolvA verilerinizi kaydetmez, loglamaz, saklamaz.**\n\n"
-            "- Girdiğiniz çözünme verileri, profiller ve sonuçlar yalnızca oturum "
-            "belleğinde tutulur; sayfayı kapatınca/yenileyince **silinir**. Veritabanı yoktur.\n"
-            "- Uygulama Streamlit Community Cloud altyapısında çalışır; veriler orada "
-            "yalnızca anlık işlenir, **tarafımızca kalıcı saklanmaz**.\n"
-            "- Dışarıya gönderilen **tek** şey: **API Bilgisi** sayfasında yazdığınız "
-            "**ilaç adı** — halka açık veritabanlarına (PubChem · FDA · PubMed) ve "
-            "scite.ai'ye sorgu için. **Çözünme verileriniz asla dışarı gönderilmez.**"
+            "**DissolvA does not save, log, or store your data.**\n\n"
+            "- The dissolution data, profiles, and results you enter live only in session "
+            "memory and are **erased** when you close or refresh the page. There is no database.\n"
+            "- The app runs on Streamlit Community Cloud infrastructure, where data is processed "
+            "in memory only and is **not persisted by us**.\n"
+            "- The **only** thing sent off your device is the **drug name** you type on the "
+            "**API Information** page — used to query public databases (PubChem · FDA · PubMed) "
+            "and scite.ai. **Your dissolution data is never sent anywhere.**"
         )
 
     st.markdown(

@@ -48,17 +48,17 @@ def render():
     st.markdown(
         '<div style="background:#fff3cd;border:1px solid #ffe69c;'
         'border-left:5px solid #d39e00;border-radius:6px;padding:16px 20px;margin:8px 0 4px;color:#664d03;">'
-        '🚧 <strong>IVIVC modülü şu an yeniden yapım aşamasında — geçici olarak devre dışı.</strong><br><br>'
-        'İç denetimde bu modülde bilimsel doğruluk hataları tespit edildi '
-        '(Level A Wagner-Nelson dekonvolüsyonu ve Multiple Level C korelasyonu). '
-        'Yanlış ama güven veren sonuçlar üretmemesi için, doğru biçimde yeniden yazılana kadar '
-        'kapatıldı.<br><br>'
-        '<strong>Lütfen IVIVC analizini hiçbir karar/regülasyon amacıyla kullanmayın.</strong> '
-        'Diğer tüm modüller (Kinetik model, f1/f2, Bootstrap f2, Excel rapor) tam çalışır durumdadır.'
+        '🚧 <strong>The IVIVC module is currently under reconstruction — temporarily disabled.</strong><br><br>'
+        'An internal review found scientific-accuracy errors in this module '
+        '(Level A Wagner-Nelson deconvolution and Multiple Level C correlation). '
+        'To avoid producing confident-but-incorrect results, it has been disabled until it is '
+        'rewritten correctly.<br><br>'
+        '<strong>Please do not use IVIVC analysis for any decision-making or regulatory purpose.</strong> '
+        'All other modules (kinetic modeling, f1/f2, Bootstrap f2, Excel report) are fully functional.'
         '</div>',
         unsafe_allow_html=True
     )
-    st.info("Bu bölüm yakında plazma konsantrasyonu tabanlı gerçek Level A dekonvolüsyonu ile geri gelecek.")
+    st.info("This section will return soon with a proper plasma-concentration-based Level A deconvolution.")
     st.stop()
 
     if not st.session_state.profiles:

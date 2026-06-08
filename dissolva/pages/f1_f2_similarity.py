@@ -139,7 +139,7 @@ def render():
             f"Single-point f2 test is conclusive per FDA (1997) Guidance, Section V."
         )
     else:
-        _criteria_text = "\n".join([f"- {c}" for c in _rec["reasons"]]) or "- (kriterler)"
+        _criteria_text = "\n".join([f"- {c}" for c in _rec["reasons"]]) or "- (criteria)"
         st.warning(
             f"**⚠️ Bootstrap f2 Analysis Recommended**\n\n"
             f"Standard f2 test is insufficient:\n\n{_criteria_text}\n\n"
@@ -149,8 +149,8 @@ def render():
             f"📌 *Shah VP et al. Pharm Res. 1998;15(6):889-896 | FDA Guidance 1997*"
         )
     if not _rec["has_cv"]:
-        st.caption("Not: Profillerde CV/RSD verisi yok; CV kriterleri otomatik kontrol edilemedi. "
-                   "Vessel-bazlı veri yüklenirse kontrol tam çalışır.")
+        st.caption("Note: these profiles have no CV/RSD data, so the CV criteria could not be checked "
+                   "automatically. Upload vessel-level data to enable the full check.")
 
     vf1="PASS - f1 <= 15: Profiles have acceptable difference" if f1<=15 else "FAIL - f1 > 15: Significant difference detected"
     vf2="SIMILAR - f2 >= 50: Profiles are bioequivalent (FDA)" if f2>=50 else "DISSIMILAR - f2 < 50: Profiles are NOT similar"
