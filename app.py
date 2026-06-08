@@ -194,6 +194,24 @@ with st.sidebar:
         st.session_state.academy_open = True
         st.rerun()
 
+    # Data privacy — same button style as above; opens a dialog with the statement
+    @st.dialog("🔒 Data privacy")
+    def _privacy_dialog():
+        st.markdown(
+            "**DissolvA does not save, log, or store your data.**\n\n"
+            "- The dissolution data, profiles, and results you enter live only in session "
+            "memory and are **erased** when you close or refresh the page. There is no database.\n"
+            "- The app runs on Streamlit Community Cloud infrastructure, where data is processed "
+            "in memory only and is **not persisted by us**.\n"
+            "- The **only** thing sent off your device is the **drug name** you type on the "
+            "**API Information** page — used to query public databases (PubChem · FDA · PubMed) "
+            "and scite.ai. **Your dissolution data is never sent anywhere.**"
+        )
+
+    if st.button("🔒 Data privacy", use_container_width=True,
+                 help="How DissolvA handles your data."):
+        _privacy_dialog()
+
     # Feedback link
     st.markdown(
         '''<div style="padding:6px 12px;margin-top:4px;">
@@ -205,19 +223,6 @@ with st.sidebar:
         </a></div>''',
         unsafe_allow_html=True
     )
-
-    # Data privacy — clear, honest statement (based on the api_information review)
-    with st.expander("🔒 Data privacy"):
-        st.markdown(
-            "**DissolvA does not save, log, or store your data.**\n\n"
-            "- The dissolution data, profiles, and results you enter live only in session "
-            "memory and are **erased** when you close or refresh the page. There is no database.\n"
-            "- The app runs on Streamlit Community Cloud infrastructure, where data is processed "
-            "in memory only and is **not persisted by us**.\n"
-            "- The **only** thing sent off your device is the **drug name** you type on the "
-            "**API Information** page — used to query public databases (PubChem · FDA · PubMed) "
-            "and scite.ai. **Your dissolution data is never sent anywhere.**"
-        )
 
     st.markdown(
         '<div style="text-align:center;padding:8px 0 4px 0;">'
