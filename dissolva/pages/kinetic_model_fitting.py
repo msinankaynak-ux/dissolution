@@ -119,19 +119,39 @@ def render():
         res_fail = {k:v for k,v in st.session_state.fit_results.items() if not v["success"]}
 
         st.subheader("Model Ranking")
+        # Sıralama ölçütü — AICc/BIC küçük=iyi, R2adj/MSC büyük=iyi
+        _RANK_META = {
+            "AICc (recommended)": ("aicc", True),
+            "BIC":                ("bic",  True),
+            "AIC":                ("aic",  True),
+            "RMSE":               ("rmse", True),
+            "R2adj":              ("r2adj", False),
+            "MSC":                ("msc",  False),
+        }
+        rank_choice = st.selectbox(
+            "Rank models by", list(_RANK_META.keys()), index=0,
+            help="AICc = küçük örneklem düzeltmeli AIC; az zaman noktalı dissolüsyon için önerilir. "
+                 "AIC/AICc/BIC/RMSE: küçük daha iyi. R2adj/MSC: büyük daha iyi."
+        )
+        _rank_key, _rank_asc = _RANK_META[rank_choice]
         rows=[{"Model":v["name"],"Category":v["category"],
                "R2":round(v["r2"],4),"R2adj":round(v["r2adj"],4),
-               "AIC":round(v["aic"],3),"MSC":round(v["msc"],3),
+               "RMSE":round(v["rmse"],3),
+               "AIC":round(v["aic"],2),"AICc":round(v["aicc"],2),"BIC":round(v["bic"],2),
+               "MSC":round(v["msc"],3),
                "Params":v["n_params"],"Reference":v["reference"]}
               for v in res_ok.values()]
         if rows:
-            df_r=pd.DataFrame(rows).sort_values("R2adj",ascending=False).reset_index(drop=True)
+            _sort_col = {"aicc":"AICc","bic":"BIC","aic":"AIC","rmse":"RMSE",
+                         "r2adj":"R2adj","msc":"MSC"}[_rank_key]
+            df_r=pd.DataFrame(rows).sort_values(_sort_col,ascending=_rank_asc).reset_index(drop=True)
             df_r.index+=1
-            st.dataframe(df_r.style.background_gradient(subset=["R2adj"],cmap="YlGn"),use_container_width=True)
+            _grad_cmap = "YlGn_r" if _rank_asc else "YlGn"  # küçük=iyi ise ters renk skalası
+            st.dataframe(df_r.style.background_gradient(subset=[_sort_col],cmap=_grad_cmap),use_container_width=True)
             best=df_r.iloc[0]
             st.markdown(
-                f"<div class='info-banner'>Best fit: <strong>{best['Model']}</strong> "
-                f"- R2adj={best['R2adj']}, AIC={best['AIC']}, MSC={best['MSC']}</div>",
+                f"<div class='info-banner'>Best fit (by {rank_choice}): <strong>{best['Model']}</strong> "
+                f"— R2adj={best['R2adj']}, RMSE={best['RMSE']}, AICc={best['AICc']}, BIC={best['BIC']}</div>",
                 unsafe_allow_html=True
             )
 
@@ -156,7 +176,7 @@ def render():
 
         st.subheader("Fitted Parameters")
         for mn,v in res_ok.items():
-            with st.expander(f"{mn}  |  R2adj={v['r2adj']:.4f}  |  AIC={v['aic']:.3f}"):
+            with st.expander(f"{mn}  |  R2adj={v['r2adj']:.4f}  |  RMSE={v['rmse']:.3f}  |  AICc={v['aicc']:.2f}"):
                 st.markdown(f"<div class='eq-box'>{v['equation']}</div>",unsafe_allow_html=True)
                 cols=st.columns(min(4,max(1,len(v["params"]))))
                 for j,(pn,pv) in enumerate(v["params"].items()):

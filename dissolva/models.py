@@ -146,6 +146,20 @@ def aic_fn(y,yp,p):
 def msc_fn(y,yp,p):
     n=len(y); sse=max(np.sum((y-yp)**2),1e-12); sst=max(np.sum((y-np.mean(y))**2),1e-12)
     return float(np.log(sst/sse)-2*p/n)
+def rmse_fn(y,yp):
+    """Root Mean Square Error — ortalama tahmin hatası, veriyle aynı birimde (%)."""
+    n=len(y)
+    return float(np.sqrt(np.sum((y-yp)**2)/n)) if n>0 else np.nan
+def aicc_fn(y,yp,p):
+    """Küçük örneklem için düzeltilmiş AIC (Hurvich & Tsai 1989).
+    AICc = AIC + 2p(p+1)/(n-p-1). Dissolüsyonda az nokta olduğu için tercih edilir."""
+    n=len(y); aic=aic_fn(y,yp,p)
+    denom=n-p-1
+    return float(aic + (2*p*(p+1))/denom) if denom>0 else float("inf")
+def bic_fn(y,yp,p):
+    """Bayesian (Schwarz) Information Criterion — AIC'den ağır parametre cezası: p*ln(n)."""
+    n=len(y); sse=max(np.sum((y-yp)**2),1e-12)
+    return float(n*np.log(sse/n)+p*np.log(n))
 def compute_mdt(t,r):
     f=np.array(r)/100.0; df=np.gradient(f,t)
     num=trapezoid(t*df,t); den=trapezoid(df,t)
@@ -223,23 +237,100 @@ MODEL_DEFS = {
 
 CATEGORIES = ["Basic","Lag-Time","Burst Release","Multi-Phase","Sigmoid","Fractal","Empirical"]
 
+# -- Physical parameter bounds (lower, upper) per model --
+# Cömert ama fiziksel aralıklar: hız sabitleri ≥0, salım üsteli (0,20), lag ≥0,
+# max salım ≤120%, fraksiyonlar (0,1). Listede OLMAYAN modeller sınırsız kalır
+# (regresyon yok). Belirsiz işaretli katsayılı modeller (Quadratic, Pade,
+# Peppas-Sahlin, log-logistic DDSolver) bilerek dışarıda bırakıldı.
+_INF = np.inf
+MODEL_BOUNDS = {
+    "Zero Order":              ([0.0],                 [_INF]),
+    "First Order":             ([0.0],                 [_INF]),
+    "Higuchi":                 ([0.0],                 [_INF]),
+    "Hixson-Crowell":          ([0.0],                 [_INF]),
+    "Korsmeyer-Peppas":        ([0.0, 0.0],            [_INF, 20.0]),
+    "Hopfenberg":              ([0.0, 0.0],            [_INF, 20.0]),
+    "Baker-Lonsdale":          ([0.0],                 [_INF]),
+    "Makoid-Banakar":          ([0.0, 0.0, 0.0],       [_INF, 20.0, _INF]),
+    "Weibull":                 ([1e-9, 0.0, 0.0],      [_INF, _INF, _INF]),
+    "Gompertz":                ([0.0, 0.0, 0.0],       [_INF, _INF, _INF]),
+    "Logistic":                ([0.0, 0.0, 0.0],       [_INF, _INF, _INF]),
+    "Probit":                  ([-_INF, 1e-9, 0.0],    [_INF, _INF, _INF]),
+    "Weibull (No Lag)":        ([1e-9, 0.0],           [_INF, _INF]),
+    "KP + Lag":                ([0.0, 0.0, 0.0],       [_INF, 20.0, _INF]),
+    "First Order + Lag":       ([0.0, 0.0],            [_INF, _INF]),
+    "Zero Order + Lag":        ([0.0, 0.0],            [_INF, _INF]),
+    "Higuchi + Lag":           ([0.0, 0.0],            [_INF, _INF]),
+    "Probit Log":              ([-_INF, 1e-9, 0.0],    [_INF, _INF, _INF]),
+    "Double Exponential":      ([0.0, 0.0, 0.0, 0.0],  [_INF, _INF, _INF, _INF]),
+    "Triple Exponential":      ([0.0]*6,               [_INF]*6),
+    "Power-Exponential":       ([0.0, 0.0, 0.0],       [_INF, _INF, 20.0]),
+    "Biexp. Absorption":       ([0.0, 0.0, 0.0],       [_INF, _INF, _INF]),
+    "Gallagher-Corrigan":      ([0.0, 0.0, 0.0, 0.0],  [_INF, _INF, _INF, _INF]),
+    "Combined Higuchi+FO":     ([0.0, 0.0, 0.0],       [_INF, _INF, 1.0]),
+    "Henriksen":               ([0.0, 0.0, 0.0],       [_INF, _INF, _INF]),
+    "Modified Gompertz":       ([0.0, 0.0, 0.0],       [_INF, _INF, _INF]),
+    "Richards":                ([0.0, 0.0, 1e-9, 0.0], [_INF, _INF, _INF, _INF]),
+    "Log-Normal":              ([-_INF, 1e-9, 0.0],    [_INF, _INF, _INF]),
+    "Hill Equation":           ([0.0, 1e-9, 0.0],      [_INF, _INF, 20.0]),
+    "Dose-Response":           ([0.0, 0.0, 1e-9, 0.0], [_INF, _INF, _INF, 20.0]),
+    "Fractal First Order":     ([0.0, 0.0],            [_INF, 5.0]),
+    "Stretched Exponential":   ([0.0, 0.0, 1e-9],      [_INF, 5.0, _INF]),
+    "Fractal Weibull":         ([1e-9, 0.0, 0.0],      [_INF, _INF, _INF]),
+    "Exponential Assoc.":      ([0.0, 0.0],            [_INF, _INF]),
+    "Hyperbolic":              ([0.0, 1e-9],           [_INF, _INF]),
+    "Brody Growth":            ([0.0, 0.0, -_INF],     [_INF, _INF, _INF]),
+    "Bertalanffy":             ([0.0, 0.0, 1e-9],      [_INF, _INF, _INF]),
+    "hPLC Model":              ([0.0, 0.0, 0.0],       [_INF, _INF, 20.0]),
+    "Compreg Model":           ([0.0, 0.0, 0.0],       [_INF, 20.0, _INF]),
+    "KP Modified":             ([0.0, 0.0, 0.0],       [_INF, 20.0, _INF]),
+    "Makoid-Banakar Mod.":     ([0.0, 0.0, 0.0, -_INF],[_INF, 20.0, _INF, _INF]),
+    "Weibull-Sigmoid":         ([0.0, 0.0, 0.0, 1e-9], [_INF, _INF, _INF, _INF]),
+    "Zero Order + F0":         ([0.0, 0.0],            [_INF, _INF]),
+    "First Order + Fmax":      ([0.0, 0.0],            [_INF, 120.0]),
+    "First Order + Tlag + Fmax":([0.0, 0.0, 0.0],      [_INF, _INF, 120.0]),
+    "Higuchi + F0":            ([0.0, 0.0],            [_INF, _INF]),
+    "KP + F0":                 ([0.0, 0.0, 0.0],       [_INF, 20.0, _INF]),
+    "Second Order":            ([0.0],                 [_INF]),
+    "Third Order":             ([0.0],                 [_INF]),
+    "Michaelis-Menten":        ([0.0, 1e-9],           [_INF, _INF]),
+    "Hixson-Crowell + Lag":    ([0.0, 0.0],            [_INF, _INF]),
+    "Logistic 2 (DDSolver)":   ([-_INF, -_INF, 0.0],   [_INF, _INF, 120.0]),
+    "Gompertz 2 (DDSolver)":   ([-_INF, -_INF, 0.0],   [_INF, _INF, 120.0]),
+}
+
 # -- Curve-fitting engine --
 def fit_model(t, y, name):
     func, p0, pnames, eq, ref, cat = MODEL_DEFS[name]
+    bnds = MODEL_BOUNDS.get(name)
     try:
-        popt,_ = curve_fit(func, t, y, p0=p0, maxfev=25000)
+        if bnds is not None:
+            lo, hi = bnds
+            # p0'ı sınırların içine çek (curve_fit p0 ∈ [lo,hi] ister)
+            p0c = [min(max(v, l), h) for v, l, h in zip(p0, lo, hi)]
+            try:
+                popt, _ = curve_fit(func, t, y, p0=p0c, bounds=(lo, hi), max_nfev=25000)
+            except Exception:
+                # Bounded fit başarısızsa eski davranışa (sınırsız) düş — regresyon yok
+                popt, _ = curve_fit(func, t, y, p0=p0, maxfev=25000)
+        else:
+            popt, _ = curve_fit(func, t, y, p0=p0, maxfev=25000)
         yp = np.array(func(t,*popt), dtype=float)
         valid = ~np.isnan(yp)
         if valid.sum() < 3: raise ValueError("Too few valid predictions")
         tv,yv,ypv = t[valid],y[valid],yp[valid]
+        np_ = len(popt)
         return {"success":True,"name":name,"category":cat,
-                "r2":r2s(yv,ypv),"r2adj":r2adj(yv,ypv,len(popt)),
-                "aic":aic_fn(yv,ypv,len(popt)),"msc":msc_fn(yv,ypv,len(popt)),
+                "r2":r2s(yv,ypv),"r2adj":r2adj(yv,ypv,np_),
+                "aic":aic_fn(yv,ypv,np_),"aicc":aicc_fn(yv,ypv,np_),
+                "bic":bic_fn(yv,ypv,np_),"msc":msc_fn(yv,ypv,np_),
+                "rmse":rmse_fn(yv,ypv),
                 "params":dict(zip(pnames,popt)),"yp":yp,
-                "n_params":len(popt),"equation":eq,"reference":ref,"error":None}
+                "n_params":np_,"equation":eq,"reference":ref,"error":None}
     except Exception as e:
         return {"success":False,"name":name,"category":cat,
-                "r2":np.nan,"r2adj":np.nan,"aic":np.nan,"msc":np.nan,
+                "r2":np.nan,"r2adj":np.nan,"aic":np.nan,"aicc":np.nan,
+                "bic":np.nan,"msc":np.nan,"rmse":np.nan,
                 "params":{},"yp":np.full(len(t),np.nan),
                 "n_params":len(p0),"equation":MODEL_DEFS[name][3],
                 "reference":MODEL_DEFS[name][4],"error":str(e)}
