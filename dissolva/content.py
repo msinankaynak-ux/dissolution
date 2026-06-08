@@ -27,8 +27,11 @@ def bootstrap_recommendation(profiles, ref_nm, test_nm):
             rsd_all.extend([x for x in rsd if x is not None])
             if tt and len(tt) == len(rsd):
                 _t = np.asarray(tt, float); _r = np.asarray(rsd, float)
-                rsd_early.extend(_r[_t <= 15.0].tolist())
-                rsd_late.extend(_r[_t > 15.0].tolist())
+                # FDA: %20 erken noktalarda (örn. ≤15 dk) VE en erken örnekleme
+                # noktasında (ilk nokta t>15 olsa bile) geçerli; diğerlerinde %10.
+                early_mask = (_t <= 15.0) | (_t == _t.min())
+                rsd_early.extend(_r[early_mask].tolist())
+                rsd_late.extend(_r[~early_mask].tolist())
     cv_max       = max(rsd_all)   if rsd_all   else 0.0
     cv_early_max = max(rsd_early) if rsd_early else 0.0
     cv_late_max  = max(rsd_late)  if rsd_late  else 0.0

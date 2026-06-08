@@ -174,9 +174,10 @@ def render():
             # ─────────────────────────────────────────────────────────────────
             has_sd = not np.all(sd_v == 0)
             if has_sd and len(rsd_v) > 0:
-                # FDA: t ≤ 15 min = early (CV ≤ 20%), t > 15 min = late (CV ≤ 10%)
-                early_mask = t_v <= 15.0
-                late_mask  = t_v > 15.0
+                # FDA: %20 erken noktalarda (≤15 dk) VE en erken örnekleme
+                # noktasında (ilk nokta t>15 olsa bile); diğerlerinde %10.
+                early_mask = (t_v <= 15.0) | (t_v == t_v.min())
+                late_mask  = ~early_mask
                 rsd_early_arr = rsd_v[early_mask]
                 rsd_late_arr  = rsd_v[late_mask]
                 cv_early_max = float(np.max(rsd_early_arr)) if len(rsd_early_arr) > 0 else 0.0

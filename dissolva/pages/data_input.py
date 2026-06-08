@@ -98,26 +98,28 @@ def render():
         if up:
             fname = up.name.lower()
 
-            # -- Helper: fix Excel misreading decimal numbers as dates ---------
-            def fix_date_val(val):
-                import datetime as _dt
-                if val is None or (isinstance(val, float) and np.isnan(val)):
+            # -- Safe numeric cell parser — NEVER fabricates a value -----------
+            # Vessel cells must be numbers. Anything else (a date that Excel
+            # mis-inferred, or stray text) becomes NaN. The old code converted
+            # such cells to a fake "day.month" number, silently corrupting real
+            # dissolution data — removed. We coerce to NaN and warn instead.
+            def _to_num(val):
+                if val is None or isinstance(val, bool):
                     return np.nan
                 if isinstance(val, (int, float)):
                     return float(val)
-                if isinstance(val, (_dt.datetime, _dt.date)):
-                    # e.g. 12.5 was read as May-12 -> day=12, month=5 -> 12.5
-                    return float(f"{val.day}.{val.month}")
-                if isinstance(val, str):
-                    try:
-                        return float(val)
+                try:
+                    return float(str(val).strip())
+                except Exception:
+                    try:  # tolerate European decimal comma ("12,5" -> 12.5)
+                        return float(str(val).strip().replace(",", "."))
                     except Exception:
-                        try:
-                            dt = pd.to_datetime(val)
-                            return float(f"{dt.day}.{dt.month}")
-                        except Exception:
-                            return np.nan
-                return np.nan
+                        return np.nan
+
+            # Single shared, SAFE time-column keyword list (no bare "t"/"min"
+            # that would mis-match a vessel column named e.g. "T").
+            TIME_KEYWORDS = ["time", "zaman", "minute", "minutes", "saat",
+                             "hour", "hours", "dakika", "sure", "sures", "süre"]
 
             # -- Load all sheets -----------------------------------------------
             try:
@@ -142,16 +144,14 @@ def render():
                     df_prev = raw_sheets[prev_sh].copy()
                     df_prev.columns = [str(c).strip() for c in df_prev.columns]
 
-                    # Detect time col for preview
-                    TIME_KEYWORDS = ["time","zaman","t","min","minute","minutes",
-                                     "hour","hours","saat","sures","sure"]
+                    # Detect time col for preview (shared TIME_KEYWORDS)
                     tc_prev = next((c for c in df_prev.columns
                                     if c.lower().strip() in TIME_KEYWORDS), df_prev.columns[0])
                     vc_prev = [c for c in df_prev.columns if c != tc_prev]
 
-                    # Fix dates in preview
+                    # Parse vessel cells safely (non-numeric -> NaN, never fabricated)
                     for col in vc_prev:
-                        df_prev[col] = df_prev[col].apply(fix_date_val)
+                        df_prev[col] = df_prev[col].apply(_to_num)
                     df_prev[tc_prev] = pd.to_numeric(df_prev[tc_prev], errors="coerce")
 
                     st.markdown(f"**Raw data - {prev_sh}** ({len(vc_prev)} vessels)")
@@ -185,18 +185,34 @@ def render():
                         df_raw = raw_sheets[sh].copy()
                         df_raw.columns = [str(c).strip() for c in df_raw.columns]
 
-                        TIME_KEYWORDS = ["time","zaman","t","min","minute","minutes",
-                                         "hour","hours","saat"]
                         time_col = next((c for c in df_raw.columns
                                          if c.lower().strip() in TIME_KEYWORDS),
                                         df_raw.columns[0])
                         vessel_cols = [c for c in df_raw.columns if c != time_col]
 
-                        # Fix date-misread values
+                        # Guard: a sheet with no vessel columns can't be a profile
+                        if not vessel_cols:
+                            warnings_list.append(f"Sheet '{sh}': no vessel columns found — skipped.")
+                            continue
+
+                        # Parse vessel cells safely; count cells that fail (non-numeric)
+                        _orig_nonnull = int(df_raw[vessel_cols].notna().sum().sum())
                         for col in vessel_cols:
-                            df_raw[col] = df_raw[col].apply(fix_date_val)
+                            df_raw[col] = df_raw[col].apply(_to_num)
+                        _bad_cells = _orig_nonnull - int(df_raw[vessel_cols].notna().sum().sum())
+                        if _bad_cells > 0:
+                            warnings_list.append(
+                                f"Sheet '{sh}': {_bad_cells} cell(s) could not be read as numbers and were "
+                                f"treated as missing. Format dissolution values as Number (not Date/Text) in Excel."
+                            )
+
                         df_raw[time_col] = pd.to_numeric(df_raw[time_col], errors="coerce")
                         df_raw = df_raw.dropna(subset=[time_col])
+                        # Sort by time and drop duplicate time points (keep first)
+                        df_raw = df_raw.sort_values(time_col).drop_duplicates(subset=[time_col], keep="first")
+                        if df_raw.empty:
+                            warnings_list.append(f"Sheet '{sh}': no valid time points — skipped.")
+                            continue
 
                         t_vals = df_raw[time_col].values.astype(float)
                         vdata  = df_raw[vessel_cols].apply(pd.to_numeric, errors="coerce")
