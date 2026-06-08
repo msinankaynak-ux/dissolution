@@ -114,7 +114,7 @@ with st.sidebar:
     def _nav_label(key: str) -> str:
         return _NAV_LABELS.get(key, key)
 
-    nav = st.radio("", [
+    nav = st.radio("Navigation", [
         # Setup
         "Method Settings", "Analytical Settings", "Data Input",
         # Analysis
@@ -124,7 +124,7 @@ with st.sidebar:
         "Excel Report",
         # Reference
         "💊 API Information", "📚 All References",
-    ], format_func=_nav_label, label_visibility="hidden",
+    ], format_func=_nav_label, label_visibility="collapsed",
        on_change=lambda: st.session_state.update(academy_open=False))
 
     # Active substance sidebar badge
