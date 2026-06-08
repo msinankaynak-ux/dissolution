@@ -96,4 +96,8 @@ def _clear_all():
         "name": "Untitled Project", "description": "",
         "created": "", "analyst": "",
     }
+    st.session_state.active_substance  = {
+        "name": "", "pubchem": None, "bcs_class": None,
+        "fda_methods": [], "selected_method": None, "fetch_done": False,
+    }
 

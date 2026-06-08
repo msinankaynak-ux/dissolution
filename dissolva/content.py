@@ -160,7 +160,7 @@ def analyze_profile_shape(t_arr, r_arr):
     elif is_sigmoid:
         return {
             'shape': 'Sigmoid',
-            'top_models': ['Weibull','Gompertz 1 (DDSolver)','Logistic 1 (DDSolver)','Hill','Richards'],
+            'top_models': ['Weibull','Gompertz 1 (DDSolver)','Logistic 1 (DDSolver)','Hill Equation','Richards'],
             'categories': ['Sigmoid'],
             'reason': f"S-shaped profile detected (inflection point t={t[int(np.argmax(np.gradient(r_norm,t)))]:.1f}). Sigmoid models recommended.",
             'icon': '〜'
@@ -168,7 +168,7 @@ def analyze_profile_shape(t_arr, r_arr):
     elif has_lag:
         return {
             'shape': 'Lag-Time',
-            'top_models': ['First Order + Lag','Korsmeyer-Peppas + Lag','Higuchi + Lag','Zero Order + Lag','Hixson-Crowell + Lag'],
+            'top_models': ['First Order + Lag','KP + Lag','Higuchi + Lag','Zero Order + Lag','Hixson-Crowell + Lag'],
             'categories': ['Lag-Time'],
             'reason': f"Initial lag phase detected (t₂₀ avg. release: %{r_norm[:t_20idx].mean()*100:.1f}). Lag-time models recommended.",
             'icon': '⏱️'
