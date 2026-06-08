@@ -205,6 +205,20 @@ with st.sidebar:
         </a></div>''',
         unsafe_allow_html=True
     )
+
+    # Veri gizliliği — net ve dürüst ifade (api_information incelemesine dayanır)
+    with st.expander("🔒 Veri gizliliği"):
+        st.markdown(
+            "**DissolvA verilerinizi kaydetmez, loglamaz, saklamaz.**\n\n"
+            "- Girdiğiniz çözünme verileri, profiller ve sonuçlar yalnızca oturum "
+            "belleğinde tutulur; sayfayı kapatınca/yenileyince **silinir**. Veritabanı yoktur.\n"
+            "- Uygulama Streamlit Community Cloud altyapısında çalışır; veriler orada "
+            "yalnızca anlık işlenir, **tarafımızca kalıcı saklanmaz**.\n"
+            "- Dışarıya gönderilen **tek** şey: **API Bilgisi** sayfasında yazdığınız "
+            "**ilaç adı** — halka açık veritabanlarına (PubChem · FDA · PubMed) ve "
+            "scite.ai'ye sorgu için. **Çözünme verileriniz asla dışarı gönderilmez.**"
+        )
+
     st.markdown(
         '<div style="text-align:center;padding:8px 0 4px 0;">'
         '<div style="font-size:0.6rem;color:#4a5a70;">DissolvA™ v3.0 &nbsp;|&nbsp; 2026</div>'
