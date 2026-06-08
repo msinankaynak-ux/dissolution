@@ -26,6 +26,7 @@ from dissolva.content import show_literature, show_all_references, analyze_profi
 from dissolva.pages import (method_settings, analytical_settings, all_references,
     data_input, kinetic_model_fitting, statistical_analysis, f1_f2_similarity,
     bootstrap_f2, ivivc, excel_report, api_information, academy)
+from dissolva import auth
 
 st.set_page_config(
     page_title="DissolvA - Predictive Dissolution Suite",
@@ -73,6 +74,10 @@ with st.sidebar:
       </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # Authentication (Streamlit yerleşik Google OIDC). Yapılandırma yoksa açık mod.
+    auth.render_sidebar_auth()
+    auth.sync_session()
 
     if "method_cfg" not in st.session_state:
         st.session_state.method_cfg = {
