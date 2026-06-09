@@ -141,19 +141,9 @@ with st.sidebar:
         # Reference
         "API Information", "All References",
     ]
-    # Icon-decorated labels for a modern look. Native st.radio (no iframe) so the
-    # dark-sidebar theming in theme.py applies cleanly: transparent rows, light
-    # text, amber active pill — the "Midnight + Amber" palette.
-    _NAV_ICONS = {
-        "Method Settings": "⚙", "Analytical Settings": "🧪",
-        "Data Input": "📋", "Kinetic Model Fitting": "📈",
-        "Statistical Analysis": "📊", "f1 and f2 Similarity": "⚖",
-        "Bootstrap f2 Analysis": "🔁", "IVIVC Analysis": "⏳",
-        "Excel Report": "📑", "API Information": "💊",
-        "All References": "📚",
-    }
-    def _nav_fmt(key: str) -> str:
-        return f"{_NAV_ICONS.get(key, '•')} {_nav_label(key)}"
+    # Native st.radio (no iframe) so the dark-sidebar theming in theme.py applies
+    # cleanly: transparent rows, light text, amber hover + amber active pill
+    # ("Midnight + Amber" palette). Text-only labels, no leading icons.
 
     # Programmatic navigation (e.g. the demo-data button) must set the radio's key
     # BEFORE the widget is instantiated — buffer it via a plain session key.
@@ -161,7 +151,7 @@ with st.sidebar:
     if _pending in _nav_options:
         st.session_state["main_nav_radio"] = _pending
 
-    nav = st.radio("Navigation", _nav_options, format_func=_nav_fmt,
+    nav = st.radio("Navigation", _nav_options, format_func=_nav_label,
         label_visibility="collapsed", key="main_nav_radio")
 
     # Leave any full-screen overlay (Academy/Admin) when navigating to a page.

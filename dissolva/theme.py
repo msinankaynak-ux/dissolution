@@ -67,8 +67,12 @@ section[data-testid="stSidebar"] .stRadio label {
 }
 
 section[data-testid="stSidebar"] .stRadio label:hover {
-  background: rgba(255,191,0,0.07) !important;
-  color: #c8b45a !important;
+  background: rgba(255,191,0,0.12) !important;
+  color: #FFBF00 !important;
+}
+
+section[data-testid="stSidebar"] .stRadio label:hover > div:first-child {
+  border-color: #FFBF00 !important;
 }
 
 section[data-testid="stSidebar"] .stRadio label > div:first-child {
