@@ -1,7 +1,7 @@
 # DissolvA — Project Guide & Handoff (read me first)
 
 > This file travels with the repo so any machine/Claude session is fully oriented.
-> Last updated: 2026-06-09 (home machine session).
+> Last updated: 2026-06-09 (backend live + activated, Google auth working, P0 done).
 
 ## ⚠️ Language rule (always)
 **All user-facing app text MUST be in English** — every UI label, button,
@@ -21,7 +21,10 @@ curve_fit, f1/f2, vessel-level bootstrap f2). Pages: `dissolva/pages/`.
   `dissolva.app` (repo `dissolva-website`) links to it via "Launch App".
 - **Backend:** `github.com/msinankaynak-ux/dissolva-backend` — **PRIVATE**.
   FastAPI engine API (`/api/fit`, `/api/f2`, `/api/bootstrap-f2`, `/api/models`).
-  Built + tested (5/5), Railway-ready (Dockerfile binds `$PORT`). NOT deployed yet.
+  **LIVE on Railway: https://dissolva-backend-production.up.railway.app** (deploys
+  from `main`; `dev` = staging). Frontend calls it via `dissolva/engine_client.py`
+  and the live app's `[backend] url` secret is set → **compute runs server-side**.
+  `engine.py` mirrors `dissolva/models.py`. Same `dev`→`main` promote workflow.
 
 ## Run locally
 ```bash
@@ -36,37 +39,50 @@ python -c "from streamlit.testing.v1 import AppTest; \
   print('exceptions:', len(AppTest.from_file('app.py').run().exception))"
 ```
 
-## Deploy workflow
-Develop on `dev`, then promote to production: `git push origin dev:main`
-(this triggers a rebuild of dissanalyze.streamlit.app). Keep `main` == `dev` tree.
+## Deploy workflow (two machines: work + home)
+Daily loop: **work on `dev` → push `dev`** (syncs both machines; the `dev` Streamlit
+app auto-deploys as a live preview). When a chunk is solid: **promote `dev`→`main`**
+(`git push origin dev:main`) — this rebuilds production dissanalyze.streamlit.app +
+Railway backend. Golden rule: **push before leaving a machine, `git checkout dev &&
+git pull` before starting on the other** (avoids history divergence). HTTPS + PAT for
+pushes. Streamlit Cloud caches: after a deploy, hard-refresh (Cmd+Shift+R) or Reboot
+the app from the dashboard if it "looks old".
 
 ## Current status (2026-06-09)
 - ✅ Live, all English. 62-model engine, fixed bootstrap f2 (FDA 85% rule),
   data_input data-corruption fixed, FDA CV early-point rule fixed.
-- ✅ Data-privacy notice (sidebar button → dialog). Google OIDC scaffold in
-  `dissolva/auth.py` (open mode unless `.streamlit/secrets.toml` `[auth]` set).
+- ✅ **Backend live + ACTIVATED** — compute runs on Railway; frontend falls back to
+  local engine only if the backend is unreachable.
+- ✅ **Google sign-in WORKS** via `streamlit-oauth` (`dissolva/auth.py`) — native
+  `st.login` was unreliable on Community Cloud. Needs `[auth]`+`[auth.google]` secrets.
+- ✅ **P0 hardening & polish done** (see plan `~/.claude/plans/witty-juggling-horizon.md`):
+  backend input bounds (DoS), XSS-escape external content in `api_information.py`,
+  Korsmeyer-Peppas ≤60% validity note, f2 3-point guard, fitting legend + chart DPI/
+  contrast, sign-in button shrink + "Powered by AI" moved to footer fine print.
 - 🚧 **IVIVC is DISABLED on purpose** (`pages/ivivc.py` shows a notice + `st.stop()`)
   — Level A misapplied Wagner-Nelson (used dissolution instead of plasma Cp →
   circular) and Multiple Level C regressed a constant (crash). Needs a proper
   rewrite: Level A from entered plasma Cp [Fa=(Cp+ke·AUC0-t)/(ke·AUC0-∞)],
   Multiple-C with real per-formulation dissolution values.
 
-## Open tasks (next steps)
-1. ✅ DONE — backend LIVE on Railway: **https://dissolva-backend-production.up.railway.app**
-   (/health, /api/* verified).
-2. ~ IN PROGRESS — frontend wired to the API via `dissolva/engine_client.py`
-   (BACKEND_URL from `st.secrets["backend"]["url"]` or env; falls back to local engine).
-   Done + tested vs live: **f1/f2, kinetic fitting, bootstrap f2** (API also returns fitted
-   curves + bootstrap distribution so charts survive). TO ACTIVATE on the live app: set the
-   Streamlit Cloud secret `[backend]\nurl="https://dissolva-backend-production.up.railway.app"`.
-   THEN remove the engine (`dissolva/models.py` heavy parts) from this PUBLIC repo → real IP
-   protection (engine currently still present as fallback).
-3. **Google login** is PARKED: secrets loaded (button shows) but clicking gave
-   "internal server error" — likely wrong client_secret or consent-screen
-   (Testing → add test user / publish). Diagnose from the app logs. Optional for beta.
-4. **api_information.py hardening** (review found): html.escape external content
-   (XSS), graceful network-failure messages, BCS-attribution confidence, regex
-   for FDA speed/volume, disclose scite.ai (commercial) in privacy note.
+## Roadmap (next steps) — full detail in `~/.claude/plans/witty-juggling-horizon.md`
+Goal: replace DDSolver/KinetDS; sell to formulation-development researchers worldwide.
+- ✅ **DONE:** backend deploy + activation, frontend↔API wiring, Google auth, **P0**.
+- **P1 — Security/IP (urgent, before monetizing):** backend API-key auth (`/api/*`
+  are currently PUBLIC) + rate limiting (`slowapi`) + request logging; tighten CORS/
+  TrustedHost; `SECRET_KEY` fail-fast; THEN **remove the engine from this PUBLIC repo**
+  (`dissolva/models.py` heavy parts + `engine_client.py` local fallback) → real IP
+  protection (engine still mirrored here as fallback).
+- **P2 — Scientific parity (beat DDSolver/KinetDS):** weighted least squares
+  (`sigma=`), per-parameter 95% CIs, residual diagnostics (residual/Q-Q/runs), dF/dt
+  + Tx% + PDTS/MSD, richer export.
+- **P3 — Commercial:** Stripe (Payment Link + Portal), wire `state.require_tier()`
+  (defined but unused), Firestore persistence/usage metering, ToS/Privacy Policy,
+  fix "FDA compliant" marketing claim, 21 CFR Part 11 audit trail.
+- **P4 — IVIVC rewrite** (plasma-Cp Level A; see below) + validation suite vs
+  `bootf2`/`disprofas`/DDSolver to make the site's "8/8 validation" claim auditable.
+- **api_information.py** further hardening: a few secondary external fields still
+  unescaped; graceful network-failure messages; disclose scite.ai (commercial).
 
 ## Notes / gotchas
 - The repo was made PUBLIC to deploy on Streamlit Cloud free (private repo +
