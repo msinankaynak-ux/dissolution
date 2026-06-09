@@ -112,7 +112,7 @@ def render_sidebar_auth():
 
     oauth2 = OAuth2Component(cid, csec, _AUTHORIZE, _TOKEN, _TOKEN, _REVOKE)
     result = oauth2.authorize_button(
-        name="🔑 Sign in with Google",
+        name="Sign in with Google",
         redirect_uri=redirect,
         scope="openid email profile",
         key="google_login",

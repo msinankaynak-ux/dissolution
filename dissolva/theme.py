@@ -201,10 +201,16 @@ section[data-testid="stSidebar"] .stNumberInput button {
 [data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover * {
   color: #002147 !important;
 }
-/* Round the streamlit-oauth "Sign in with Google" button (iframe component); keep its color */
+/* streamlit-oauth "Sign in with Google" button (iframe). We can't reach inside the
+   iframe to shrink its font, so scale the whole iframe down to size the label
+   proportionally; width/margin compensation refills the box. Color & shape kept. */
 [data-testid="stSidebar"] iframe[title="streamlit_oauth.authorize_button"] {
   border-radius: 12px !important;
   overflow: hidden !important;
+  transform: scale(0.68) !important;
+  transform-origin: top left !important;
+  width: 147% !important;
+  margin-bottom: -23px !important;
 }
 .stDownloadButton > button {
   background: #FFBF00 !important; color: #002147 !important;
