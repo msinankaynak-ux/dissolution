@@ -52,11 +52,15 @@ Develop on `dev`, then promote to production: `git push origin dev:main`
   Multiple-C with real per-formulation dissolution values.
 
 ## Open tasks (next steps)
-1. **Deploy backend to Railway** (needs your Railway account; see backend repo
-   `DEPLOY_RAILWAY.md`). Get the URL.
-2. **Wire frontend → backend API** (Claude can do fully): pages call the API
-   instead of importing `dissolva.models`; then remove the engine from this
-   PUBLIC repo → real IP protection.
+1. ✅ DONE — backend LIVE on Railway: **https://dissolva-backend-production.up.railway.app**
+   (/health, /api/* verified).
+2. ~ IN PROGRESS — frontend wired to the API via `dissolva/engine_client.py`
+   (BACKEND_URL from `st.secrets["backend"]["url"]` or env; falls back to local engine).
+   Done + tested vs live: **f1/f2, kinetic fitting, bootstrap f2** (API also returns fitted
+   curves + bootstrap distribution so charts survive). TO ACTIVATE on the live app: set the
+   Streamlit Cloud secret `[backend]\nurl="https://dissolva-backend-production.up.railway.app"`.
+   THEN remove the engine (`dissolva/models.py` heavy parts) from this PUBLIC repo → real IP
+   protection (engine currently still present as fallback).
 3. **Google login** is PARKED: secrets loaded (button shows) but clicking gave
    "internal server error" — likely wrong client_secret or consent-screen
    (Testing → add test user / publish). Diagnose from the app logs. Optional for beta.

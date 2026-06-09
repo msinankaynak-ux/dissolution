@@ -18,6 +18,7 @@ from scipy.interpolate import interp1d
 from dissolva.theme import OXFORD, AMBER, PALETTE, style_ax
 from dissolva.models import (MODEL_DEFS, CATEGORIES, fit_model, compute_mdt,
     compute_de, r2s, r2adj, aic_fn, msc_fn, _nz, fda_f2_mask, f1_score, f2_score)
+from dissolva import engine_client
 from dissolva.state import (current_tier, require_tier, _safe_profile_names,
     _get_index, _rename_profile, _clear_all)
 from dissolva.content import (show_literature, show_all_references,
@@ -102,8 +103,8 @@ def render():
     if len(rrf)==0:
         st.error("No valid time points (reference <= 85%)."); st.stop()
 
-    f1=f1_score(rrf,rtf)
-    f2=f2_score(rrf,rtf)
+    # f1/f2 via backend API when configured, else local engine (engine_client)
+    f1, f2, _n_used = engine_client.similarity(t_ref, r_ref, t_tst, r_tst)
 
     mc1,mc2,mc3,mc4,mc5=st.columns(5)
     mc1.metric("f1 (Difference)", f"{f1:.2f}",

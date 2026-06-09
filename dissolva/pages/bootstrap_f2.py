@@ -18,6 +18,7 @@ from scipy.interpolate import interp1d
 from dissolva.theme import OXFORD, AMBER, PALETTE, style_ax
 from dissolva.models import (MODEL_DEFS, CATEGORIES, fit_model, compute_mdt,
     compute_de, r2s, r2adj, aic_fn, msc_fn, _nz, fda_f2_mask, f2_score, bootstrap_f2)
+from dissolva import engine_client
 from dissolva.state import (current_tier, require_tier, _safe_profile_names,
     _get_index, _rename_profile, _clear_all)
 from dissolva.content import (show_literature, show_all_references,
@@ -204,20 +205,20 @@ def render():
         prog = st.progress(0, text="Running bootstrap simulation…")
         def _prog(frac, i):
             prog.progress(frac, text=f"Iteration {i:,} / {int(n_iter):,}…")
-        f2_boot = bootstrap_f2(
-            raw_ref_common, raw_test_common, mask_obs,
-            iterations=int(n_iter), seed=int(seed_val),
-            method=_method, progress=_prog,
+        _bs = engine_client.bootstrap(
+            d_ref["time"], d_ref["raw"], d_test["time"], d_test["raw"],
+            method=_method, iterations=int(n_iter), seed=int(seed_val),
+            lower_pctile=float(lower_pctile), progress=_prog,
         )
         prog.empty()
 
-        f2_boot    = f2_boot[~np.isnan(f2_boot)]
-        f2_lower   = float(np.percentile(f2_boot, lower_pctile))
-        f2_upper   = float(np.percentile(f2_boot, 100 - lower_pctile))
-        f2_mean    = float(np.mean(f2_boot))
-        f2_med     = float(np.median(f2_boot))
-        f2_sd      = float(np.std(f2_boot, ddof=1))
-        is_similar = f2_lower >= 50
+        f2_boot    = np.array(_bs["distribution"], dtype=float)
+        f2_lower   = _bs["f2_lower"]
+        f2_upper   = _bs["f2_upper"]
+        f2_mean    = _bs["f2_mean"]
+        f2_med     = _bs["f2_median"]
+        f2_sd      = _bs["f2_sd"]
+        is_similar = _bs["similar"]
 
         # ---- Key metric card (big) ------------------------------------------
         verdict_color = "#c6efce" if is_similar else "#ffc7ce"

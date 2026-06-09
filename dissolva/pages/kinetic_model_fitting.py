@@ -21,6 +21,7 @@ from dissolva.models import (MODEL_DEFS, CATEGORIES, fit_model, compute_mdt,
 from dissolva.state import (current_tier, require_tier, _safe_profile_names,
     _get_index, _rename_profile, _clear_all)
 from dissolva.content import show_literature, show_all_references, analyze_profile_shape
+from dissolva import engine_client
 
 
 def render():
@@ -107,11 +108,9 @@ def render():
                 )
 
     if st.button("Run Model Fitting", type="primary") and selected_models:
-        st.session_state.fit_results = {}
-        prog = st.progress(0)
-        for i,mn in enumerate(selected_models):
-            st.session_state.fit_results[mn] = fit_model(t_arr, r_arr, mn)
-            prog.progress((i+1)/len(selected_models))
+        with st.spinner(f"Fitting {len(selected_models)} model(s)…"):
+            _results, _best = engine_client.fit_models(t_arr, r_arr, selected_models)
+        st.session_state.fit_results = _results
         st.success(f"Fitting complete - {len(selected_models)} models processed.")
 
     if st.session_state.fit_results:
@@ -161,10 +160,12 @@ def render():
         ax.set_xlim(left=0); ax.set_ylim(bottom=0)
         t_sm=np.linspace(t_arr.min(),t_arr.max(),400)
         for i,(mn,v) in enumerate(res_ok.items()):
-            func=MODEL_DEFS[mn][0]; popt=list(v["params"].values())
             try:
-                ys=func(t_sm,*popt)
-                ax.plot(t_sm,ys,color=PALETTE[i%len(PALETTE)],lw=1.6,alpha=0.85,
+                if v.get("curve_t") and v.get("curve_y"):
+                    xs, ys = v["curve_t"], v["curve_y"]          # backend-provided curve
+                else:
+                    xs, ys = t_sm, MODEL_DEFS[mn][0](t_sm, *list(v["params"].values()))
+                ax.plot(xs,ys,color=PALETTE[i%len(PALETTE)],lw=1.6,alpha=0.85,
                         label=f"{mn} (R2adj={v['r2adj']:.3f})")
             except: pass
         ax.set_xlabel(f"Time ({time_unit})")
