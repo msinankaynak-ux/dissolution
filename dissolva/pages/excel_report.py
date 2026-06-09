@@ -21,6 +21,7 @@ from dissolva.models import (MODEL_DEFS, CATEGORIES, fit_model, compute_mdt,
 from dissolva.state import (current_tier, require_tier, _safe_profile_names,
     _get_index, _rename_profile, _clear_all)
 from dissolva.content import show_literature, show_all_references, analyze_profile_shape
+from dissolva import extras
 
 
 def render():
@@ -40,6 +41,34 @@ def render():
     if not st.session_state.profiles:
         st.warning("No profiles loaded. Please go to Data Input first.")
         st.stop()
+
+    # ── Publication exports (PDF report + 300 dpi figure) ───────────────────
+    with st.expander("📑 Publication exports — PDF report & 300 dpi figure", expanded=False):
+        st.caption("Journal-ready outputs built from your current profiles "
+                   "(and model ranking, if a fit has been run).")
+        pe1, pe2 = st.columns(2)
+        with pe1:
+            if st.button("Prepare PDF report", use_container_width=True):
+                try:
+                    st.session_state["_pdf_bytes"] = extras.build_pdf_report()
+                except Exception as e:
+                    st.session_state["_pdf_bytes"] = None
+                    st.error(f"Could not build the PDF: {e}")
+            if st.session_state.get("_pdf_bytes"):
+                st.download_button("⬇️ Download PDF report",
+                    st.session_state["_pdf_bytes"], "DissolvA_report.pdf",
+                    "application/pdf", use_container_width=True)
+        with pe2:
+            if st.button("Prepare figure (300 dpi)", use_container_width=True):
+                try:
+                    st.session_state["_png_bytes"] = extras.build_overlay_png(300)
+                except Exception as e:
+                    st.session_state["_png_bytes"] = None
+                    st.error(f"Could not build the figure: {e}")
+            if st.session_state.get("_png_bytes"):
+                st.download_button("⬇️ Download figure (PNG, 300 dpi)",
+                    st.session_state["_png_bytes"], "DissolvA_profiles_300dpi.png",
+                    "image/png", use_container_width=True)
 
     # ── Customization ───────────────────────────────────────────────────────
     # Get defaults from project metadata
