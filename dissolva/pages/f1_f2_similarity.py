@@ -100,8 +100,14 @@ def render():
     n_points_above85 = int(np.sum(rr > 85))
     n_points_excluded = max(0, n_points_above85 - 1)
 
-    if len(rrf)==0:
-        st.error("No valid time points (reference <= 85%)."); st.stop()
+    if len(rrf) == 0:
+        st.error("No valid time points (reference ≤ 85%)."); st.stop()
+    if len(rrf) < 3:
+        st.error(
+            f"f2 requires at least 3 evaluation points (FDA 1997 Guidance); only "
+            f"{len(rrf)} point(s) qualify (reference ≤ 85%, plus the first point above). "
+            "Add earlier sampling time points to compute a valid f2."
+        ); st.stop()
 
     # f1/f2 via backend API when configured, else local engine (engine_client)
     f1, f2, _n_used = engine_client.similarity(t_ref, r_ref, t_tst, r_tst)

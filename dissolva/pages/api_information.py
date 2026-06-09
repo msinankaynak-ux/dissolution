@@ -5,6 +5,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import io
 import warnings
+import html
+
+
+def _esc(v) -> str:
+    """HTML-escape external content (PubChem/PubMed/scite) before it is rendered
+    via unsafe_allow_html — prevents markup/script injection from API responses."""
+    return html.escape(str(v if v is not None else ""), quote=True)
+
+
 try:
     import plotly.graph_objects as go
     import plotly.figure_factory as ff
@@ -614,16 +623,16 @@ def render():
             f'<div style="background:linear-gradient(135deg,#002147,#003a7a);'
             f'border-radius:10px;padding:14px 20px;margin-bottom:12px;">'
             f'<div style="display:flex;align-items:center;gap:14px;">'
-            f'<img src="{_pc.get("img_url","")}" '
+            f'<img src="{_esc(_pc.get("img_url",""))}" '
             f'style="width:80px;height:80px;object-fit:contain;background:white;'
             f'border-radius:8px;padding:4px;" onerror="this.style.display=\"none\"">'
             f'<div style="flex:1;">'
-            f'<div style="font-size:20px;font-weight:700;color:white;">{_as["name"]}</div>'
+            f'<div style="font-size:20px;font-weight:700;color:white;">{_esc(_as["name"])}</div>'
             f'<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:3px;">'
-            f'{_pc.get("formula","")} &nbsp;·&nbsp; CAS {_pc.get("cas","N/A")} '
-            f'&nbsp;·&nbsp; MW {_pc.get("mw","")} g/mol</div>'
+            f'{_esc(_pc.get("formula",""))} &nbsp;·&nbsp; CAS {_esc(_pc.get("cas","N/A"))} '
+            f'&nbsp;·&nbsp; MW {_esc(_pc.get("mw",""))} g/mol</div>'
             f'<div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px;">'
-            f'{(_pc.get("name","") or "")[:90]}</div>'
+            f'{_esc((_pc.get("name","") or "")[:90])}</div>'
             f'</div>'
             f'<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;">'
             f'{_bcs_badge}'
@@ -852,7 +861,7 @@ def render():
                             f'background:{_p_m.get("bg","#f8f9fa")}20;border-radius:0 8px 8px 0;">'
                             f'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">'
                             f'<div style="font-size:12px;font-weight:600;color:#002147;line-height:1.4;flex:1;">'
-                            f'{_p.get("title","")[:100]}{"..." if len(_p.get("title",""))>100 else ""}'
+                            f'{_esc(_p.get("title","")[:100])}{"..." if len(_p.get("title",""))>100 else ""}'
                             f'</div>'
                             f'<div style="display:flex;gap:5px;align-items:center;margin-left:8px;flex-shrink:0;">'
                             + (f'<span style="background:#dbeafe;color:#185fa5;font-size:9px;font-weight:600;'
@@ -866,9 +875,9 @@ def render():
                             f'</div>'
                             f'</div>'
                             f'<div style="font-size:10px;color:#718096;">'
-                            f'{_p.get("source","")}'
-                            f'{" · " + _p.get("journal","")[:40] if _p.get("journal") else ""}'
-                            + (f' · <a href="https://doi.org/{_p.get("doi")}" target="_blank" '
+                            f'{_esc(_p.get("source",""))}'
+                            f'{" · " + _esc(_p.get("journal","")[:40]) if _p.get("journal") else ""}'
+                            + (f' · <a href="https://doi.org/{_esc(_p.get("doi"))}" target="_blank" '
                                f'style="color:#185fa5;">DOI ↗</a>' if _p.get("doi") else "") +
                             f'</div>'
                             + ("".join([
@@ -876,7 +885,7 @@ def render():
                                 f'background:rgba(255,255,255,0.7);border-radius:5px;'
                                 f'font-size:11px;color:#555;line-height:1.5;'
                                 f'border-left:2px solid {_p_m.get("border","#ddd")};">'
-                                f'<em>"{s[:200]}{"..." if len(s)>200 else ""}"</em>'
+                                f'<em>"{_esc(s[:200])}{"..." if len(s)>200 else ""}"</em>'
                                 f'</div>'
                                 for s in _snips_p
                             ]) if _snips_p else "") +
@@ -1024,10 +1033,10 @@ def render():
                         f'white-space:nowrap;height:fit-content;margin-top:1px;">{_tag}</span>'
                         f'<div style="flex:1;">'
                         f'<div style="font-size:12px;font-weight:500;color:#002147;'
-                        f'line-height:1.4;margin-bottom:3px;">{_art["title"][:120]}'
+                        f'line-height:1.4;margin-bottom:3px;">{_esc(_art["title"][:120])}'
                         f'{"..." if len(_art["title"])>120 else ""}</div>'
                         f'<div style="font-size:10px;color:#718096;">'
-                        f'{_art["first_author"]} et al. · {_art["journal"][:50]} · {_art["year"]}'
+                        f'{_esc(_art["first_author"])} et al. · {_esc(_art["journal"][:50])} · {_esc(_art["year"])}'
                         f'</div>'
                         + (f'<div style="font-size:10px;color:#185fa5;margin-top:1px;">'
                            f'<a href="https://doi.org/{_art["doi"]}" target="_blank" '

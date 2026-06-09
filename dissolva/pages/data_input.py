@@ -572,9 +572,11 @@ def render():
                        alpha=0.07, color="#e74c3c", zorder=0)
             ax.text(q_time * 0.5, q_limit * 0.5,
                     "⚠️ CRITICAL\nTARGET ZONE",
-                    ha='center', va='center', fontsize=7.5,
-                    color='#c0392b', alpha=0.65,
-                    fontweight='bold', style='italic')
+                    ha='center', va='center', fontsize=8.5,
+                    color='#7b1a1a', alpha=0.95,
+                    fontweight='bold', style='italic', zorder=4,
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
+                              edgecolor='#e74c3c', alpha=0.55, lw=0.8))
 
         if show_80:
             ax.axhline(q_limit, color=AMBER, lw=1.5, ls="--", alpha=0.9,

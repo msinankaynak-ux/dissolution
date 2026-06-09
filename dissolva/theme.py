@@ -4,6 +4,11 @@ import streamlit as st
 
 OXFORD = "#002147"
 AMBER  = "#FFBF00"
+# Shared chart sizing — keep page-width dissolution charts visually consistent
+# and export at print quality. Use via plt.subplots(figsize=FIGSIZE); style_ax()
+# raises the DPI for all figures uniformly.
+FIGSIZE = (10, 5)
+DPI = 150
 PALETTE = [
     "#e6194B","#3cb44b","#4363d8","#f58231","#911eb4","#42d4f4",
     "#f032e6","#bfef45","#469990","#dcbeff","#9A6324","#800000",
@@ -254,6 +259,8 @@ def inject_theme():
 
 
 def style_ax(fig, ax):
+    try: fig.set_dpi(DPI)   # uniform print-quality resolution across all charts
+    except Exception: pass
     fig.patch.set_facecolor("#FDFAF5")
     ax.set_facecolor("#F8F4EC")
     for sp in ["top","right"]: ax.spines[sp].set_visible(False)

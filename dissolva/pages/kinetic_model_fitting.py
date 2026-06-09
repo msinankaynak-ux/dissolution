@@ -117,6 +117,17 @@ def render():
         res_ok   = {k:v for k,v in st.session_state.fit_results.items() if v["success"]}
         res_fail = {k:v for k,v in st.session_state.fit_results.items() if not v["success"]}
 
+        # Korsmeyer-Peppas validity advisory (Peppas 1985): the release exponent n
+        # is only interpretable over the first ~60% of release.
+        _kp_like = [m for m in res_ok if ("Korsmeyer" in m or m.startswith("KP"))]
+        if _kp_like and float(np.nanmax(r_arr)) > 60.0:
+            st.info(
+                "ℹ️ **Korsmeyer-Peppas note:** the release exponent *n* is interpretable only "
+                "for the **first ~60% of release** (Peppas, 1985). Above 60%, *n* and its "
+                "transport-mechanism classification become unreliable — read the "
+                f"{', '.join(_kp_like)} fit with caution."
+            )
+
         st.subheader("Model Ranking")
         # Sıralama ölçütü — AICc/BIC küçük=iyi, R2adj/MSC büyük=iyi
         _RANK_META = {
@@ -172,7 +183,11 @@ def render():
         ax.set_ylabel("Cumulative Drug Released (%)")
         ax.set_xlim(left=0)
         ax.set_title(f"Kinetic Model Fitting — {pname}"); ax.set_ylim(0,112)
-        ax.legend(fontsize=6.5,ncol=2,loc="lower right")
+        # Legend outside the axes (right) so dense curve sets stay readable
+        _ncol = 1 if (len(res_ok) + 1) <= 14 else 2
+        ax.legend(fontsize=8, loc="center left", bbox_to_anchor=(1.01, 0.5),
+                  ncol=_ncol, framealpha=0.9, borderaxespad=0.0)
+        fig.tight_layout()
         st.pyplot(fig); plt.close()
 
         st.subheader("Fitted Parameters")
