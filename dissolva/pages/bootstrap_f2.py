@@ -212,13 +212,19 @@ def render():
         )
         prog.empty()
 
-        f2_boot    = np.array(_bs["distribution"], dtype=float)
-        f2_lower   = _bs["f2_lower"]
-        f2_upper   = _bs["f2_upper"]
-        f2_mean    = _bs["f2_mean"]
-        f2_med     = _bs["f2_median"]
-        f2_sd      = _bs["f2_sd"]
-        is_similar = _bs["similar"]
+        _dist = _bs.get("distribution") or []
+        f2_boot = np.asarray(_dist, dtype=float)
+        f2_boot = f2_boot[np.isfinite(f2_boot)] if f2_boot.ndim else np.array([])
+        if f2_boot.size == 0:
+            st.error("Bootstrap produced no valid iterations for these profiles. "
+                     "Check that both profiles have raw vessel data and overlapping time points.")
+            st.stop()
+        f2_lower   = _bs.get("f2_lower")
+        f2_upper   = _bs.get("f2_upper")
+        f2_mean    = _bs.get("f2_mean")
+        f2_med     = _bs.get("f2_median")
+        f2_sd      = _bs.get("f2_sd")
+        is_similar = bool(_bs.get("similar"))
 
         # ---- Key metric card (big) ------------------------------------------
         verdict_color = "#c6efce" if is_similar else "#ffc7ce"

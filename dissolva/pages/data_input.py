@@ -218,9 +218,22 @@ def render():
                         vdata  = df_raw[vessel_cols].apply(pd.to_numeric, errors="coerce")
                         n_v    = vdata.shape[1]
 
+                        # A dissolution profile needs ≥2 time points (fitting / f2 /
+                        # bootstrap all require it); skip otherwise to avoid downstream errors.
+                        if len(t_vals) < 2:
+                            warnings_list.append(f"Sheet '{sh}': needs at least 2 time points — skipped.")
+                            continue
+
                         mean_r = vdata.mean(axis=1).values
                         sd_r   = vdata.std(axis=1, ddof=1).values if n_v > 1 else np.zeros(len(t_vals))
                         rsd_r  = np.where(mean_r > 0, sd_r / mean_r * 100, 0.0)
+
+                        # Dissolution should be (roughly) non-decreasing; flag clear reversals.
+                        if mean_r.size >= 2 and np.any(np.diff(mean_r) < -2.0):
+                            warnings_list.append(
+                                f"Sheet '{sh}': mean release decreases at one or more points "
+                                f"(non-monotonic) — please verify the data."
+                            )
 
                         if n_v not in [6, 12]:
                             warnings_list.append(

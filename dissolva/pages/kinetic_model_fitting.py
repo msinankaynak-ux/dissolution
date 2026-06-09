@@ -144,12 +144,20 @@ def render():
                  "AIC/AICc/BIC/RMSE: lower is better. R2adj/MSC: higher is better."
         )
         _rank_key, _rank_asc = _RANK_META[rank_choice]
-        rows=[{"Model":v["name"],"Category":v["category"],
-               "R2":round(v["r2"],4),"R2adj":round(v["r2adj"],4),
-               "RMSE":round(v["rmse"],3),
-               "AIC":round(v["aic"],2),"AICc":round(v["aicc"],2),"BIC":round(v["bic"],2),
-               "MSC":round(v["msc"],3),
-               "Params":v["n_params"],"Reference":v["reference"]}
+        # Safe numeric round — None/NaN/inf metrics (possible for marginal fits via
+        # the backend) become np.nan so pandas sort + background_gradient keep working.
+        def _rn(x, n):
+            try:
+                xf = float(x)
+                return round(xf, n) if (xf == xf and xf not in (float("inf"), float("-inf"))) else np.nan
+            except (TypeError, ValueError):
+                return np.nan
+        rows=[{"Model":v.get("name",""),"Category":v.get("category",""),
+               "R2":_rn(v.get("r2"),4),"R2adj":_rn(v.get("r2adj"),4),
+               "RMSE":_rn(v.get("rmse"),3),
+               "AIC":_rn(v.get("aic"),2),"AICc":_rn(v.get("aicc"),2),"BIC":_rn(v.get("bic"),2),
+               "MSC":_rn(v.get("msc"),3),
+               "Params":v.get("n_params",0),"Reference":v.get("reference","")}
               for v in res_ok.values()]
         if rows:
             _sort_col = {"aicc":"AICc","bic":"BIC","aic":"AIC","rmse":"RMSE",
@@ -170,15 +178,22 @@ def render():
         ax.scatter(t_arr,r_arr,color=OXFORD,s=65,zorder=5,edgecolors="white",lw=0.8,label="Experimental")
         ax.set_xlim(left=0); ax.set_ylim(bottom=0)
         t_sm=np.linspace(t_arr.min(),t_arr.max(),400)
+        _curve_skip=[]
         for i,(mn,v) in enumerate(res_ok.items()):
             try:
-                if v.get("curve_t") and v.get("curve_y"):
-                    xs, ys = v["curve_t"], v["curve_y"]          # backend-provided curve
-                else:
-                    xs, ys = t_sm, MODEL_DEFS[mn][0](t_sm, *list(v["params"].values()))
-                ax.plot(xs,ys,color=PALETTE[i%len(PALETTE)],lw=1.6,alpha=0.85,
-                        label=f"{mn} (R2adj={v['r2adj']:.3f})")
-            except: pass
+                ct, cy = v.get("curve_t"), v.get("curve_y")
+                if ct and cy:
+                    xs, ys = ct, cy                              # backend-provided curve
+                else:                                            # local fallback: recompute
+                    _pv = list((v.get("params") or {}).values())
+                    if not _pv or any((p is None or p != p) for p in _pv):
+                        _curve_skip.append(mn); continue
+                    xs, ys = t_sm, MODEL_DEFS[mn][0](t_sm, *_pv)
+                _r2a = v.get("r2adj")
+                _lbl = f"{mn} (R2adj={_r2a:.3f})" if isinstance(_r2a,(int,float)) and _r2a==_r2a else mn
+                ax.plot(xs,ys,color=PALETTE[i%len(PALETTE)],lw=1.6,alpha=0.85,label=_lbl)
+            except Exception:
+                _curve_skip.append(mn)
         ax.set_xlabel(f"Time ({time_unit})")
         ax.set_ylabel("Cumulative Drug Released (%)")
         ax.set_xlim(left=0)
@@ -189,14 +204,28 @@ def render():
                   ncol=_ncol, framealpha=0.9, borderaxespad=0.0)
         fig.tight_layout()
         st.pyplot(fig); plt.close()
+        if _curve_skip:
+            st.caption(f"Curves not shown for: {', '.join(_curve_skip)} (non-finite parameters).")
+
+        # Safe display formatter — None/NaN/inf → "N/A" (never crashes f-strings).
+        def _fmt(x, n, g=False):
+            try:
+                xf = float(x)
+                if xf != xf or xf in (float("inf"), float("-inf")):
+                    return "N/A"
+                return f"{xf:.{n}g}" if g else f"{xf:.{n}f}"
+            except (TypeError, ValueError):
+                return "N/A"
 
         st.subheader("Fitted Parameters")
         for mn,v in res_ok.items():
-            with st.expander(f"{mn}  |  R2adj={v['r2adj']:.4f}  |  RMSE={v['rmse']:.3f}  |  AICc={v['aicc']:.2f}"):
-                st.markdown(f"<div class='eq-box'>{v['equation']}</div>",unsafe_allow_html=True)
-                cols=st.columns(min(4,max(1,len(v["params"]))))
-                for j,(pn,pv) in enumerate(v["params"].items()):
-                    cols[j%4].metric(pn,f"{pv:.5g}")
+            with st.expander(f"{mn}  |  R2adj={_fmt(v.get('r2adj'),4)}  |  "
+                             f"RMSE={_fmt(v.get('rmse'),3)}  |  AICc={_fmt(v.get('aicc'),2)}"):
+                st.markdown(f"<div class='eq-box'>{v.get('equation','')}</div>",unsafe_allow_html=True)
+                _params = v.get("params") or {}
+                cols=st.columns(min(4,max(1,len(_params))))
+                for j,(pn,pv) in enumerate(_params.items()):
+                    cols[j%4].metric(pn, _fmt(pv,5,g=True))
         if res_fail:
             st.warning(f"Did not converge: {', '.join(res_fail.keys())}")
 

@@ -384,20 +384,33 @@ def render():
             for ci,h in enumerate(fh): ws4.write(3,ci,h,fmt_h)
             ws4.set_column(0,0,26); ws4.set_column(1,1,14); ws4.set_column(10,10,45); ws4.set_column(11,11,30)
             if st.session_state.fit_results:
-                # AICc ile sırala (küçük=iyi); az zaman noktalı dissolüsyon için önerilen ölçüt
-                sorted_r = sorted([(k,v) for k,v in st.session_state.fit_results.items() if v["success"]],
-                                  key=lambda x: x[1].get("aicc", float("inf")))
+                # Safe rounder — None / NaN / inf metrics (possible from the backend
+                # for marginal fits) become "N/A" instead of crashing round().
+                def _xl(x, n):
+                    try:
+                        xf = float(x)
+                        return round(xf, n) if (xf == xf and xf not in (float("inf"), float("-inf"))) else "N/A"
+                    except (TypeError, ValueError):
+                        return "N/A"
+                def _num(x):
+                    try:
+                        xf = float(x); return xf if xf == xf else None
+                    except (TypeError, ValueError):
+                        return None
+                # AICc ile sırala (küçük=iyi); None'lar sona
+                sorted_r = sorted([(k,v) for k,v in st.session_state.fit_results.items() if v.get("success")],
+                                  key=lambda x: (_num(x[1].get("aicc")) is None, _num(x[1].get("aicc")) or float("inf")))
                 for ri3,(mn,v) in enumerate(sorted_r):
-                    row = ri3+4; adj = v["r2adj"]
-                    ws4.write(row,0,mn,fmt_p); ws4.write(row,1,v["category"],fmt_p)
-                    ws4.write(row,2,round(v["r2"],4),fmt_d)
-                    ws4.write(row,3,round(adj,4),fmt_g if adj>=0.9 else fmt_b)
-                    ws4.write(row,4,round(v["rmse"],3),fmt_d)
-                    ws4.write(row,5,round(v["aic"],2),fmt_d); ws4.write(row,6,round(v["aicc"],2),fmt_d)
-                    ws4.write(row,7,round(v["bic"],2),fmt_d); ws4.write(row,8,round(v["msc"],3),fmt_d)
-                    ws4.write(row,9,v["n_params"],fmt_p)
-                    pstr = "; ".join(f"{k}={pv:.4g}" for k,pv in v["params"].items())
-                    ws4.write(row,10,pstr,fmt_p); ws4.write(row,11,v["reference"],fmt_p)
+                    row = ri3+4; adj = _num(v.get("r2adj"))
+                    ws4.write(row,0,mn,fmt_p); ws4.write(row,1,v.get("category",""),fmt_p)
+                    ws4.write(row,2,_xl(v.get("r2"),4),fmt_d)
+                    ws4.write(row,3,_xl(v.get("r2adj"),4),fmt_g if (adj is not None and adj>=0.9) else fmt_b)
+                    ws4.write(row,4,_xl(v.get("rmse"),3),fmt_d)
+                    ws4.write(row,5,_xl(v.get("aic"),2),fmt_d); ws4.write(row,6,_xl(v.get("aicc"),2),fmt_d)
+                    ws4.write(row,7,_xl(v.get("bic"),2),fmt_d); ws4.write(row,8,_xl(v.get("msc"),3),fmt_d)
+                    ws4.write(row,9,v.get("n_params",0),fmt_p)
+                    pstr = "; ".join(f"{k}={pv:.4g}" for k,pv in (v.get("params") or {}).items() if isinstance(pv,(int,float)))
+                    ws4.write(row,10,pstr,fmt_p); ws4.write(row,11,v.get("reference",""),fmt_p)
             else:
                 ws4.write(4,0,"No fitting results. Run Kinetic Model Fitting first.",fmt_n)
 
