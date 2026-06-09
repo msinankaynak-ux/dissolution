@@ -141,46 +141,28 @@ with st.sidebar:
         # Reference
         "API Information", "All References",
     ]
+    # Icon-decorated labels for a modern look. Native st.radio (no iframe) so the
+    # dark-sidebar theming in theme.py applies cleanly: transparent rows, light
+    # text, amber active pill — the "Midnight + Amber" palette.
     _NAV_ICONS = {
-        "Method Settings": "gear", "Analytical Settings": "sliders",
-        "Data Input": "table", "Kinetic Model Fitting": "graph-up",
-        "Statistical Analysis": "bar-chart-line", "f1 and f2 Similarity": "shuffle",
-        "Bootstrap f2 Analysis": "dice-5", "IVIVC Analysis": "hourglass-split",
-        "Excel Report": "file-earmark-spreadsheet", "API Information": "capsule",
-        "All References": "book",
+        "Method Settings": "⚙", "Analytical Settings": "🧪",
+        "Data Input": "📋", "Kinetic Model Fitting": "📈",
+        "Statistical Analysis": "📊", "f1 and f2 Similarity": "⚖",
+        "Bootstrap f2 Analysis": "🔁", "IVIVC Analysis": "⏳",
+        "Excel Report": "📑", "API Information": "💊",
+        "All References": "📚",
     }
-    # Modern grouped sidebar nav via streamlit-option-menu, with a safe fallback to
-    # st.radio if the optional component is unavailable (the app must never break).
-    nav = None
-    try:
-        from streamlit_option_menu import option_menu
-        _disp = [_nav_label(k) for k in _nav_options]
-        _disp_to_key = {_nav_label(k): k for k in _nav_options}
-        _cur_key = st.session_state.get("_nav_key", _nav_options[0])
-        _idx = _nav_options.index(_cur_key) if _cur_key in _nav_options else 0
-        _sel = option_menu(
-            menu_title=None, options=_disp,
-            icons=[_NAV_ICONS.get(k, "circle") for k in _nav_options],
-            default_index=_idx, key="main_nav_menu",
-            styles={
-                # A clean white nav card on the dark sidebar (deterministic contrast:
-                # dark text on white, amber pill for the active page).
-                "container": {"padding": "6px!important",
-                              "background-color": "#ffffff",
-                              "border-radius": "10px"},
-                "icon": {"color": "#BA7517", "font-size": "15px"},
-                "nav-link": {"font-size": "13px", "color": "#1f2d3d",
-                             "text-align": "left", "padding": "8px 12px",
-                             "margin": "2px 0", "border-radius": "7px",
-                             "--hover-color": "#f3ede1"},
-                "nav-link-selected": {"background-color": "#BA7517",
-                                      "color": "#ffffff", "font-weight": "500"},
-            },
-        )
-        nav = _disp_to_key.get(_sel, _nav_options[0])
-    except Exception:
-        nav = st.radio("Navigation", _nav_options,
-            format_func=_nav_label, label_visibility="collapsed")
+    def _nav_fmt(key: str) -> str:
+        return f"{_NAV_ICONS.get(key, '•')} {_nav_label(key)}"
+
+    # Programmatic navigation (e.g. the demo-data button) must set the radio's key
+    # BEFORE the widget is instantiated — buffer it via a plain session key.
+    _pending = st.session_state.pop("_pending_nav", None)
+    if _pending in _nav_options:
+        st.session_state["main_nav_radio"] = _pending
+
+    nav = st.radio("Navigation", _nav_options, format_func=_nav_fmt,
+        label_visibility="collapsed", key="main_nav_radio")
 
     # Leave any full-screen overlay (Academy/Admin) when navigating to a page.
     if nav != st.session_state.get("_nav_key"):
@@ -258,7 +240,7 @@ with st.sidebar:
     if st.button("⚗ Load demo data", use_container_width=True,
                  help="Load example Reference + Test profiles so you can try fitting and f2 instantly."):
         extras.load_demo_data()
-        st.session_state["_nav_key"] = "Data Input"
+        st.session_state["_pending_nav"] = "Data Input"
         st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
         st.rerun()
 

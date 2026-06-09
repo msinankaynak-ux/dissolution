@@ -11,5 +11,4 @@ streamlit-oauth>=0.1.14   # robust OAuth2 (Google sign-in) — native st.login u
 plotly
 requests>=2.31.0
 beautifulsoup4>=4.12.0
-streamlit-option-menu>=0.3.13   # modern grouped sidebar nav (graceful fallback to st.radio)
 sentry-sdk>=2.0                 # crash reporting (no-op without a DSN; never sends PII)
