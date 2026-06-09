@@ -65,7 +65,29 @@ the app from the dashboard if it "looks old".
   rewrite: Level A from entered plasma Cp [Fa=(Cp+ke·AUC0-t)/(ke·AUC0-∞)],
   Multiple-C with real per-formulation dissolution values.
 
-## Roadmap (next steps) — full detail in `~/.claude/plans/witty-juggling-horizon.md`
+## Free-beta hardening progress (2026-06-09, on `dev` — promote `dev→main` to ship)
+Plan: `~/.claude/plans/tender-kindling-dahl.md`. Decision: Friday = **free beta** (paid later);
+beta gives everyone a free **core** account; owner needs an admin console + privacy-safe usage analytics.
+- ✅ **F1** runtime crash fixes (excel_report safe metrics; kinetic_model nan-safe table/curve/params;
+  bootstrap distribution guard; data_input ≥2-timepoint + non-monotonic checks). AppTest 0 exc.
+- ✅ **F2** backend security: API-key (`X-API-Key` vs `BACKEND_API_KEY`) on /api/*; slowapi rate
+  limits; prod fail-fast; tighter CORS/TrustedHost; request logging; bootstrap cap 5000. pytest 5/5.
+  **Frontend** sends key from `st.secrets["backend"]["api_key"]`. security.py has `require_admin_key` ready.
+- ✅ **F3** honest header (dropped IVIVC, "FDA/EMA guidance-aligned", BETA chip) + privacy dialog
+  rewritten (discloses beta data: email/name, country, usage; reaffirms dissolution data never stored).
+- ⬜ **F4 (NEXT)** Membership + analytics + admin console — Railway Postgres + SQLAlchemy
+  (`db.py`, `routes/members.py`, `schemas/members.py`); /api/members/upsert (+geo country),
+  /api/events, admin /api/admin/* (X-Admin-Key); frontend upsert on sign-in + fire-and-forget events
+  + hidden admin page (admin email only). Designed to no-op when `DATABASE_URL` empty. Testable
+  locally via SQLite (`DATABASE_URL=sqlite:///dev.db`) before wiring Railway Postgres.
+
+### Deploy steps for F1–F3 to go live
+1. Promote: in `~/dissolva/app` and `~/dissolva/backend`: `git push origin dev:main`.
+2. Railway (backend): set env `BACKEND_API_KEY=<random>`, strong `SECRET_KEY`, `ENVIRONMENT=production`.
+3. Streamlit Cloud (frontend): add secret `[backend]` `api_key = "<same BACKEND_API_KEY>"`
+   (keep existing `url`). Without these the API stays OPEN (dev behaviour) — set them to enforce.
+
+## Roadmap (next steps) — full detail in `~/.claude/plans/tender-kindling-dahl.md`
 Goal: replace DDSolver/KinetDS; sell to formulation-development researchers worldwide.
 - ✅ **DONE:** backend deploy + activation, frontend↔API wiring, Google auth, **P0**.
 - **P1 — Security/IP (urgent, before monetizing):** backend API-key auth (`/api/*`
