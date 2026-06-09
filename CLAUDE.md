@@ -83,6 +83,26 @@ beta gives everyone a free **core** account; owner needs an admin console + priv
   page-view events on nav change; hidden **Admin** page (`pages/admin.py`) for admin emails
   (`st.secrets[admin][emails]`, default owner). Privacy: only email/name/country/feature — no science data.
 
+## Beta value-adds (2026-06-10, shipped to main) — `dissolva/extras.py`
+Low-effort, high-impact additions for the academic launch. All logic is isolated in
+`dissolva/extras.py`; each piece degrades gracefully and cannot crash the app.
+- **Modern nav:** sidebar uses `streamlit-option-menu` (icons + amber pill) with a
+  try/except **fallback to `st.radio`**; thin Setup→Analysis→Report→Reference
+  **stepper** at the top of the main content (driven by the current page).
+- **Load demo data** (sidebar): one click loads Reference + Test 6-vessel IR profiles
+  and selects them → instant fitting/f2.
+- **Cite this tool** (sidebar dialog): APA + BibTeX. Override via `[citation]` secret
+  (`authors,title,year,version,url,doi`); add the Zenodo `doi` once minted.
+- **Publication exports** (Excel Report page expander): PDF report (matplotlib
+  PdfPages — cover + overlay + model ranking) + **300 dpi PNG** figure.
+- **Sentry** crash reporting (frontend `app.py` + backend `main.py`): no-op unless a
+  DSN is set; `send_default_pii=False`, `traces_sample_rate=0` → no user data.
+- **GDPR consent banner** (session-level, dismissible).
+
+### Optional secrets/env for the value-adds (all optional — app works without them)
+- Frontend secrets: `[sentry] dsn="..."`; `[citation] doi="10.5281/zenodo.XXXX"` etc.
+- Backend Railway env: `SENTRY_DSN=...` (separate project from the frontend).
+
 ### Deploy steps to activate the beta (all F1–F4)
 1. Promote: in `~/dissolva/app` and `~/dissolva/backend`: `git push origin dev:main`.
 2. **Railway (backend)**: add the **Postgres** plugin (auto-sets `DATABASE_URL`); set env
