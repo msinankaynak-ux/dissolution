@@ -198,14 +198,17 @@ with st.sidebar:
     @st.dialog("🔒 Data privacy")
     def _privacy_dialog():
         st.markdown(
-            "**DissolvA does not save, log, or store your data.**\n\n"
-            "- The dissolution data, profiles, and results you enter live only in session "
-            "memory and are **erased** when you close or refresh the page. There is no database.\n"
-            "- The app runs on Streamlit Community Cloud infrastructure, where data is processed "
-            "in memory only and is **not persisted by us**.\n"
-            "- The **only** thing sent off your device is the **drug name** you type on the "
-            "**API Information** page — used to query public databases (PubChem · FDA · PubMed) "
-            "and scite.ai. **Your dissolution data is never sent anywhere.**"
+            "**Your dissolution data is never stored.**\n\n"
+            "- The dissolution data, profiles, and results you enter live only in your session "
+            "memory and are **erased** when you close or refresh the page. We have no database of "
+            "your scientific data and never sell or share it.\n\n"
+            "**During the free beta we do record a minimal amount to run the service and improve it:**\n"
+            "- Your **account email and name** from Google sign-in (to create your free account).\n"
+            "- Your **country**, derived once at sign-in (we store only the country, not your IP).\n"
+            "- **Anonymous usage events** — which features you open/run (no scientific data, ever).\n\n"
+            "**External lookups:** only the **drug name** you type on the *API Information* page is "
+            "sent out, to query PubChem · FDA · PubMed (public databases) and **scite.ai** "
+            "(a commercial citation service by Digital Science). Your dissolution data is never sent."
         )
 
     if st.button("🔒 Data privacy", use_container_width=True,
@@ -244,7 +247,9 @@ st.markdown(
     '<span style="font-size:1rem;color:#888;font-style:italic;font-weight:400;">' +
     '- Predictive Dissolution Suite</span></h1>' +
     '<div style="color:#5a6480;font-size:0.9rem;margin-top:4px;">' +
-    'FDA-Compliant - 62 Kinetic Models - Statistical Profiling - IVIVC</div>',
+    'FDA/EMA guidance-aligned · 62 Kinetic Models · f1/f2 · Bootstrap f2 · Statistical Profiling' +
+    '<span style="background:#eef2f7;color:#5a6480;font-size:0.7rem;font-weight:600;' +
+    'padding:1px 8px;border-radius:10px;margin-left:8px;">BETA · research use only</span></div>',
     unsafe_allow_html=True
 )
 st.markdown('<hr style="border:1px solid #FFBF00;margin:10px 0 4px 0;">', unsafe_allow_html=True)
