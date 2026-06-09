@@ -163,14 +163,18 @@ with st.sidebar:
             icons=[_NAV_ICONS.get(k, "circle") for k in _nav_options],
             default_index=_idx, key="main_nav_menu",
             styles={
-                "container": {"padding": "0", "background-color": "transparent"},
-                "icon": {"color": "rgba(255,191,0,0.7)", "font-size": "14px"},
-                "nav-link": {"font-size": "13px", "color": "rgba(255,255,255,0.78)",
-                             "padding": "7px 12px", "margin": "2px 4px",
-                             "border-radius": "6px",
-                             "--hover-color": "rgba(255,191,0,0.10)"},
+                # A clean white nav card on the dark sidebar (deterministic contrast:
+                # dark text on white, amber pill for the active page).
+                "container": {"padding": "6px!important",
+                              "background-color": "#ffffff",
+                              "border-radius": "10px"},
+                "icon": {"color": "#BA7517", "font-size": "15px"},
+                "nav-link": {"font-size": "13px", "color": "#1f2d3d",
+                             "text-align": "left", "padding": "8px 12px",
+                             "margin": "2px 0", "border-radius": "7px",
+                             "--hover-color": "#f3ede1"},
                 "nav-link-selected": {"background-color": "#BA7517",
-                                      "color": "#FAEEDA", "font-weight": "500"},
+                                      "color": "#ffffff", "font-weight": "500"},
             },
         )
         nav = _disp_to_key.get(_sel, _nav_options[0])
