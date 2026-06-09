@@ -169,33 +169,34 @@ def consent_banner(open_privacy):
     if st.session_state.get("cookie_consent"):
         return
     st.markdown("""<style>
-    .st-key-consent_bar { background:rgba(0,33,71,0.035) !important;
-        border:1px solid rgba(0,33,71,0.10) !important; border-radius:10px !important; }
+    .st-key-consent_bar { background:transparent !important; border:none !important;
+        border-bottom:1px solid rgba(0,33,71,0.08) !important;
+        padding:0 2px 10px !important; margin-bottom:16px !important; }
     .st-key-consent_accept button {
-        background:#002147 !important; color:#fff !important;
-        border:1px solid rgba(255,191,0,0.55) !important;
-        font-family:inherit !important; font-size:0.8rem !important;
-        font-weight:500 !important; padding:5px 16px !important;
+        background:transparent !important; color:#9a6a12 !important;
+        border:1px solid rgba(255,191,0,0.65) !important;
+        font-family:inherit !important; font-size:0.78rem !important;
+        font-weight:500 !important; padding:4px 16px !important;
         border-radius:7px !important; min-height:0 !important; }
     .st-key-consent_accept button:hover {
         background:#FFBF00 !important; color:#002147 !important;
         border-color:#FFBF00 !important; }
     .st-key-consent_details button {
         background:transparent !important; border:none !important;
-        color:#5a8ab0 !important; font-family:inherit !important;
+        color:#8a98ab !important; font-family:inherit !important;
         font-size:0.78rem !important; font-weight:400 !important;
-        padding:5px 4px !important; min-height:0 !important; }
+        padding:4px 4px !important; min-height:0 !important; }
     .st-key-consent_details button:hover {
-        background:transparent !important; color:#FFBF00 !important; }
+        background:transparent !important; color:#9a6a12 !important; }
     </style>""", unsafe_allow_html=True)
     with st.container(border=False, key="consent_bar"):
-        c1, c2, c3 = st.columns([0.80, 0.11, 0.11], vertical_alignment="center")
+        c1, c2, c3 = st.columns([0.78, 0.11, 0.11], vertical_alignment="center")
         with c1:
             st.markdown(
-                "<div style='font-size:0.82rem;color:#5a6480;line-height:1.45;'>"
-                "🍪 We use a sign-in cookie and anonymous usage stats (feature + "
-                "country) to run the beta — <b style='color:#3a4660;'>your dissolution "
-                "data is never stored.</b></div>", unsafe_allow_html=True)
+                "<div style='font-size:0.8rem;color:#8a98ab;line-height:1.4;'>"
+                "🍪 Cookies and anonymous usage stats keep the beta running. "
+                "<span style='color:#5a6480;'>Your dissolution data is never stored.</span>"
+                "</div>", unsafe_allow_html=True)
         with c2:
             if st.button("Details", use_container_width=True, key="consent_details"):
                 open_privacy()
