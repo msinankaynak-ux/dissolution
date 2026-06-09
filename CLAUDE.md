@@ -75,17 +75,22 @@ beta gives everyone a free **core** account; owner needs an admin console + priv
   **Frontend** sends key from `st.secrets["backend"]["api_key"]`. security.py has `require_admin_key` ready.
 - ✅ **F3** honest header (dropped IVIVC, "FDA/EMA guidance-aligned", BETA chip) + privacy dialog
   rewritten (discloses beta data: email/name, country, usage; reaffirms dissolution data never stored).
-- ⬜ **F4 (NEXT)** Membership + analytics + admin console — Railway Postgres + SQLAlchemy
-  (`db.py`, `routes/members.py`, `schemas/members.py`); /api/members/upsert (+geo country),
-  /api/events, admin /api/admin/* (X-Admin-Key); frontend upsert on sign-in + fire-and-forget events
-  + hidden admin page (admin email only). Designed to no-op when `DATABASE_URL` empty. Testable
-  locally via SQLite (`DATABASE_URL=sqlite:///dev.db`) before wiring Railway Postgres.
+- ✅ **F4** Membership + analytics + admin console (code-complete, tested via SQLite).
+  Backend: `db.py` (SQLAlchemy Member/UsageEvent; no-op when `DATABASE_URL` empty),
+  `routes/members.py` (/api/members/upsert +geo country, /api/events, admin /api/admin/{members,stats}
+  behind X-Admin-Key). Frontend: `auth.py` upserts a free 'core' member on sign-in;
+  `engine_client` upsert_member/log_event (fire-and-forget) + admin_members/admin_stats;
+  page-view events on nav change; hidden **Admin** page (`pages/admin.py`) for admin emails
+  (`st.secrets[admin][emails]`, default owner). Privacy: only email/name/country/feature — no science data.
 
-### Deploy steps for F1–F3 to go live
+### Deploy steps to activate the beta (all F1–F4)
 1. Promote: in `~/dissolva/app` and `~/dissolva/backend`: `git push origin dev:main`.
-2. Railway (backend): set env `BACKEND_API_KEY=<random>`, strong `SECRET_KEY`, `ENVIRONMENT=production`.
-3. Streamlit Cloud (frontend): add secret `[backend]` `api_key = "<same BACKEND_API_KEY>"`
-   (keep existing `url`). Without these the API stays OPEN (dev behaviour) — set them to enforce.
+2. **Railway (backend)**: add the **Postgres** plugin (auto-sets `DATABASE_URL`); set env
+   `BACKEND_API_KEY=<random>`, `ADMIN_API_KEY=<random>`, strong `SECRET_KEY`, `ENVIRONMENT=production`.
+3. **Streamlit Cloud (frontend) secrets**: under `[backend]` keep `url`, add
+   `api_key="<BACKEND_API_KEY>"` and `admin_key="<ADMIN_API_KEY>"`; add `[admin]` `emails=["msinankaynak@gmail.com"]`.
+4. Verify: sign in → you appear in the **Admin** console; usage events accrue.
+   Without step 2/3 the API stays OPEN and membership/analytics no-op (app still works).
 
 ## Roadmap (next steps) — full detail in `~/.claude/plans/tender-kindling-dahl.md`
 Goal: replace DDSolver/KinetDS; sell to formulation-development researchers worldwide.
