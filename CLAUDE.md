@@ -1,7 +1,8 @@
 # DissolvA — Project Guide & Handoff (read me first)
 
 > This file travels with the repo so any machine/Claude session is fully oriented.
-> Last updated: 2026-06-09 (backend live + activated, Google auth working, P0 done).
+> Last updated: 2026-06-10 (free beta shipped: F1–F4 + value-adds; native nav
+> palette + slim consent banner; ready for the school-distribution day).
 
 ## ⚠️ Language rule (always)
 **All user-facing app text MUST be in English** — every UI label, button,
@@ -21,10 +22,14 @@ curve_fit, f1/f2, vessel-level bootstrap f2). Pages: `dissolva/pages/`.
   `dissolva.app` (repo `dissolva-website`) links to it via "Launch App".
 - **Backend:** `github.com/msinankaynak-ux/dissolva-backend` — **PRIVATE**.
   FastAPI engine API (`/api/fit`, `/api/f2`, `/api/bootstrap-f2`, `/api/models`).
-  **LIVE on Railway: https://dissolva-backend-production.up.railway.app** (deploys
-  from `main`; `dev` = staging). Frontend calls it via `dissolva/engine_client.py`
-  and the live app's `[backend] url` secret is set → **compute runs server-side**.
-  `engine.py` mirrors `dissolva/models.py`. Same `dev`→`main` promote workflow.
+  **LIVE on Railway: https://dissolva-backend-production-d2c7.up.railway.app**
+  (Railway project `zoological-endurance`; deploys from `main`, `dev` = staging).
+  The Streamlit secret `[backend] url` points here; `api_key`/`admin_key` match the
+  Railway env `BACKEND_API_KEY`/`ADMIN_API_KEY`. Postgres plugin attached →
+  membership + usage analytics live (Admin Console populated). Frontend calls it via
+  `dissolva/engine_client.py` → **compute runs server-side**; `engine.py` mirrors
+  `dissolva/models.py`. Same `dev`→`main` promote workflow.
+  NOTE: a duplicate empty Railway project `giving-abundance` exists — ignore/delete it.
 
 ## Run locally
 ```bash
