@@ -109,7 +109,7 @@ with st.sidebar:
     # Logical flow: Setup -> Analysis -> Report -> Reference.
     # Returned value is the canonical key; the displayed label is decorated via _nav_label (routing intact).
     _NAV_LABELS = {
-        "IVIVC Analysis": "IVIVC Analysis  🚧",   # geçici devre dışı (yeniden yapımda)
+        "IVIVC Analysis": "IVIVC Analysis — Coming Soon",   # disabled / under construction
     }
     def _nav_label(key: str) -> str:
         return _NAV_LABELS.get(key, key)
@@ -123,7 +123,7 @@ with st.sidebar:
         # Report
         "Excel Report",
         # Reference
-        "💊 API Information", "📚 All References",
+        "API Information", "All References",
     ], format_func=_nav_label, label_visibility="collapsed",
        on_change=lambda: st.session_state.update(academy_open=False))
 
@@ -215,15 +215,16 @@ with st.sidebar:
                  help="How DissolvA handles your data."):
         _privacy_dialog()
 
-    # Feedback link
+    # Feedback — styled like the New Session / Academy / Data privacy buttons above
     st.markdown(
-        '''<div style="padding:6px 12px;margin-top:4px;">
-        <a href="https://tally.so/r/44oM55" target="_blank"
-           style="display:flex;align-items:center;gap:8px;text-decoration:none;
-                  color:rgba(232,224,208,0.4);font-size:0.75rem;"
-           onmouseover="this.style.color='#FFBF00'" onmouseout="this.style.color='rgba(232,224,208,0.4)'">
-          <span>✉</span><span>Share Feedback</span>
-        </a></div>''',
+        '''<a href="https://tally.so/r/44oM55" target="_blank"
+           style="display:block;text-align:center;background:transparent;
+                  border:1px solid rgba(255,191,0,0.35);color:rgba(255,191,0,0.75);
+                  font-size:0.78rem;font-weight:600;letter-spacing:0.5px;border-radius:8px;
+                  padding:0.5rem 0.75rem;margin-top:4px;text-decoration:none;"
+           onmouseover="this.style.borderColor='#FFBF00';this.style.color='#FFBF00';this.style.background='rgba(255,191,0,0.06)'"
+           onmouseout="this.style.borderColor='rgba(255,191,0,0.35)';this.style.color='rgba(255,191,0,0.75)';this.style.background='transparent'">
+          ✉ Share Feedback</a>''',
         unsafe_allow_html=True
     )
 
@@ -293,7 +294,7 @@ elif nav == "IVIVC Analysis":
     ivivc.render()
 elif nav == "Excel Report":
     excel_report.render()
-elif nav == "💊 API Information":
+elif nav == "API Information":
     api_information.render()
-elif nav == "📚 All References":
+elif nav == "All References":
     all_references.render()
