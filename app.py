@@ -140,8 +140,6 @@ with st.sidebar:
         # Reference
         "API Information", "All References",
     ]
-    if _is_admin():
-        _nav_options.append("Admin")
     nav = st.radio("Navigation", _nav_options,
        format_func=_nav_label, label_visibility="collapsed",
        on_change=lambda: st.session_state.update(academy_open=False))
@@ -239,6 +237,13 @@ with st.sidebar:
                  help="How DissolvA handles your data."):
         _privacy_dialog()
 
+    # Admin Console — shown ONLY to admin emails (st.secrets[admin][emails], default owner)
+    if _is_admin():
+        if st.button("🛡️ Admin Console", use_container_width=True,
+                     help="Members & usage analytics (admins only)."):
+            st.session_state.admin_open = True
+            st.rerun()
+
     # Feedback — styled like the New Session / Academy / Data privacy buttons above
     st.markdown(
         '''<a href="https://tally.so/r/44oM55" target="_blank"
@@ -300,6 +305,14 @@ if st.session_state.get("academy_open"):
     academy.render()
     st.stop()
 
+# Admin Console — admin-only, opened via the sidebar button (not a nav peer).
+if st.session_state.get("admin_open") and _is_admin():
+    if st.button("← Back to app"):
+        st.session_state.admin_open = False
+        st.rerun()
+    admin.render()
+    st.stop()
+
 if nav == "Method Settings":
     method_settings.render()
 elif nav == "Analytical Settings":
@@ -322,5 +335,3 @@ elif nav == "API Information":
     api_information.render()
 elif nav == "All References":
     all_references.render()
-elif nav == "Admin" and _is_admin():
-    admin.render()
