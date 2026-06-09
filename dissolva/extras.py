@@ -162,23 +162,45 @@ def citation_dialog():
 # Consent banner — GDPR cookie/usage notice (session-level, dismissible)
 # ---------------------------------------------------------------------------
 def consent_banner(open_privacy):
-    """Render a dismissible consent notice until the user accepts it this session.
-    `open_privacy` is a zero-arg callable that opens the full privacy dialog."""
+    """Render a slim, dismissible consent notice until the user accepts it this
+    session. `open_privacy` is a zero-arg callable that opens the privacy dialog.
+    Buttons are scoped via their `st-key-*` classes so they stay light and compact
+    (the global amber button style would otherwise make them heavy)."""
     if st.session_state.get("cookie_consent"):
         return
-    with st.container(border=True):
-        c1, c2, c3 = st.columns([6, 1.3, 1.3])
+    st.markdown("""<style>
+    .st-key-consent_bar { background:rgba(0,33,71,0.035) !important;
+        border:1px solid rgba(0,33,71,0.10) !important; border-radius:10px !important; }
+    .st-key-consent_accept button {
+        background:#002147 !important; color:#fff !important;
+        border:1px solid rgba(255,191,0,0.55) !important;
+        font-family:inherit !important; font-size:0.8rem !important;
+        font-weight:500 !important; padding:5px 16px !important;
+        border-radius:7px !important; min-height:0 !important; }
+    .st-key-consent_accept button:hover {
+        background:#FFBF00 !important; color:#002147 !important;
+        border-color:#FFBF00 !important; }
+    .st-key-consent_details button {
+        background:transparent !important; border:none !important;
+        color:#5a8ab0 !important; font-family:inherit !important;
+        font-size:0.78rem !important; font-weight:400 !important;
+        padding:5px 4px !important; min-height:0 !important; }
+    .st-key-consent_details button:hover {
+        background:transparent !important; color:#FFBF00 !important; }
+    </style>""", unsafe_allow_html=True)
+    with st.container(border=False, key="consent_bar"):
+        c1, c2, c3 = st.columns([0.80, 0.11, 0.11], vertical_alignment="center")
         with c1:
             st.markdown(
-                "🍪 **We value your privacy.** DissolvA uses a sign-in cookie and "
-                "records minimal, anonymous usage (feature names + country) to run "
-                "and improve the beta. **Your dissolution data is never stored.**"
-            )
+                "<div style='font-size:0.82rem;color:#5a6480;line-height:1.45;'>"
+                "🍪 We use a sign-in cookie and anonymous usage stats (feature + "
+                "country) to run the beta — <b style='color:#3a4660;'>your dissolution "
+                "data is never stored.</b></div>", unsafe_allow_html=True)
         with c2:
-            if st.button("Privacy details", use_container_width=True, key="_consent_priv"):
+            if st.button("Details", use_container_width=True, key="consent_details"):
                 open_privacy()
         with c3:
-            if st.button("Accept", type="primary", use_container_width=True, key="_consent_ok"):
+            if st.button("Got it", use_container_width=True, key="consent_accept"):
                 st.session_state.cookie_consent = True
                 st.rerun()
 
