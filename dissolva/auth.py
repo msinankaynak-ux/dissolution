@@ -126,6 +126,12 @@ def render_sidebar_auth():
         st.session_state["user_name"]    = info.get("name")
         st.session_state["user_picture"] = info.get("picture")
         st.session_state["auth_token"]   = result["token"]
+        # Register the free "core" member (best-effort; backend no-op if DB disabled).
+        try:
+            from dissolva import engine_client
+            engine_client.upsert_member(info.get("email"), info.get("name"))
+        except Exception:
+            pass
         st.rerun()
 
 

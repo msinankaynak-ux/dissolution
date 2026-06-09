@@ -148,3 +148,54 @@ def bootstrap(ref_time, ref_raw, test_time, test_raw, method="nonparametric",
         "f2_sd": float(dist.std(ddof=1)), "n_iter": int(dist.size),
         "similar": bool(f2_lower >= 50), "distribution": [float(x) for x in dist],
     }
+
+
+# ── Membership & usage analytics (best-effort; never block/raise to the UI) ──
+def _admin_key():
+    try:
+        return (st.secrets.get("backend") or {}).get("admin_key") or os.getenv("BACKEND_ADMIN_KEY") or ""
+    except Exception:
+        return os.getenv("BACKEND_ADMIN_KEY") or ""
+
+
+def upsert_member(email, name=""):
+    """Register/refresh the signed-in user as a free 'core' member. Silent no-op
+    if the backend or email is missing."""
+    if not (using_backend() and email):
+        return
+    try:
+        _post("/api/members/upsert", {"email": email, "name": name or ""}, timeout=15)
+    except Exception:
+        pass
+
+
+def log_event(feature, email=""):
+    """Fire-and-forget usage event (feature name only — no scientific data)."""
+    if not using_backend():
+        return
+    try:
+        _post("/api/events", {"feature": feature, "email": email or ""}, timeout=8)
+    except Exception:
+        pass
+
+
+def _admin_get(path, timeout=20):
+    url = backend_url()
+    if not url:
+        raise RuntimeError("Backend URL not configured.")
+    headers = {}
+    if _api_key():
+        headers["X-API-Key"] = _api_key()
+    if _admin_key():
+        headers["X-Admin-Key"] = _admin_key()
+    resp = requests.get(url + path, headers=headers, timeout=timeout)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def admin_members():
+    return _admin_get("/api/admin/members")
+
+
+def admin_stats():
+    return _admin_get("/api/admin/stats")

@@ -25,8 +25,23 @@ from dissolva.state import (init_session_state, TIER_RANK, current_tier, require
 from dissolva.content import show_literature, show_all_references, analyze_profile_shape
 from dissolva.pages import (method_settings, analytical_settings, all_references,
     data_input, kinetic_model_fitting, statistical_analysis, f1_f2_similarity,
-    bootstrap_f2, ivivc, excel_report, api_information, academy)
-from dissolva import auth
+    bootstrap_f2, ivivc, excel_report, api_information, academy, admin)
+from dissolva import auth, engine_client
+
+
+def _admin_emails():
+    try:
+        e = st.secrets.get("admin", {}).get("emails")
+        if e:
+            return {str(x).strip().lower() for x in e}
+    except Exception:
+        pass
+    return {"msinankaynak@gmail.com"}  # default owner
+
+
+def _is_admin():
+    em = (auth.current_user() or {}).get("email") or ""
+    return em.strip().lower() in _admin_emails()
 
 st.set_page_config(
     page_title="DissolvA - Predictive Dissolution Suite",
@@ -114,7 +129,7 @@ with st.sidebar:
     def _nav_label(key: str) -> str:
         return _NAV_LABELS.get(key, key)
 
-    nav = st.radio("Navigation", [
+    _nav_options = [
         # Setup
         "Method Settings", "Analytical Settings", "Data Input",
         # Analysis
@@ -124,8 +139,17 @@ with st.sidebar:
         "Excel Report",
         # Reference
         "API Information", "All References",
-    ], format_func=_nav_label, label_visibility="collapsed",
+    ]
+    if _is_admin():
+        _nav_options.append("Admin")
+    nav = st.radio("Navigation", _nav_options,
+       format_func=_nav_label, label_visibility="collapsed",
        on_change=lambda: st.session_state.update(academy_open=False))
+
+    # Privacy-safe usage analytics: log a page-view once per page change (best-effort).
+    if nav != st.session_state.get("_last_logged_page"):
+        st.session_state["_last_logged_page"] = nav
+        engine_client.log_event(nav, (auth.current_user() or {}).get("email") or "")
 
     # Active substance sidebar badge
     _as_sb = st.session_state.get("active_substance", {})
@@ -298,3 +322,5 @@ elif nav == "API Information":
     api_information.render()
 elif nav == "All References":
     all_references.render()
+elif nav == "Admin" and _is_admin():
+    admin.render()
