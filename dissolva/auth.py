@@ -1,54 +1,90 @@
-"""DissolvA authentication / membership module.
+"""DissolvA authentication.
 
-Streamlit yerleşik OIDC girişini (st.login / st.logout / st.user) sarmalar.
-Giriş henüz yapılandırılmadıysa (secrets.toml yoksa) uygulama açık modda çalışır.
-Tier (core/research/pro) enforcement burada DEĞİL — şimdilik sadece kimlik.
-Gerçek tier ataması ileride Firestore/Stripe ile bağlanacak (Phase 6)."""
+Streamlit's NATIVE st.login (OIDC) is unreliable on Streamlit Community Cloud
+("Missing provider for OAuth callback" — the OAuth state is kept in memory and is
+lost on the callback). So we use the `streamlit-oauth` component instead, which
+runs the OAuth2 + PKCE flow in a popup and returns the token directly.
+
+Reuses the EXISTING secret `[auth.google]` (client_id/client_secret) and derives
+the app-root redirect URI from `[auth].redirect_uri` (strips /oauth2callback).
+When not configured (or the package is missing) the app runs in OPEN mode.
+Tier (core/research/pro) enforcement is NOT here yet — identity only.
+"""
+import base64
+import json
 import streamlit as st
+
+try:
+    from streamlit_oauth import OAuth2Component
+    _OAUTH_OK = True
+except Exception:
+    _OAUTH_OK = False
+
+_AUTHORIZE = "https://accounts.google.com/o/oauth2/v2/auth"
+_TOKEN = "https://oauth2.googleapis.com/token"
+_REVOKE = "https://oauth2.googleapis.com/revoke"
+
+
+def _google_cfg():
+    """(client_id, client_secret, app_root_redirect) or (None, None, None)."""
+    try:
+        a = st.secrets["auth"]
+        g = a["google"]
+        cid = g.get("client_id")
+        csec = g.get("client_secret")
+        redirect = (a.get("redirect_uri") or "").replace("/oauth2callback", "").rstrip("/")
+        if cid and csec and redirect:
+            return cid, csec, redirect
+    except Exception:
+        pass
+    return None, None, None
 
 
 def auth_configured() -> bool:
-    """secrets.toml içinde [auth] + bir Google sağlayıcısı tanımlı mı?"""
-    try:
-        return ("auth" in st.secrets) and ("google" in st.secrets["auth"])
-    except Exception:
-        return False
+    cid, _, _ = _google_cfg()
+    return bool(cid) and _OAUTH_OK
 
 
 def is_authenticated() -> bool:
-    """Kullanıcı giriş yapmış mı?"""
-    try:
-        return bool(getattr(st.user, "is_logged_in", False))
-    except Exception:
-        return False
+    return bool(st.session_state.get("user_email"))
 
 
 def current_user() -> dict:
-    """Giriş yapan kullanıcının bilgileri (yoksa None'lar)."""
-    if is_authenticated():
-        return {
-            "email":   getattr(st.user, "email", None),
-            "name":    getattr(st.user, "name", None),
-            "picture": getattr(st.user, "picture", None),
-        }
-    return {"email": None, "name": None, "picture": None}
+    return {
+        "email":   st.session_state.get("user_email"),
+        "name":    st.session_state.get("user_name"),
+        "picture": st.session_state.get("user_picture"),
+    }
 
 
 def sync_session():
-    """st.user → st.session_state.user_email senkronu (durum tutarlılığı)."""
+    """Kept for compatibility; user_email is written on login."""
+    return
+
+
+def _decode_id_token(token: dict) -> dict:
+    """Decode the (TLS-delivered) Google id_token JWT payload for display."""
     try:
-        st.session_state.user_email = current_user()["email"]
+        payload = token.get("id_token", "").split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        return json.loads(base64.urlsafe_b64decode(payload))
     except Exception:
-        pass
+        return {}
+
+
+def _logout():
+    for k in ("user_email", "user_name", "user_picture", "auth_token"):
+        st.session_state.pop(k, None)
+    st.rerun()
 
 
 def render_sidebar_auth():
-    """Sidebar giriş/çıkış arayüzü. Yapılandırma yoksa nazik bir not gösterir."""
-    if not auth_configured():
+    """Sidebar sign-in / user card. Open-mode note when not configured."""
+    cid, csec, redirect = _google_cfg()
+    if not (cid and _OAUTH_OK):
         st.markdown(
             '<div style="padding:8px 12px;font-size:0.7rem;color:#7a8aa0;">'
-            '🔓 Open mode — sign-in not configured'
-            '</div>',
+            '🔓 Open mode — sign-in not configured</div>',
             unsafe_allow_html=True,
         )
         return
@@ -71,18 +107,32 @@ def render_sidebar_auth():
             unsafe_allow_html=True,
         )
         if st.button("Log out", use_container_width=True, key="_logout_btn"):
-            st.logout()
-    else:
-        if st.button("🔑 Sign in with Google", use_container_width=True, key="_login_btn"):
-            st.login("google")
+            _logout()
+        return
+
+    oauth2 = OAuth2Component(cid, csec, _AUTHORIZE, _TOKEN, _TOKEN, _REVOKE)
+    result = oauth2.authorize_button(
+        name="🔑 Sign in with Google",
+        redirect_uri=redirect,
+        scope="openid email profile",
+        key="google_login",
+        extras_params={"prompt": "select_account"},
+        use_container_width=True,
+        pkce="S256",
+    )
+    if result and "token" in result:
+        info = _decode_id_token(result["token"])
+        st.session_state["user_email"]   = info.get("email")
+        st.session_state["user_name"]    = info.get("name")
+        st.session_state["user_picture"] = info.get("picture")
+        st.session_state["auth_token"]   = result["token"]
+        st.rerun()
 
 
 def require_login(feature: str = "This feature"):
-    """İleride kullanılacak: bir özelliği giriş şartına bağlamak için.
-    Şu an HİÇBİR YERDE çağrılmıyor (tier enforcement kapalı kararı).
-    Giriş yapılmamışsa uyarı gösterir ve False döner."""
+    """Gate a feature behind sign-in (not wired anywhere yet)."""
     if not auth_configured():
-        return True  # open mode
+        return True
     if is_authenticated():
         return True
     st.warning(f"🔒 {feature} requires sign-in. Use the sidebar to sign in with Google.")
