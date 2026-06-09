@@ -38,9 +38,20 @@ def using_backend():
     return backend_url() is not None and requests is not None
 
 
+def _api_key():
+    try:
+        return (st.secrets.get("backend") or {}).get("api_key") or os.getenv("BACKEND_API_KEY") or ""
+    except Exception:
+        return os.getenv("BACKEND_API_KEY") or ""
+
+
 def _post(path, payload, timeout=120):
     url = backend_url()
-    resp = requests.post(url + path, json=payload, timeout=timeout)
+    headers = {}
+    key = _api_key()
+    if key:
+        headers["X-API-Key"] = key
+    resp = requests.post(url + path, json=payload, timeout=timeout, headers=headers)
     resp.raise_for_status()
     return resp.json()
 
