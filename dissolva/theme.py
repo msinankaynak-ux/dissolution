@@ -196,6 +196,11 @@ section[data-testid="stSidebar"] .stNumberInput button {
 [data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover * {
   color: #002147 !important;
 }
+/* Round the streamlit-oauth "Sign in with Google" button (iframe component); keep its color */
+[data-testid="stSidebar"] iframe[title="streamlit_oauth.authorize_button"] {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
 .stDownloadButton > button {
   background: #FFBF00 !important; color: #002147 !important;
   border: 2px solid #002147 !important;
