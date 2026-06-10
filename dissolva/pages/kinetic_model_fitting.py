@@ -260,6 +260,93 @@ def render():
         if res_fail:
             st.warning(f"Did not converge: {', '.join(res_fail.keys())}")
 
+        # ── Residual Diagnostics ─────────────────────────────────────────────
+        # How well does the fit behave? Residual-vs-fitted + Q-Q, plus Shapiro-Wilk
+        # (normality) and Wald-Wolfowitz runs (randomness) p-values from the engine.
+        _diag_models = [m for m, v in res_ok.items()
+                        if (v.get("diagnostics") or {}).get("residuals")]
+        if _diag_models:
+            with st.expander("Residual Diagnostics"):
+                _default_idx = (_diag_models.index(_best)
+                                if (_best in _diag_models) else 0)
+                _dm = st.selectbox(
+                    "Model", _diag_models, index=_default_idx,
+                    key=f"resid_diag_model_{pname}",
+                    help="Residuals = observed − fitted at each measured time point. "
+                         "Good fits scatter randomly around 0 and look normal."
+                )
+                diag = res_ok[_dm].get("diagnostics") or {}
+                _resid = diag.get("residuals") or []
+                _fitted = diag.get("fitted") or []
+                if _resid and _fitted and len(_resid) == len(_fitted):
+                    _resid_a = np.asarray(_resid, dtype=float)
+                    _fit_a = np.asarray(_fitted, dtype=float)
+
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        fig1, ax1 = plt.subplots(figsize=(5, 4)); style_ax(fig1, ax1)
+                        ax1.axhline(0, color=AMBER, ls="--", lw=1.2, zorder=1)
+                        ax1.scatter(_fit_a, _resid_a, color=OXFORD, s=45,
+                                    edgecolors="white", lw=0.6, zorder=3)
+                        ax1.set_xlabel("Fitted value (%)")
+                        ax1.set_ylabel("Residual (%)")
+                        ax1.set_title("Residuals vs Fitted")
+                        fig1.tight_layout()
+                        st.pyplot(fig1); plt.close(fig1)
+                    with c2:
+                        fig2, ax2 = plt.subplots(figsize=(5, 4)); style_ax(fig2, ax2)
+                        try:
+                            from scipy import stats as _sps
+                            _sps.probplot(_resid_a, dist="norm", plot=ax2)
+                        except Exception:
+                            ax2.text(0.5, 0.5, "Q-Q plot unavailable",
+                                     ha="center", va="center", transform=ax2.transAxes)
+                        ax2.set_title("Normal Q-Q")
+                        fig2.tight_layout()
+                        st.pyplot(fig2); plt.close(fig2)
+
+                    st.caption(
+                        "Left: points scattered randomly around the dashed zero line "
+                        "indicate a good fit; a curved/funnel pattern suggests the model "
+                        "is mis-specified. Right: points near the diagonal mean the "
+                        "residuals are approximately normal."
+                    )
+
+                    def _verdict(p, good_msg, warn_msg):
+                        if p is None:
+                            return "n/a (too few points)"
+                        try:
+                            pf = float(p)
+                        except (TypeError, ValueError):
+                            return "n/a (too few points)"
+                        if pf != pf:
+                            return "n/a (too few points)"
+                        return (f"✅ {good_msg}" if pf > 0.05 else f"⚠️ {warn_msg}")
+
+                    def _pv(p):
+                        try:
+                            pf = float(p)
+                            return f"{pf:.3f}" if pf == pf else "n/a"
+                        except (TypeError, ValueError):
+                            return "n/a"
+
+                    m1, m2 = st.columns(2)
+                    _sp = diag.get("shapiro_p")
+                    _rp = diag.get("runs_p")
+                    m1.metric("Shapiro-Wilk p", _pv(_sp))
+                    m1.caption("**Normality of residuals:** "
+                               + _verdict(_sp, "residuals look normal",
+                                          "residuals deviate from normal → check the model"))
+                    m2.metric("Runs test p", _pv(_rp))
+                    m2.caption("**Randomness of residuals:** "
+                               + _verdict(_rp, "residuals look random",
+                                          "residuals show structure → model may be mis-specified"))
+                    st.caption(
+                        f"Based on {diag.get('n_resid', len(_resid))} residual points. "
+                        "p > 0.05 is good (no evidence of a problem); "
+                        "p ≤ 0.05 is a warning."
+                    )
+
     show_literature("Kinetic Model Fitting")
 
 # ===========================================================================

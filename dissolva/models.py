@@ -5,6 +5,7 @@ import numpy as np
 from scipy.optimize import curve_fit, root
 from scipy.stats import norm as sp_norm
 from scipy.stats import t as _student_t
+from scipy.stats import shapiro as _shapiro
 from scipy.integrate import trapezoid
 
 def _nz(x): return np.where(x > 0, x, 1e-9)
@@ -429,6 +430,53 @@ def _compute_param_ci(pnames, popt, pcov, n_valid_points, n_params):
     return out
 
 
+# -- Residual diagnostics (additive; DDSolver parity) --
+def _residual_diagnostics(yv, ypv):
+    """Residual analysis on the valid-masked fit points (yv observed, ypv fitted).
+
+    Returns the residuals (observed - fitted) and fitted values (same order, so the
+    UI can draw residual-vs-fitted without re-deriving anything), plus two goodness
+    tests: Shapiro-Wilk normality p-value and a Wald-Wolfowitz runs-test p-value on
+    the signs of the residuals about 0 (randomness/autocorrelation). p-values are
+    None when not computable (too few points, zero variance, all-one-sign, etc.)."""
+    residuals = [float(a) - float(b) for a, b in zip(yv, ypv)]
+    fitted = [float(b) for b in ypv]
+    n = len(residuals)
+
+    # Shapiro-Wilk: only for 3<=n<=5000 and non-degenerate (zero variance raises).
+    shapiro_p = None
+    try:
+        if 3 <= n <= 5000 and len(set(residuals)) > 1:
+            shapiro_p = float(_shapiro(residuals).pvalue)
+    except Exception:
+        shapiro_p = None
+
+    # Wald-Wolfowitz runs test on residual signs about 0 (zeros dropped).
+    runs_p = None
+    try:
+        signs = [1 if r > 0 else -1 for r in residuals if r != 0]
+        n1 = signs.count(1)
+        n2 = signs.count(-1)
+        if n1 == 0 or n2 == 0 or (n1 + n2) < 2:
+            runs_p = None
+        else:
+            runs = 1 + sum(1 for a, b in zip(signs[:-1], signs[1:]) if a != b)
+            mu = 2.0 * n1 * n2 / (n1 + n2) + 1.0
+            var = (2.0 * n1 * n2 * (2.0 * n1 * n2 - n1 - n2)
+                   / (((n1 + n2) ** 2) * (n1 + n2 - 1)))
+            if var <= 0:
+                runs_p = None
+            else:
+                z = (runs - mu) / np.sqrt(var)
+                p = float(2.0 * sp_norm.sf(abs(z)))
+                runs_p = float(min(1.0, max(0.0, p)))
+    except Exception:
+        runs_p = None
+
+    return {"residuals": residuals, "fitted": fitted,
+            "shapiro_p": shapiro_p, "runs_p": runs_p, "n_resid": n}
+
+
 # -- Curve-fitting engine --
 def fit_model(t, y, name, weight_scheme="none", sd=None):
     func, p0, pnames, eq, ref, cat = MODEL_DEFS[name]
@@ -464,11 +512,13 @@ def fit_model(t, y, name, weight_scheme="none", sd=None):
                 "rmse":rmse_fn(yv,ypv),
                 "params":dict(zip(pnames,popt)),"param_ci":param_ci,"yp":yp,
                 "n_params":np_,"equation":eq,"reference":ref,"error":None,
-                "weight_scheme":eff_scheme}
+                "weight_scheme":eff_scheme,
+                "diagnostics":_residual_diagnostics(yv,ypv)}
     except Exception as e:
         return {"success":False,"name":name,"category":cat,
                 "r2":np.nan,"r2adj":np.nan,"aic":np.nan,"aicc":np.nan,
                 "bic":np.nan,"msc":np.nan,"rmse":np.nan,
                 "params":{},"param_ci":{},"yp":np.full(len(t),np.nan),
                 "n_params":len(p0),"equation":MODEL_DEFS[name][3],
-                "reference":MODEL_DEFS[name][4],"error":str(e)}
+                "reference":MODEL_DEFS[name][4],"error":str(e),
+                "diagnostics":None}
