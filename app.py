@@ -66,21 +66,21 @@ with st.sidebar:
     st.markdown("""
     <div style="padding:16px 16px 14px;margin-bottom:8px;">
       <div style="display:inline-flex;align-items:center;gap:12px;
-                  background:rgba(255,191,0,0.05);border:1px solid rgba(255,191,0,0.22);
+                  background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.22);
                   border-radius:12px;padding:10px 14px;">
         <div style="position:relative;width:44px;height:44px;background:#003171;border-radius:10px;
                     display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <div style="position:absolute;top:0;right:0;width:12px;height:3px;
-                      background:#FFBF00;border-radius:0 10px 0 2px;"></div>
+                      background:#FFCC00;border-radius:0 10px 0 2px;"></div>
           <div style="position:absolute;top:0;right:0;width:3px;height:12px;
-                      background:#FFBF00;border-radius:0 10px 0 2px;"></div>
-          <span style="font-size:24px;font-weight:500;color:#FFBF00;line-height:1;
+                      background:#FFCC00;border-radius:0 10px 0 2px;"></div>
+          <span style="font-size:24px;font-weight:500;color:#FFCC00 !important;line-height:1;
                        font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">A</span>
         </div>
         <div style="display:flex;flex-direction:column;justify-content:center;gap:4px;">
           <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                      font-size:17px;font-weight:400;color:white;letter-spacing:-0.3px;line-height:1;">
-            Dissolv<span style="font-weight:600;color:#FFBF00;">A</span><sup style="font-size:8px;color:white;font-weight:400;">™</sup>
+                      font-size:17px;font-weight:400;color:#FFFFFF !important;letter-spacing:-0.3px;line-height:1;">
+            Dissolv<span style="font-weight:600;color:#FFCC00 !important;">A</span><sup style="font-size:8px;color:#9fb0d0;font-weight:400;">™</sup>
           </div>
           <div style="font-size:8.5px;letter-spacing:1.4px;text-transform:uppercase;
                       color:rgba(255,191,0,0.55);font-weight:600;line-height:1;">
