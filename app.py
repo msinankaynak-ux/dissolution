@@ -161,7 +161,10 @@ with st.sidebar:
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button {
         background: transparent !important; border: none !important; box-shadow: none !important;
         justify-content: flex-start !important; text-align: left !important;
-        padding: 7px 12px !important; border-radius: 7px !important;
+        gap: 11px !important; padding: 9px 12px !important; border-radius: 7px !important;
+    }
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button [data-testid="stIconMaterial"] {
+        margin-right: 0 !important;
     }
     /* Force left-alignment robustly across Streamlit versions (button inner wrappers) */
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button > div,
@@ -175,7 +178,13 @@ with st.sidebar:
     }
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button,
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button * {
-        color: #9fb0d0 !important; font-weight: 400 !important; font-size: 0.9rem !important; letter-spacing: 0 !important;
+        color: #9fb0d0 !important; font-weight: 400 !important; letter-spacing: 0 !important;
+    }
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button [data-testid="stMarkdownContainer"] p {
+        font-size: 1rem !important;
+    }
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button [data-testid="stIconMaterial"] {
+        font-size: 21px !important; width: 21px !important; height: 21px !important;
     }
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button:hover { background: rgba(255,204,0,0.12) !important; }
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button:hover,
@@ -189,8 +198,8 @@ with st.sidebar:
         color: #FFCC00 !important; font-weight: 600 !important;
     }
     [data-testid="stSidebar"] .nav-cat {
-        font-size: 0.6rem !important; letter-spacing: 1.5px !important; text-transform: uppercase !important;
-        color: rgba(203,213,225,0.45) !important; padding: 12px 12px 3px !important; font-weight: 600 !important;
+        font-size: 0.68rem !important; letter-spacing: 1.2px !important; text-transform: uppercase !important;
+        color: rgba(203,213,225,0.5) !important; padding: 13px 12px 4px !important; font-weight: 600 !important;
     }
     [data-testid="stSidebar"] .st-key-navmenu .stCaption, [data-testid="stSidebar"] .st-key-navmenu .stCaption * {
         color: rgba(255,204,0,0.65) !important; font-size: 0.66rem !important; padding-left: 12px !important;
