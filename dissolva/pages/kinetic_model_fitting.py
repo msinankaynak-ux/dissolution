@@ -198,6 +198,29 @@ def render():
                 unsafe_allow_html=True
             )
 
+        # ── Release Time Points (Tx%) ────────────────────────────────────────
+        # Time for each fitted model to reach 25/50/80/90% release, interpolated
+        # within the measured time range (T50/T80 are regulatory-standard).
+        with st.expander("Release Time Points (Tx%)"):
+            _tx_rows = []
+            for v in res_ok.values():
+                _tx = v.get("tx") or {}
+                _tx_rows.append({
+                    "Model": v.get("name", ""),
+                    f"T25 ({time_unit})": _rn(_tx.get("25"), 2) if _tx.get("25") is not None else "n/a",
+                    f"T50 ({time_unit})": _rn(_tx.get("50"), 2) if _tx.get("50") is not None else "n/a",
+                    f"T80 ({time_unit})": _rn(_tx.get("80"), 2) if _tx.get("80") is not None else "n/a",
+                    f"T90 ({time_unit})": _rn(_tx.get("90"), 2) if _tx.get("90") is not None else "n/a",
+                })
+            if _tx_rows:
+                _df_tx = pd.DataFrame(_tx_rows).reset_index(drop=True)
+                _df_tx.index += 1
+                st.dataframe(_df_tx, use_container_width=True)
+            st.caption(
+                "Time for the fitted model to reach each % release, interpolated "
+                "within the measured time range; 'n/a' = not reached in range."
+            )
+
         st.subheader("Dissolution Curves with Model Fits")
         fig,ax=plt.subplots(figsize=(10,5.5)); style_ax(fig,ax)
         ax.scatter(t_arr,r_arr,color=OXFORD,s=65,zorder=5,edgecolors="white",lw=0.8,label="Experimental")

@@ -477,6 +477,48 @@ def _residual_diagnostics(yv, ypv):
             "shapiro_p": shapiro_p, "runs_p": runs_p, "n_resid": n}
 
 
+# -- Tx% release-time interpolation (additive; DDSolver parity) --
+def _compute_tx(func, popt, t_lo, t_hi, targets=(25.0, 50.0, 80.0, 90.0), n=400):
+    """Time at which the fitted curve first reaches each target % release.
+
+    Builds a dense grid over the MEASURED time range [t_lo, t_hi] (interpolation
+    only — never extrapolation), clips predictions to [0,100], and for each
+    target finds the FIRST UPWARD crossing, linearly interpolating the time:
+        t_cross = td[i-1] + (target-yd[i-1])*(td[i]-td[i-1])/(yd[i]-yd[i-1]).
+    Edge cases: if the curve is already >= target at t_lo, report t_lo; if the
+    target is never reached within the range, report None. Non-finite predictions
+    break the search (no crossing inferred across a NaN gap). Returns
+    {"25":..,"50":..,"80":..,"90":..} with float|None values; any failure → all-None."""
+    keys = [str(int(x)) for x in targets]
+    try:
+        td = np.linspace(float(t_lo), float(t_hi), n)
+        yd = np.asarray(func(td, *popt), dtype=float)
+        yd = np.clip(yd, 0.0, 100.0)
+        out = {}
+        for target, key in zip(targets, keys):
+            tgt = float(target)
+            t_cross = None
+            # Already at/above target at the start of the measured range.
+            if np.isfinite(yd[0]) and yd[0] >= tgt:
+                t_cross = float(td[0])
+            else:
+                for i in range(1, len(yd)):
+                    a, b = yd[i - 1], yd[i]
+                    if not (np.isfinite(a) and np.isfinite(b)):
+                        continue  # break across a non-finite gap (no crossing)
+                    if a < tgt <= b:
+                        denom = b - a
+                        if denom != 0.0:
+                            t_cross = float(td[i - 1] + (tgt - a) * (td[i] - td[i - 1]) / denom)
+                        else:
+                            t_cross = float(td[i - 1])
+                        break
+            out[key] = t_cross
+        return out
+    except Exception:
+        return {k: None for k in keys}
+
+
 # -- Curve-fitting engine --
 def fit_model(t, y, name, weight_scheme="none", sd=None):
     func, p0, pnames, eq, ref, cat = MODEL_DEFS[name]
@@ -513,7 +555,8 @@ def fit_model(t, y, name, weight_scheme="none", sd=None):
                 "params":dict(zip(pnames,popt)),"param_ci":param_ci,"yp":yp,
                 "n_params":np_,"equation":eq,"reference":ref,"error":None,
                 "weight_scheme":eff_scheme,
-                "diagnostics":_residual_diagnostics(yv,ypv)}
+                "diagnostics":_residual_diagnostics(yv,ypv),
+                "tx":_compute_tx(func,popt,float(np.min(t)),float(np.max(t)))}
     except Exception as e:
         return {"success":False,"name":name,"category":cat,
                 "r2":np.nan,"r2adj":np.nan,"aic":np.nan,"aicc":np.nan,
@@ -521,4 +564,4 @@ def fit_model(t, y, name, weight_scheme="none", sd=None):
                 "params":{},"param_ci":{},"yp":np.full(len(t),np.nan),
                 "n_params":len(p0),"equation":MODEL_DEFS[name][3],
                 "reference":MODEL_DEFS[name][4],"error":str(e),
-                "diagnostics":None}
+                "diagnostics":None,"tx":None}
