@@ -534,20 +534,25 @@ def fit_model(t, y, name, weight_scheme="none", sd=None):
             try:
                 popt, pcov = curve_fit(func, t, y, p0=p0c, bounds=(lo, hi), max_nfev=25000,
                                        sigma=sigma, absolute_sigma=absolute_sigma)
+                bounds_enforced = True   # bounded fit succeeded
             except Exception:
                 # Bounded fit başarısızsa eski davranışa (sınırsız) düş — regresyon yok
                 popt, pcov = curve_fit(func, t, y, p0=p0, maxfev=25000,
                                        sigma=sigma, absolute_sigma=absolute_sigma)
+                bounds_enforced = False  # fell back to unbounded fit
         else:
             popt, pcov = curve_fit(func, t, y, p0=p0, maxfev=25000,
                                    sigma=sigma, absolute_sigma=absolute_sigma)
+            bounds_enforced = None       # model has no bounds to enforce
         yp = np.array(func(t,*popt), dtype=float)
+        nan_fraction = float(np.mean(np.isnan(yp)))
         valid = ~np.isnan(yp)
         if valid.sum() < 3: raise ValueError("Too few valid predictions")
         tv,yv,ypv = t[valid],y[valid],yp[valid]
         np_ = len(popt)
         param_ci = _compute_param_ci(pnames, popt, pcov, int(valid.sum()), np_)
         return {"success":True,"name":name,"category":cat,
+                "bounds_enforced":bounds_enforced,"nan_fraction":nan_fraction,
                 "r2":r2s(yv,ypv),"r2adj":r2adj(yv,ypv,np_),
                 "aic":aic_fn(yv,ypv,np_),"aicc":aicc_fn(yv,ypv,np_),
                 "bic":bic_fn(yv,ypv,np_),"msc":msc_fn(yv,ypv,np_),
@@ -559,6 +564,7 @@ def fit_model(t, y, name, weight_scheme="none", sd=None):
                 "tx":_compute_tx(func,popt,float(np.min(t)),float(np.max(t)))}
     except Exception as e:
         return {"success":False,"name":name,"category":cat,
+                "bounds_enforced":None,"nan_fraction":None,
                 "r2":np.nan,"r2adj":np.nan,"aic":np.nan,"aicc":np.nan,
                 "bic":np.nan,"msc":np.nan,"rmse":np.nan,
                 "params":{},"param_ci":{},"yp":np.full(len(t),np.nan),

@@ -153,6 +153,31 @@ def render():
                 f"{', '.join(_kp_like)} fit with caution."
             )
 
+        # Korsmeyer-Peppas transport-mechanism interpretation (Ritger-Peppas 1987,
+        # cylindrical geometry). UI-only: reads the already-fitted exponent n.
+        for _kpm in _kp_like:
+            _kp_params = (res_ok[_kpm].get("params") or {})
+            _n = _kp_params.get("n")
+            if _n is None:
+                continue
+            try:
+                _nf = float(_n)
+            except (TypeError, ValueError):
+                continue
+            if not np.isfinite(_nf):
+                continue
+            # Ritger-Peppas (cylinder): explicit half-open bands so the n≈0.89
+            # Case-II window is deterministic (not float-edge dependent).
+            if _nf <= 0.45:
+                _mech = "Fickian diffusion"
+            elif _nf < 0.885:
+                _mech = "Anomalous (non-Fickian) transport"
+            elif _nf <= 0.895:
+                _mech = "Case II transport (zero-order)"
+            else:
+                _mech = "Super Case II transport"
+            st.caption(f"{_kpm}: n = {_nf:.2f} → {_mech} (cylindrical geometry).")
+
         st.subheader("Model Ranking")
         # Sıralama ölçütü — AICc/BIC küçük=iyi, R2adj/MSC büyük=iyi
         _RANK_META = {
@@ -270,6 +295,13 @@ def render():
             with st.expander(f"{mn}  |  R2adj={_fmt(v.get('r2adj'),4)}  |  "
                              f"RMSE={_fmt(v.get('rmse'),3)}  |  AICc={_fmt(v.get('aicc'),2)}"):
                 st.markdown(f"<div class='eq-box'>{v.get('equation','')}</div>",unsafe_allow_html=True)
+                if v.get("bounds_enforced") is False:
+                    st.caption("⚠️ Unconstrained fit — physical bounds could not be applied; "
+                               "interpret parameters with caution.")
+                _nanf = v.get("nan_fraction") or 0
+                if _nanf > 0.10:
+                    st.caption(f"⚠️ {_nanf:.0%} of model predictions are undefined — "
+                               "fit may be unreliable.")
                 _params = v.get("params") or {}
                 _pci = v.get("param_ci") or {}
                 cols=st.columns(min(4,max(1,len(_params))))
