@@ -472,11 +472,11 @@ def render():
                 n_v = d.get("n", 1)
                 max_r = max(d["release"])
                 st.markdown(
-                    f"<div style='background:white;border:1px solid #ddd;"
+                    f"<div style='background:#16203F;border:1px solid rgba(255,255,255,0.08);"
                     f"border-left:4px solid {PALETTE[i%len(PALETTE)]};border-radius:4px;"
                     f"padding:10px;margin:4px 0;'>"
                     f"<strong>{nm}</strong><br>"
-                    f"<span style='font-size:0.82rem;color:#555;'>"
+                    f"<span style='font-size:0.82rem;color:#9fb0d0;'>"
                     f"n = {n_v} vessels &nbsp;|&nbsp; {len(d['time'])} time points<br>"
                     f"Max release: {max_r:.1f}%</span></div>",
                     unsafe_allow_html=True

@@ -355,8 +355,8 @@ def render():
 
     # ── Source info banner ────────────────────────────────────────────────
     st.markdown(
-        '<div style="background:#f8f9fa;border:0.5px solid #e2e8f0;border-radius:8px;'
-        'padding:10px 16px;margin-bottom:14px;font-size:12px;color:#555;line-height:1.7;">'
+        '<div style="background:#16203F;border:0.5px solid rgba(255,255,255,0.08);border-radius:8px;'
+        'padding:10px 16px;margin-bottom:14px;font-size:12px;color:#9fb0d0;line-height:1.7;">'
         '<strong>Sources:</strong> &nbsp;'
         '<span style="background:#dbeafe;color:#185fa5;padding:1px 7px;border-radius:10px;'
         'font-size:11px;margin-right:4px;">PubChem NIH</span> physicochemical parameters · '
@@ -599,11 +599,11 @@ def render():
     # Empty screen if no active substance loaded
     if not _as.get("fetch_done") or not _as.get("name"):
         st.markdown(
-            '<div style="text-align:center;padding:40px 20px;color:#718096;">'
+            '<div style="text-align:center;padding:40px 20px;color:#9fb0d0;">'
             '<div style="font-size:44px;margin-bottom:12px;">💊</div>'
-            '<div style="font-size:16px;font-weight:500;color:#2d3748;margin-bottom:6px;">'
+            '<div style="font-size:16px;font-weight:500;color:#E6ECF8;margin-bottom:6px;">'
             'Enter active substance name and press Load</div>'
-            '<div style="font-size:12px;color:#aaa;line-height:1.8;">'
+            '<div style="font-size:12px;color:#7E8DAB;line-height:1.8;">'
             'PubChem · FDA Dissolution DB · Scite · PubMed</div></div>',
             unsafe_allow_html=True
         )
@@ -651,13 +651,13 @@ def render():
             (_m5,"Rot.Bond", f'{_pc.get("rot_bonds","")}',  "",       "Flexibility"),
         ]:
             _col.markdown(
-                f'<div style="background:#f8f9fa;border-radius:8px;padding:10px;'
-                f'text-align:center;border:1px solid #e2e8f0;">'
-                f'<div style="font-size:9px;font-weight:700;color:#718096;'
+                f'<div style="background:#16203F;border-radius:8px;padding:10px;'
+                f'text-align:center;border:1px solid rgba(255,255,255,0.08);">'
+                f'<div style="font-size:9px;font-weight:700;color:#9fb0d0;'
                 f'text-transform:uppercase;letter-spacing:0.4px;">{_lbl}</div>'
-                f'<div style="font-size:16px;font-weight:700;color:#002147;margin-top:3px;">'
-                f'{_val}<span style="font-size:10px;color:#888;"> {_unit}</span></div>'
-                f'<div style="font-size:9px;color:#aaa;margin-top:1px;">{_note}</div>'
+                f'<div style="font-size:16px;font-weight:700;color:#E6ECF8;margin-top:3px;">'
+                f'{_val}<span style="font-size:10px;color:#7E8DAB;"> {_unit}</span></div>'
+                f'<div style="font-size:9px;color:#7E8DAB;margin-top:1px;">{_note}</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
@@ -684,7 +684,7 @@ def render():
                 _refer_count = sum(1 for m in _fda if not m.get("apparatus") or "Refer" in m.get("apparatus",""))
                 _data_count  = len(_fda) - _refer_count
                 st.markdown(
-                    f'<div style="font-size:12px;color:#555;margin-bottom:10px;">'
+                    f'<div style="font-size:12px;color:#9fb0d0;margin-bottom:10px;">'
                     f'<strong>{len(_fda)}</strong> FDA records — '
                     f'<span style="color:#185fa5;">{_data_count} parameters available</span>'
                     f'{", " + str(_refer_count) + " Refer to USP" if _refer_count else ""}'
@@ -701,16 +701,16 @@ def render():
 
                     if not _is_refer:
                         st.markdown(
-                            f'<div style="background:{"rgba(255,191,0,0.04)" if _is_sel else "white"};'
-                            f'border:{"2px solid #FFBF00" if _is_sel else "0.5px solid #e2e8f0"};'
+                            f'<div style="background:{"rgba(255,191,0,0.04)" if _is_sel else "#16203F"};'
+                            f'border:{"2px solid #FFBF00" if _is_sel else "0.5px solid rgba(255,255,255,0.08)"};'
                             f'border-radius:10px;overflow:hidden;margin-bottom:10px;">'
-                            f'<div style="background:#f8f9fa;padding:9px 14px;'
+                            f'<div style="background:#16203F;padding:9px 14px;'
                             f'display:flex;align-items:center;justify-content:space-between;">'
-                            f'<div><span style="font-size:13px;font-weight:600;color:#002147;">'
+                            f'<div><span style="font-size:13px;font-weight:600;color:#E6ECF8;">'
                             f'{_fm["drug_name"]}</span>'
-                            f'<span style="font-size:11px;color:#718096;margin-left:8px;">'
+                            f'<span style="font-size:11px;color:#9fb0d0;margin-left:8px;">'
                             f'{_fm["dosage_form"]}</span>'
-                            f'<span style="font-size:10px;color:#aaa;margin-left:6px;">'
+                            f'<span style="font-size:10px;color:#7E8DAB;margin-left:6px;">'
                             f'· {_fm.get("date_updated","")}</span></div>'
                             + (f'<span style="background:#FFBF00;color:#002147;font-size:9px;'
                                f'font-weight:800;padding:2px 8px;border-radius:20px;">✓ SELECTED</span>'
@@ -721,9 +721,9 @@ def render():
                             f'<div style="padding:10px 14px;">'
                             f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;">'
                             + "".join([
-                                f'<div><div style="font-size:9px;font-weight:700;color:#718096;'
+                                f'<div><div style="font-size:9px;font-weight:700;color:#9fb0d0;'
                                 f'text-transform:uppercase;">{l}</div>'
-                                f'<div style="font-size:12px;font-weight:600;color:#002147;">{v}</div></div>'
+                                f'<div style="font-size:12px;font-weight:600;color:#E6ECF8;">{v}</div></div>'
                                 for l,v in [
                                     ("Apparatus",  _fm.get("apparatus","") or "—"),
                                     ("Speed",     (_fm.get("speed_rpm","") or "—") + " rpm"),
@@ -732,7 +732,7 @@ def render():
                                 ]
                             ]) +
                             f'</div>'
-                            f'<div style="background:#f8f9fa;border-radius:5px;padding:6px 10px;'
+                            f'<div style="background:#16203F;border-radius:5px;padding:6px 10px;'
                             f'font-size:11px;margin-bottom:7px;">'
                             f'<strong>Medium:</strong> {_fm.get("medium","")}</div>'
                             f'<div style="font-size:10px;margin-bottom:8px;">'
@@ -781,8 +781,8 @@ def render():
                             st.markdown(
                                 f'<a href="https://www.accessdata.fda.gov/scripts/cder/dissolution/" '
                                 f'target="_blank" style="display:block;text-align:center;padding:7px;'
-                                f'background:#f8f9fa;border:1px solid #e2e8f0;border-radius:7px;'
-                                f'font-size:12px;color:#002147;text-decoration:none;">🔗 FDA Source</a>',
+                                f'background:#16203F;border:1px solid rgba(255,255,255,0.08);border-radius:7px;'
+                                f'font-size:12px;color:#E6ECF8;text-decoration:none;">🔗 FDA Source</a>',
                                 unsafe_allow_html=True
                             )
                     else:
@@ -800,7 +800,7 @@ def render():
             _bcs_journal2 = _bcs_lit2.get("journal", "")
 
             st.markdown(
-                "<div style='font-size:11px;font-weight:700;color:#718096;"
+                "<div style='font-size:11px;font-weight:700;color:#9fb0d0;"
                 "text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;'>"
                 f"BCS Class — {_as['name']} — Literature search "
                 f"(Scite + PubMed)</div>",
@@ -819,14 +819,14 @@ def render():
                 for _cls_i in _bcs_cls2:
                     _m_i = _BCS_META.get(_cls_i, {})
                     st.markdown(
-                        f'<div style="background:#f8f9fa;border:0.5px solid #e2e8f0;'
+                        f'<div style="background:#16203F;border:0.5px solid rgba(255,255,255,0.08);'
                         f'border-radius:8px;padding:8px 14px;margin-bottom:6px;'
                         f'display:flex;align-items:center;gap:10px;">'
                         f'<span style="background:{_m_i.get("bg","#eee")};'
                         f'color:{_m_i.get("text","#333")};font-size:10px;font-weight:700;'
                         f'padding:2px 8px;border-radius:10px;white-space:nowrap;">BCS {_cls_i}</span>'
-                        f'<span style="font-size:12px;color:#002147;">{_m_i.get("desc","")}</span>'
-                        f'<span style="font-size:11px;color:#718096;margin-left:auto;">'
+                        f'<span style="font-size:12px;color:#E6ECF8;">{_m_i.get("desc","")}</span>'
+                        f'<span style="font-size:11px;color:#9fb0d0;margin-left:auto;">'
                         f'Biowaiver: {_m_i.get("biowaiver","")}</span>'
                         f'</div>',
                         unsafe_allow_html=True
@@ -844,7 +844,7 @@ def render():
 
                 if _papers_to_show:
                     st.markdown(
-                        f'<div style="font-size:11px;font-weight:700;color:#718096;'
+                        f'<div style="font-size:11px;font-weight:700;color:#9fb0d0;'
                         f'text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">'
                         f'Sources ({len(_papers_to_show)} articles — by citation count)</div>',
                         unsafe_allow_html=True
@@ -860,7 +860,7 @@ def render():
                             f'padding:10px 14px;margin-bottom:8px;'
                             f'background:{_p_m.get("bg","#f8f9fa")}20;border-radius:0 8px 8px 0;">'
                             f'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">'
-                            f'<div style="font-size:12px;font-weight:600;color:#002147;line-height:1.4;flex:1;">'
+                            f'<div style="font-size:12px;font-weight:600;color:#E6ECF8;line-height:1.4;flex:1;">'
                             f'{_esc(_p.get("title","")[:100])}{"..." if len(_p.get("title",""))>100 else ""}'
                             f'</div>'
                             f'<div style="display:flex;gap:5px;align-items:center;margin-left:8px;flex-shrink:0;">'
@@ -874,7 +874,7 @@ def render():
                              if _tally > 0 else '') +
                             f'</div>'
                             f'</div>'
-                            f'<div style="font-size:10px;color:#718096;">'
+                            f'<div style="font-size:10px;color:#9fb0d0;">'
                             f'{_esc(_p.get("source",""))}'
                             f'{" · " + _esc(_p.get("journal","")[:40]) if _p.get("journal") else ""}'
                             + (f' · <a href="https://doi.org/{_esc(_p.get("doi"))}" target="_blank" '
@@ -902,8 +902,8 @@ def render():
 
             # Source note - shortened
             st.markdown(
-                '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid #e2e8f0;'
-                'font-size:10px;color:#aaa;line-height:1.6;">'
+                '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,0.08);'
+                'font-size:10px;color:#7E8DAB;line-height:1.6;">'
                 'Source: Scite (Smart Citations) · PubMed NIH (eutils API)\n'
                 'BCS class requires experimental measurement - FDA Guidance 2000, ICH M9 2019, Amidon 1995.'
                 '</div>',
@@ -914,7 +914,7 @@ def render():
         with _t3:
             _lipo = _lipinski_check(_pc) if _pc and "error" not in _pc else None
             st.markdown(
-                f'<div style="font-size:11px;color:#718096;margin-bottom:10px;">'
+                f'<div style="font-size:11px;color:#9fb0d0;margin-bottom:10px;">'
                 f'Source: PubChem (NIH) CID {_pc.get("cid","")} · '
                 f'Calculated values — validate with experimental data.</div>',
                 unsafe_allow_html=True
@@ -923,7 +923,7 @@ def render():
 
             with _pc1:
                 st.markdown(
-                    '<div style="font-size:10px;font-weight:700;color:#718096;'
+                    '<div style="font-size:10px;font-weight:700;color:#9fb0d0;'
                     'text-transform:uppercase;margin-bottom:8px;">Physicochemical</div>',
                     unsafe_allow_html=True
                 )
@@ -943,10 +943,10 @@ def render():
                     _warn = _k == "TPSA" and _pc.get("tpsa",0) and float(str(_pc.get("tpsa",0)).replace("N/A","0") or 0) > 120
                     st.markdown(
                         f'<div style="display:flex;justify-content:space-between;'
-                        f'padding:5px 0;border-bottom:0.5px solid #f0f0f0;">'
-                        f'<span style="font-size:11px;color:#718096;">{_k}</span>'
+                        f'padding:5px 0;border-bottom:0.5px solid rgba(255,255,255,0.08);">'
+                        f'<span style="font-size:11px;color:#9fb0d0;">{_k}</span>'
                         f'<span style="font-size:11px;font-weight:500;'
-                        f'color:{"#856404" if _warn else "#002147"};">{_v}</span>'
+                        f'color:{"#856404" if _warn else "#E6ECF8"};">{_v}</span>'
                         f'</div>',
                         unsafe_allow_html=True
                     )
@@ -954,7 +954,7 @@ def render():
             with _pc2:
                 if _lipo:
                     st.markdown(
-                        '<div style="font-size:10px;font-weight:700;color:#718096;'
+                        '<div style="font-size:10px;font-weight:700;color:#9fb0d0;'
                         'text-transform:uppercase;margin-bottom:8px;">Lipinski Rule of Five</div>',
                         unsafe_allow_html=True
                     )
@@ -962,8 +962,8 @@ def render():
                         _vstr = f"{_val:.2f}" if isinstance(_val, float) else str(_val)
                         st.markdown(
                             f'<div style="display:flex;justify-content:space-between;'
-                            f'padding:5px 0;border-bottom:0.5px solid #f0f0f0;">'
-                            f'<span style="font-size:11px;color:#718096;">{"✅" if _ok else "❌"} {_rule}</span>'
+                            f'padding:5px 0;border-bottom:0.5px solid rgba(255,255,255,0.08);">'
+                            f'<span style="font-size:11px;color:#9fb0d0;">{"✅" if _ok else "❌"} {_rule}</span>'
                             f'<span style="font-size:11px;font-weight:500;'
                             f'color:{"#1a5c2e" if _ok else "#9c1c1c"};">{_vstr}</span>'
                             f'</div>',
@@ -981,9 +981,9 @@ def render():
                 if _pc.get("synonyms"):
                     st.markdown(
                         f'<div style="margin-top:14px;">'
-                        f'<div style="font-size:10px;font-weight:700;color:#718096;'
+                        f'<div style="font-size:10px;font-weight:700;color:#9fb0d0;'
                         f'text-transform:uppercase;margin-bottom:6px;">Synonyms</div>'
-                        f'<div style="font-size:11px;color:#555;line-height:1.8;">'
+                        f'<div style="font-size:11px;color:#9fb0d0;line-height:1.8;">'
                         f'{", ".join(_pc.get("synonyms",[])[:8])}</div></div>',
                         unsafe_allow_html=True
                     )
@@ -1008,7 +1008,7 @@ def render():
 
             else:
                 st.markdown(
-                    f'<div style="font-size:12px;color:#555;margin-bottom:6px;">'
+                    f'<div style="font-size:12px;color:#9fb0d0;margin-bottom:6px;">'
                     f'<strong>{_pm_total}</strong> articles — Hybrid strategy '
                     f'(MeSH + Title/Abstract) · first {len(_pm_results)} shown</div>',
                     unsafe_allow_html=True
@@ -1026,16 +1026,16 @@ def render():
                     _tb    = "#c6efce" if _is_oa else "#f0f0f0"
                     st.markdown(
                         f'<div style="display:flex;gap:10px;padding:9px 12px;'
-                        f'background:white;border:0.5px solid #e2e8f0;'
+                        f'background:#16203F;border:0.5px solid rgba(255,255,255,0.08);'
                         f'border-radius:8px;margin-bottom:5px;">'
                         f'<span style="background:{_tb};color:{_tc};font-size:10px;'
                         f'font-weight:500;padding:2px 7px;border-radius:20px;'
                         f'white-space:nowrap;height:fit-content;margin-top:1px;">{_tag}</span>'
                         f'<div style="flex:1;">'
-                        f'<div style="font-size:12px;font-weight:500;color:#002147;'
+                        f'<div style="font-size:12px;font-weight:500;color:#E6ECF8;'
                         f'line-height:1.4;margin-bottom:3px;">{_esc(_art["title"][:120])}'
                         f'{"..." if len(_art["title"])>120 else ""}</div>'
-                        f'<div style="font-size:10px;color:#718096;">'
+                        f'<div style="font-size:10px;color:#9fb0d0;">'
                         f'{_esc(_art["first_author"])} et al. · {_esc(_art["journal"][:50])} · {_esc(_art["year"])}'
                         f'</div>'
                         + (f'<div style="font-size:10px;color:#185fa5;margin-top:1px;">'
@@ -1048,8 +1048,8 @@ def render():
 
         # Footer
         st.markdown(
-            '<div style="margin-top:16px;padding-top:10px;border-top:0.5px solid #e2e8f0;'
-            'font-size:10px;color:#aaa;display:flex;justify-content:space-between;">'
+            '<div style="margin-top:16px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,0.08);'
+            'font-size:10px;color:#7E8DAB;display:flex;justify-content:space-between;">'
             '<span>Sources: PubMed (NIH) · PubChem · FDA Dissolution DB</span>'
             '<span>API Information — DissolvA v4.0</span>'
             '</div>',
