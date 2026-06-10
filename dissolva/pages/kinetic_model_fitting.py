@@ -223,9 +223,15 @@ def render():
                              f"RMSE={_fmt(v.get('rmse'),3)}  |  AICc={_fmt(v.get('aicc'),2)}"):
                 st.markdown(f"<div class='eq-box'>{v.get('equation','')}</div>",unsafe_allow_html=True)
                 _params = v.get("params") or {}
+                _pci = v.get("param_ci") or {}
                 cols=st.columns(min(4,max(1,len(_params))))
                 for j,(pn,pv) in enumerate(_params.items()):
-                    cols[j%4].metric(pn, _fmt(pv,5,g=True))
+                    col = cols[j%4]
+                    col.metric(pn, _fmt(pv,5,g=True))
+                    ci = _pci.get(pn) or {}
+                    lo, hi = ci.get("ci_low"), ci.get("ci_high")
+                    if lo is not None and hi is not None:
+                        col.caption(f"95% CI: {_fmt(lo,4,g=True)}–{_fmt(hi,4,g=True)}")
         if res_fail:
             st.warning(f"Did not converge: {', '.join(res_fail.keys())}")
 

@@ -4,6 +4,7 @@ Extracted from app.py (Phase 1.4 modularization)."""
 import numpy as np
 from scipy.optimize import curve_fit, root
 from scipy.stats import norm as sp_norm
+from scipy.stats import t as _student_t
 from scipy.integrate import trapezoid
 
 def _nz(x): return np.where(x > 0, x, 1e-9)
@@ -359,6 +360,34 @@ MODEL_BOUNDS = {
     "Gompertz 2 (DDSolver)":   ([-_INF, -_INF, 0.0],   [_INF, _INF, 120.0]),
 }
 
+# -- Per-parameter 95% confidence intervals (additive; DDSolver parity) --
+def _compute_param_ci(pnames, popt, pcov, n_valid_points, n_params):
+    """Build a {param: {value, se, ci_low, ci_high}} dict from curve_fit's pcov.
+    Uses the t-distribution (NOT a fixed 1.96) with dof = n_valid_points -
+    n_params, correct for the small n typical of dissolution. A saturated fit
+    (dof <= 0) has no residual information to estimate uncertainty, so its CIs are
+    reported as None rather than a misleading interval. Non-finite or negative
+    variances likewise yield se/ci_low/ci_high = None instead of crashing/NaN."""
+    dof = int(n_valid_points) - int(n_params)
+    tval = float(_student_t.ppf(0.975, dof)) if dof > 0 else None
+    # Only trust pcov if there is residual dof AND it is a finite 2-D square diagonal.
+    cov = np.asarray(pcov, dtype=float) if pcov is not None else None
+    have_cov = (dof > 0 and cov is not None and cov.ndim == 2
+                and cov.shape[0] == cov.shape[1] and cov.shape[0] == len(popt))
+    out = {}
+    for i, pn in enumerate(pnames):
+        val = float(popt[i])
+        se = ci_low = ci_high = None
+        if have_cov:
+            var = cov[i, i]
+            if np.isfinite(var) and var >= 0.0:
+                se = float(np.sqrt(var))
+                ci_low = float(val - tval * se)
+                ci_high = float(val + tval * se)
+        out[pn] = {"value": val, "se": se, "ci_low": ci_low, "ci_high": ci_high}
+    return out
+
+
 # -- Curve-fitting engine --
 def fit_model(t, y, name):
     func, p0, pnames, eq, ref, cat = MODEL_DEFS[name]
@@ -369,28 +398,29 @@ def fit_model(t, y, name):
             # p0'ı sınırların içine çek (curve_fit p0 ∈ [lo,hi] ister)
             p0c = [min(max(v, l), h) for v, l, h in zip(p0, lo, hi)]
             try:
-                popt, _ = curve_fit(func, t, y, p0=p0c, bounds=(lo, hi), max_nfev=25000)
+                popt, pcov = curve_fit(func, t, y, p0=p0c, bounds=(lo, hi), max_nfev=25000)
             except Exception:
                 # Bounded fit başarısızsa eski davranışa (sınırsız) düş — regresyon yok
-                popt, _ = curve_fit(func, t, y, p0=p0, maxfev=25000)
+                popt, pcov = curve_fit(func, t, y, p0=p0, maxfev=25000)
         else:
-            popt, _ = curve_fit(func, t, y, p0=p0, maxfev=25000)
+            popt, pcov = curve_fit(func, t, y, p0=p0, maxfev=25000)
         yp = np.array(func(t,*popt), dtype=float)
         valid = ~np.isnan(yp)
         if valid.sum() < 3: raise ValueError("Too few valid predictions")
         tv,yv,ypv = t[valid],y[valid],yp[valid]
         np_ = len(popt)
+        param_ci = _compute_param_ci(pnames, popt, pcov, int(valid.sum()), np_)
         return {"success":True,"name":name,"category":cat,
                 "r2":r2s(yv,ypv),"r2adj":r2adj(yv,ypv,np_),
                 "aic":aic_fn(yv,ypv,np_),"aicc":aicc_fn(yv,ypv,np_),
                 "bic":bic_fn(yv,ypv,np_),"msc":msc_fn(yv,ypv,np_),
                 "rmse":rmse_fn(yv,ypv),
-                "params":dict(zip(pnames,popt)),"yp":yp,
+                "params":dict(zip(pnames,popt)),"param_ci":param_ci,"yp":yp,
                 "n_params":np_,"equation":eq,"reference":ref,"error":None}
     except Exception as e:
         return {"success":False,"name":name,"category":cat,
                 "r2":np.nan,"r2adj":np.nan,"aic":np.nan,"aicc":np.nan,
                 "bic":np.nan,"msc":np.nan,"rmse":np.nan,
-                "params":{},"yp":np.full(len(t),np.nan),
+                "params":{},"param_ci":{},"yp":np.full(len(t),np.nan),
                 "n_params":len(p0),"equation":MODEL_DEFS[name][3],
                 "reference":MODEL_DEFS[name][4],"error":str(e)}
