@@ -64,6 +64,18 @@ the app from the dashboard if it "looks old".
   backend input bounds (DoS), XSS-escape external content in `api_information.py`,
   Korsmeyer-Peppas ≤60% validity note, f2 3-point guard, fitting legend + chart DPI/
   contrast, sign-in button shrink + "Powered by AI" moved to footer fine print.
+- ✅ **WS-A DDSolver/KinetDS scientific parity SHIPPED** (plan `~/.claude/plans/witty-juggling-horizon.md`;
+  each feature built by a verified multi-agent workflow). The engine (`services/engine.py` ↔
+  `dissolva/models.py`, kept byte-identical) `fit_model` result now additively carries, and `/api/fit`
+  returns: **param_ci** (A1 — per-param 95% CI from pcov, t-dist, None when no residual dof), **weight_scheme**
+  (A2 — weighted LS none/1·y⁻¹/1·y⁻²/1·SD⁻², sigma=1/√w, absolute_sigma only for 1/SD²), **diagnostics**
+  (A3 — residuals/fitted + Shapiro-Wilk + Wald-Wolfowitz runs test), **tx** (A4 — T25/T50/T80/T90 by first
+  upward crossing of the fitted curve within the measured range), **bounds_enforced** + **nan_fraction**
+  (A8 — fit-honesty flags), **equation_fitted** (A7 — parameter-substituted equation; Biexp param `F`→`Fr`).
+  UI (`pages/kinetic_model_fitting.py`): CI captions, weighting selectbox, Residual Diagnostics expander
+  (residual-vs-fitted + Q-Q + p-value verdicts), Tx% table, KP n→transport-mechanism line (A6, Ritger-Peppas),
+  fitted-equation line, unconstrained/NaN warning badges. `pages/statistical_analysis.py`: dF/dt rate plot (A5).
+  All backward-compatible (new fields Optional/defaulted). backend pytest 5/5, AppTest 0 exc.
 - 🚧 **IVIVC is DISABLED on purpose** (`pages/ivivc.py` shows a notice + `st.stop()`)
   — Level A misapplied Wagner-Nelson (used dissolution instead of plasma Cp →
   circular) and Multiple Level C regressed a constant (crash). Needs a proper
