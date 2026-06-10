@@ -330,9 +330,20 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
+    # ── Unlock Pro CTA card (placeholder until WS-C/Stripe) ──────────────────
     st.markdown(
-        '<div style="text-align:center;padding:8px 0 4px 0;">'
-        '<div style="font-size:0.6rem;color:#4a5a70;">DissolvA™ v3.0 &nbsp;|&nbsp; 2026 &nbsp;|&nbsp; Powered by AI</div>'
+        '<style>'
+        'section[data-testid="stSidebar"] .upro-dark{color:#1C2541 !important;}'
+        'section[data-testid="stSidebar"] .upro-mut{color:#5b4500 !important;}'
+        'section[data-testid="stSidebar"] .upro-gold{color:#FFCC00 !important;}'
+        '</style>'
+        '<div style="margin-top:14px;border-radius:12px;padding:13px 14px;'
+        'background:linear-gradient(135deg,#FFD43B,#E0A100);">'
+        '<div class="upro-dark" style="font-size:0.85rem;font-weight:700;">★ Unlock Pro</div>'
+        '<div class="upro-mut" style="font-size:0.7rem;margin:5px 0 10px;line-height:1.4;">'
+        'IVIVC, batch &amp; AI insights, advanced reports.</div>'
+        '<a href="#pro" class="upro-gold" style="display:block;text-align:center;font-size:0.78rem;'
+        'font-weight:700;background:#0B132B;border-radius:8px;padding:8px 0;text-decoration:none;">Go Pro</a>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -460,3 +471,20 @@ elif nav == "API Information":
     api_information.render()
 elif nav == "All References":
     all_references.render()
+
+# ── Persistent bottom footer (utility links + Pro upgrade CTA) ───────────────
+st.markdown(
+    '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:30px 0 10px;">'
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;'
+    'flex-wrap:wrap;padding-bottom:12px;">'
+    '<div style="font-size:0.74rem;color:#7E8DAB;">'
+    'Dissolv<span style="color:#FFCC00;">A</span>™ v3.0 &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Powered by AI'
+    ' &nbsp;·&nbsp; <a href="https://tally.so/r/44oM55" target="_blank" '
+    'style="color:#9fb0d0;text-decoration:none;">Share Feedback</a>'
+    '</div>'
+    '<a href="#pro" style="background:linear-gradient(135deg,#FFD43B,#E0A100);color:#1C2541;'
+    'font-size:0.8rem;font-weight:700;border-radius:8px;padding:9px 18px;text-decoration:none;'
+    'white-space:nowrap;">⚡ Try DissolvA Pro — Upgrade Now</a>'
+    '</div>',
+    unsafe_allow_html=True
+)
