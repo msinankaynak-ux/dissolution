@@ -19,11 +19,11 @@ def _model_page(name):
     func, p0, pnames, eq, ref, cat = MODEL_DEFS[name]
     c = ACADEMY.get(name, {})
     st.markdown(
-        f'<div style="border-left:4px solid {AMBER};background:rgba(255,191,0,0.05);'
+        f'<div style="border-left:4px solid {AMBER};background:rgba(255,204,0,0.06);'
         f'padding:14px 18px;border-radius:6px;margin-bottom:14px;">'
-        f'<div style="font-size:1.6rem;font-weight:700;color:{OXFORD};">{name}</div>'
-        f'<div style="font-size:0.85rem;color:#5a6480;margin-top:2px;">'
-        f'Category: <b>{cat}</b> &nbsp;·&nbsp; Reference: {ref}</div></div>',
+        f'<div style="font-size:1.6rem;font-weight:700;color:#FFFFFF;">{name}</div>'
+        f'<div style="font-size:0.85rem;color:#9fb0d0;margin-top:2px;">'
+        f'Category: <b style="color:#CBD5E1;">{cat}</b> &nbsp;·&nbsp; Reference: {ref}</div></div>',
         unsafe_allow_html=True,
     )
     col1, col2 = st.columns([3, 2])

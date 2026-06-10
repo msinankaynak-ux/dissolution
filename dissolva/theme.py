@@ -21,6 +21,18 @@ GOLD         = "#FFCC00"   # premium accent / highlights
 TXT          = "#FFFFFF"   # primary text (headers)
 TXT2         = "#CBD5E1"   # secondary text (descriptions)
 
+VERSION      = "3.0"       # single source of truth for the visible app version
+
+
+def brand_html(extra_css: str = "", white: str = "#FFFFFF") -> str:
+    """Canonical DissolvA wordmark — white 'Dissolv' + gold 'A' + small grey ™.
+    Use this EVERYWHERE the brand is shown as a lockup; never re-spell it inline
+    (keeps the trademark style consistent: always ™, never (TM))."""
+    return (f'<span style="{extra_css}color:{white};font-weight:600;">Dissolv'
+            f'<span style="color:{GOLD};">A</span>'
+            f'<sup style="font-size:0.5em;color:#8593AD;font-weight:400;'
+            f'vertical-align:super;">™</sup></span>')
+
 _CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -157,6 +169,50 @@ section[data-testid="stSidebar"] .stNumberInput button { background: #16203F !im
 }
 button[data-baseweb="tab"] { font-family: 'EB Garamond', serif !important; font-size: 1.05rem !important; }
 button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFCC00 !important; font-weight: 700 !important; }
+
+/* ── Workspace data-entry hierarchy — muted label vs bright editable field ─ */
+/* Field labels: muted, small, uppercase → clearly distinct from the white value */
+[data-testid="stMain"] .stTextInput label p,
+[data-testid="stMain"] .stNumberInput label p,
+[data-testid="stMain"] .stSelectbox label p,
+[data-testid="stMain"] .stTextArea label p,
+[data-testid="stMain"] .stDateInput label p,
+[data-testid="stMain"] .stTimeInput label p,
+[data-testid="stMain"] .stMultiSelect label p,
+[data-testid="stMain"] .stSlider label p,
+[data-testid="stMain"] .stFileUploader label p {
+  color: #8EA0BC !important; font-size: 0.74rem !important; font-weight: 600 !important;
+  letter-spacing: 0.05em !important; text-transform: uppercase !important;
+}
+/* Editable fields: defined border + gold focus so they read as "type here" */
+[data-testid="stMain"] .stTextInput input,
+[data-testid="stMain"] .stNumberInput input,
+[data-testid="stMain"] .stTextArea textarea,
+[data-testid="stMain"] .stDateInput input,
+[data-testid="stMain"] .stSelectbox div[data-baseweb="select"] > div {
+  background: #16203F !important; color: #FFFFFF !important;
+  border: 1px solid rgba(255,204,0,0.28) !important; border-radius: 7px !important;
+}
+[data-testid="stMain"] .stTextInput input:focus,
+[data-testid="stMain"] .stNumberInput input:focus,
+[data-testid="stMain"] .stTextArea textarea:focus {
+  border-color: #FFCC00 !important; box-shadow: 0 0 0 2px rgba(255,204,0,0.22) !important;
+}
+[data-testid="stMain"] input::placeholder,
+[data-testid="stMain"] textarea::placeholder { color: #6f7d97 !important; }
+[data-testid="stMain"] .stCaption, [data-testid="stMain"] .stCaption * {
+  color: #6f7d97 !important;
+}
+
+/* ── Reusable dark-safe status boxes (replace ad-hoc light hex on pages) ──── */
+.dv-note { background: rgba(255,255,255,0.04); border-left: 4px solid #5b86c4;
+  color: #DDE6F2; border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 8px 0; font-size: 0.88rem; }
+.dv-warn { background: rgba(255,204,0,0.08); border-left: 4px solid #FFCC00;
+  color: #F0E2B0; border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 8px 0; font-size: 0.88rem; }
+.dv-pass { background: rgba(38,174,96,0.14); border: 1px solid rgba(38,174,96,0.45);
+  color: #7EDD9A; border-radius: 6px; padding: 10px 14px; text-align: center; font-weight: 600; }
+.dv-fail { background: rgba(231,76,60,0.14); border: 1px solid rgba(231,76,60,0.45);
+  color: #F2998E; border-radius: 6px; padding: 10px 14px; text-align: center; font-weight: 600; }
 
 /* ── Custom content boxes — dark surfaces + light text ──────────────────── */
 .eq-box {

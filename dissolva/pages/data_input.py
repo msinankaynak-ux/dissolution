@@ -536,21 +536,19 @@ def render():
             with badge_cols[i % len(badge_cols)]:
                 if res["passed"]:
                     st.markdown(
-                        f'<div style="background:#c6efce;border:2px solid #27ae60;'
-                        f'border-radius:6px;padding:10px 14px;text-align:center;">'
-                        f'<div style="font-size:1.1rem;font-weight:700;color:#1a5c2e;">✅ COMPLIANT</div>'
-                        f'<div style="font-size:0.8rem;color:#1a5c2e;">{nm}</div>'
-                        f'<div style="font-size:0.75rem;color:#2d7d46;">@ {q_time:.0f} {time_unit}: '
+                        f'<div class="dv-pass">'
+                        f'<div style="font-size:1.1rem;font-weight:700;">✅ COMPLIANT</div>'
+                        f'<div style="font-size:0.8rem;">{nm}</div>'
+                        f'<div style="font-size:0.75rem;opacity:0.85;">@ {q_time:.0f} {time_unit}: '
                         f'<strong>{res["rel"]:.1f}%</strong> ≥ Q={q_limit:.0f}%</div>'
                         f'</div>', unsafe_allow_html=True
                     )
                 else:
                     st.markdown(
-                        f'<div style="background:#ffc7ce;border:2px solid #e74c3c;'
-                        f'border-radius:6px;padding:10px 14px;text-align:center;">'
-                        f'<div style="font-size:1.1rem;font-weight:700;color:#7b1a1a;">⚠️ OOS</div>'
-                        f'<div style="font-size:0.8rem;color:#7b1a1a;">{nm}</div>'
-                        f'<div style="font-size:0.75rem;color:#a93226;">@ {q_time:.0f} {time_unit}: '
+                        f'<div class="dv-fail">'
+                        f'<div style="font-size:1.1rem;font-weight:700;">⚠️ OOS</div>'
+                        f'<div style="font-size:0.8rem;">{nm}</div>'
+                        f'<div style="font-size:0.75rem;opacity:0.85;">@ {q_time:.0f} {time_unit}: '
                         f'<strong>{res["rel"]:.1f}%</strong> < Q={q_limit:.0f}%</div>'
                         f'</div>', unsafe_allow_html=True
                     )

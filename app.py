@@ -17,7 +17,7 @@ try:
 except ImportError:
     _PLOTLY_OK = False
 
-from dissolva.theme import OXFORD, inject_theme, style_ax
+from dissolva.theme import OXFORD, inject_theme, style_ax, brand_html, VERSION
 from dissolva.models import (MODEL_DEFS, CATEGORIES, fit_model,
     compute_mdt, compute_de, r2s, r2adj, aic_fn, msc_fn, _nz)
 from dissolva.state import (init_session_state, TIER_RANK, current_tier, require_tier,
@@ -195,13 +195,23 @@ with st.sidebar:
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button:hover { background: rgba(255,204,0,0.12) !important; }
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button:hover,
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button:hover * { color: #FFCC00 !important; }
-    [data-testid="stSidebar"] .st-key-navmenu [data-testid="stBaseButton-primary"] {
-        background: rgba(255,204,0,0.10) !important;
-        box-shadow: 0 0 0 1px rgba(255,204,0,0.28), 0 0 14px rgba(255,204,0,0.10) !important;
+    /* Active page — solid amber pill + dark bold text + left accent bar (unmistakable).
+       Uses the full button[data-testid=...] selector so it outranks the generic
+       navmenu color/hover rules above and the active item never reads as "inactive". */
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button[data-testid="stBaseButton-primary"] {
+        background: #FFCC00 !important;
+        border-left: 3px solid #FFF0BF !important;
+        box-shadow: 0 0 12px rgba(255,204,0,0.22) !important;
     }
-    [data-testid="stSidebar"] .st-key-navmenu [data-testid="stBaseButton-primary"],
-    [data-testid="stSidebar"] .st-key-navmenu [data-testid="stBaseButton-primary"] * {
-        color: #FFCC00 !important; font-weight: 600 !important;
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button[data-testid="stBaseButton-primary"],
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button[data-testid="stBaseButton-primary"] * {
+        color: #0B132B !important; font-weight: 700 !important;
+    }
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button[data-testid="stBaseButton-primary"]:hover {
+        background: #FFD633 !important;
+    }
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button[data-testid="stBaseButton-primary"]:hover * {
+        color: #0B132B !important;
     }
     [data-testid="stSidebar"] .nav-cat {
         font-size: 0.68rem !important; letter-spacing: 1.2px !important; text-transform: uppercase !important;
@@ -368,9 +378,9 @@ def _new_session_dialog():
 _hl, _hr = st.columns([0.56, 0.44])
 with _hl:
     st.markdown(
-        '<h1 style="margin:0;font-size:2.0rem;color:#FFFFFF;">'
-        'Dissolv<span style="color:#FFCC00;">A</span><sup style="font-size:0.85rem;color:#8593AD;">(TM)</sup> '
-        '<span style="font-size:0.92rem;color:#9fb0d0;font-style:italic;font-weight:400;">'
+        '<h1 style="margin:0;font-size:2.0rem;">'
+        + brand_html('font-size:2.0rem;') +
+        ' <span style="font-size:0.92rem;color:#9fb0d0;font-style:italic;font-weight:400;">'
         '- Predictive Dissolution Suite</span></h1>'
         '<div style="color:#7E8DAB;font-size:0.84rem;margin-top:4px;">'
         'FDA/EMA guidance-aligned · 62 Kinetic Models · f1/f2 · Bootstrap f2 · Statistical Profiling'
@@ -478,7 +488,7 @@ st.markdown(
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;'
     'flex-wrap:wrap;padding-bottom:12px;">'
     '<div style="font-size:0.74rem;color:#7E8DAB;">'
-    'Dissolv<span style="color:#FFCC00;">A</span>™ v3.0 &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Powered by AI'
+    + brand_html('font-size:0.78rem;') + f' v{VERSION} &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Powered by AI'
     ' &nbsp;·&nbsp; <a href="https://tally.so/r/44oM55" target="_blank" '
     'style="color:#9fb0d0;text-decoration:none;">Share Feedback</a>'
     '</div>'

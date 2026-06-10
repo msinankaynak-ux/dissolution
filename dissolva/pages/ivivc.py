@@ -46,9 +46,9 @@ def render():
     # Düzgün yeniden yazım (plazma Cp'den gerçek Fa, doğru Multiple-C veri modeli)
     # planlandı. Aşağıdaki tüm hesaplama kodu sonraki sürüm için korunuyor.
     st.markdown(
-        '<div style="background:#fff3cd;border:1px solid #ffe69c;'
-        'border-left:5px solid #d39e00;border-radius:6px;padding:16px 20px;margin:8px 0 4px;color:#664d03;">'
-        '🚧 <strong>The IVIVC module is currently under reconstruction — temporarily disabled.</strong><br><br>'
+        '<div style="background:rgba(255,204,0,0.08);border:1px solid rgba(255,204,0,0.30);'
+        'border-left:5px solid #FFCC00;border-radius:6px;padding:16px 20px;margin:8px 0 4px;color:#F0E2B0;">'
+        '🚧 <strong style="color:#FFCC00;">The IVIVC module is currently under reconstruction — temporarily disabled.</strong><br><br>'
         'An internal review found scientific-accuracy errors in this module '
         '(Level A Wagner-Nelson deconvolution and Multiple Level C correlation). '
         'To avoid producing confident-but-incorrect results, it has been disabled until it is '

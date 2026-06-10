@@ -822,8 +822,8 @@ def render():
                         f'<div style="background:#16203F;border:0.5px solid rgba(255,255,255,0.08);'
                         f'border-radius:8px;padding:8px 14px;margin-bottom:6px;'
                         f'display:flex;align-items:center;gap:10px;">'
-                        f'<span style="background:{_m_i.get("bg","#eee")};'
-                        f'color:{_m_i.get("text","#333")};font-size:10px;font-weight:700;'
+                        f'<span style="background:{_m_i.get("bg","rgba(255,255,255,0.08)")};'
+                        f'color:{_m_i.get("text","#CBD5E1")};font-size:10px;font-weight:700;'
                         f'padding:2px 8px;border-radius:10px;white-space:nowrap;">BCS {_cls_i}</span>'
                         f'<span style="font-size:12px;color:#E6ECF8;">{_m_i.get("desc","")}</span>'
                         f'<span style="font-size:11px;color:#9fb0d0;margin-left:auto;">'
@@ -856,7 +856,7 @@ def render():
                         _snips_p = _p.get("snippets", [])
 
                         st.markdown(
-                            f'<div style="border-left:3px solid {_p_m.get("border","#e2e8f0")};'
+                            f'<div style="border-left:3px solid {_p_m.get("border","rgba(255,255,255,0.18)")};'
                             f'padding:10px 14px;margin-bottom:8px;'
                             f'background:{_p_m.get("bg","#f8f9fa")}20;border-radius:0 8px 8px 0;">'
                             f'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">'
@@ -869,7 +869,7 @@ def render():
                                if _p.get("origin","Scite") == "Scite" and _tally > 0 else
                                f'<span style="background:#f0e6ff;color:#6b21a8;font-size:9px;font-weight:600;'
                                f'padding:2px 6px;border-radius:8px;">PubMed</span>') +
-                            (f'<span style="background:#f0f0f0;color:#718096;font-size:10px;'
+                            (f'<span style="background:rgba(255,255,255,0.08);color:#9fb0d0;font-size:10px;'
                              f'padding:2px 7px;border-radius:10px;">{_tally} citations</span>'
                              if _tally > 0 else '') +
                             f'</div>'
@@ -878,13 +878,13 @@ def render():
                             f'{_esc(_p.get("source",""))}'
                             f'{" · " + _esc(_p.get("journal","")[:40]) if _p.get("journal") else ""}'
                             + (f' · <a href="https://doi.org/{_esc(_p.get("doi"))}" target="_blank" '
-                               f'style="color:#185fa5;">DOI ↗</a>' if _p.get("doi") else "") +
+                               f'style="color:#6fb0ef;">DOI ↗</a>' if _p.get("doi") else "") +
                             f'</div>'
                             + ("".join([
                                 f'<div style="margin-top:5px;padding:5px 8px;'
-                                f'background:rgba(255,255,255,0.7);border-radius:5px;'
-                                f'font-size:11px;color:#555;line-height:1.5;'
-                                f'border-left:2px solid {_p_m.get("border","#ddd")};">'
+                                f'background:rgba(255,255,255,0.05);border-radius:5px;'
+                                f'font-size:11px;color:#CBD5E1;line-height:1.5;'
+                                f'border-left:2px solid {_p_m.get("border","rgba(255,255,255,0.2)")};">'
                                 f'<em>"{_esc(s[:200])}{"..." if len(s)>200 else ""}"</em>'
                                 f'</div>'
                                 for s in _snips_p
@@ -1051,7 +1051,7 @@ def render():
             '<div style="margin-top:16px;padding-top:10px;border-top:0.5px solid rgba(255,255,255,0.08);'
             'font-size:10px;color:#7E8DAB;display:flex;justify-content:space-between;">'
             '<span>Sources: PubMed (NIH) · PubChem · FDA Dissolution DB</span>'
-            '<span>API Information — DissolvA v4.0</span>'
+            '<span>API Information — DissolvA v3.0</span>'
             '</div>',
             unsafe_allow_html=True
         )

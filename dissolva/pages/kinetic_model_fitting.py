@@ -71,9 +71,9 @@ def render():
     st.markdown(
         f'<div style="background:rgba(255,191,0,0.08);border-left:4px solid #FFBF00;'
         f'border-radius:0 6px 6px 0;padding:14px 18px;margin:12px 0;">'
-        f'<div style="font-size:0.85rem;font-weight:700;color:#e6ac00;margin-bottom:6px;">'
+        f'<div style="font-size:0.85rem;font-weight:700;color:#FFCC00;margin-bottom:6px;">'
         f'{shape_info["icon"]} Smart Model Recommendation — {shape_info["shape"]} Profile</div>'
-        f'<div style="font-size:0.82rem;color:#666;">{shape_info["reason"]}<br>'
+        f'<div style="font-size:0.82rem;color:#CBD5E1;">{shape_info["reason"]}<br>'
         f'<strong>Recommended:</strong> {", ".join(top_models_valid)}</div></div>',
         unsafe_allow_html=True
     )

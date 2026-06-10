@@ -78,6 +78,19 @@ def _logout():
     st.rerun()
 
 
+def _initials(s: str) -> str:
+    """Two-letter initials for the avatar fallback (from a name or email)."""
+    s = (s or "").strip()
+    if not s:
+        return "U"
+    if "@" in s and " " not in s:          # an email → use the local part
+        s = s.split("@")[0]
+    parts = [p for p in s.replace(".", " ").replace("_", " ").split() if p]
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[1][0]).upper()
+    return (parts[0][:2].upper() if parts else "U")
+
+
 def render_sidebar_auth():
     """Sidebar sign-in / user card. Open-mode note when not configured."""
     cid, csec, redirect = _google_cfg()
@@ -91,23 +104,36 @@ def render_sidebar_auth():
 
     if is_authenticated():
         u = current_user()
-        _pic = (f'<img src="{u["picture"]}" style="width:30px;height:30px;border-radius:50%;">'
-                if u.get("picture") else '<span style="font-size:22px;">👤</span>')
-        st.markdown(
-            f'<div style="display:flex;align-items:center;gap:10px;'
-            f'background:rgba(39,174,96,0.12);border:1px solid rgba(39,174,96,0.3);'
-            f'border-radius:8px;padding:8px 12px;margin:6px 0;">'
-            f'{_pic}'
-            f'<div style="line-height:1.2;overflow:hidden;">'
-            f'<div style="font-size:12px;font-weight:600;color:white;'
-            f'white-space:nowrap;text-overflow:ellipsis;overflow:hidden;">{u.get("name") or "User"}</div>'
-            f'<div style="font-size:10px;color:rgba(255,255,255,0.55);'
-            f'white-space:nowrap;text-overflow:ellipsis;overflow:hidden;">{u.get("email") or ""}</div>'
-            f'</div></div>',
-            unsafe_allow_html=True,
-        )
-        if st.button("Log out", use_container_width=True, key="_logout_btn"):
-            _logout()
+        pic = u.get("picture") or ""
+        name = u.get("name") or "User"
+        email = u.get("email") or ""
+        initials = _initials(name if name != "User" else email)
+        # The popover trigger is styled into a round avatar (photo if available,
+        # else initials on a solid disc) scoped via the keyed wrapper container.
+        if pic:
+            trig = (f"background-color:#2d6cdf !important;background-image:url('{pic}') !important;"
+                    f"background-size:cover !important;background-position:center !important;"
+                    f"color:transparent !important;")
+        else:
+            trig = "background:#2d6cdf !important;color:#fff !important;"
+        st.markdown(f"""<style>
+        .st-key-acct_pop {{ width:auto !important; flex:0 0 auto !important; }}
+        .st-key-acct_pop button {{
+            width:38px !important; height:38px !important; min-width:38px !important;
+            min-height:38px !important; border-radius:50% !important; padding:0 !important;
+            overflow:hidden !important; border:2px solid rgba(255,204,0,0.45) !important;
+            font-size:12px !important; font-weight:700 !important; {trig}
+        }}
+        .st-key-acct_pop button:hover {{ border-color:#FFCC00 !important; }}
+        .st-key-acct_pop button p {{ color:inherit !important; margin:0 !important; }}
+        </style>""", unsafe_allow_html=True)
+        with st.container(key="acct_pop"):
+            with st.popover(initials, use_container_width=False):
+                st.markdown(f"**{name}**")
+                if email:
+                    st.caption(email)
+                if st.button("Log out", use_container_width=True, key="_logout_btn"):
+                    _logout()
         return
 
     oauth2 = OAuth2Component(cid, csec, _AUTHORIZE, _TOKEN, _TOKEN, _REVOKE)
@@ -117,7 +143,7 @@ def render_sidebar_auth():
         scope="openid email profile",
         key="google_login",
         extras_params={"prompt": "select_account"},
-        use_container_width=True,
+        use_container_width=False,
         pkce="S256",
     )
     if result and "token" in result:

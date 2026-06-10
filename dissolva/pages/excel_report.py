@@ -87,9 +87,9 @@ def render():
         with rc2:
             st.markdown("**📎 Logo Upload** *(optional)*")
             st.markdown(
-                '<div style="background:#f0ece0;border:1px solid #ddd;border-radius:4px;'
-                'padding:8px 12px;font-size:0.78rem;color:#666;margin-bottom:8px;">'
-                '<b>Requirements:</b><br>'
+                '<div style="background:#16203F;border:1px solid rgba(255,255,255,0.10);border-radius:6px;'
+                'padding:8px 12px;font-size:0.78rem;color:#9fb0d0;margin-bottom:8px;">'
+                '<b style="color:#CBD5E1;">Requirements:</b><br>'
                 '• Format: PNG or JPG<br>'
                 '• Recommended size: <b>300 × 100 px</b> (landscape)<br>'
                 '• Max file size: 2 MB<br>'
