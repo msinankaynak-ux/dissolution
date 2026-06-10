@@ -139,12 +139,17 @@ section[data-testid="stSidebar"] .stNumberInput button { background: #16203F !im
 [data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover { background: #FFCC00 !important; border-color: #FFCC00 !important; }
 [data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover * { color: #0B132B !important; }
 
-/* streamlit-oauth "Sign in with Google" button (iframe) — scaled to size the label proportionally */
+/* streamlit-oauth "Sign in with Google" button (iframe) — sidebar variant (scaled) */
 [data-testid="stSidebar"] iframe[title="streamlit_oauth.authorize_button"] {
   border-radius: 12px !important; overflow: hidden !important;
   transform: scale(0.68) !important; transform-origin: top left !important;
   width: 147% !important; margin-bottom: -23px !important;
 }
+/* OAuth button in the TOP HEADER (right actions) — rounded, keep one line */
+.st-key-hdractions iframe[title="streamlit_oauth.authorize_button"] {
+  border-radius: 8px !important; overflow: hidden !important;
+}
+.st-key-hdractions { align-items: center !important; gap: 10px !important; }
 .stDownloadButton > button {
   background: #FFCC00 !important; color: #0B132B !important;
   border: 1px solid #FFCC00 !important;

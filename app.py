@@ -91,9 +91,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # Authentication (Streamlit yerleşik Google OIDC). Yapılandırma yoksa açık mod.
-    auth.render_sidebar_auth()
-    auth.sync_session()
+    # (Sign-in moved to the top header, right side.)
 
     if "method_cfg" not in st.session_state:
         st.session_state.method_cfg = {
@@ -269,32 +267,7 @@ with st.sidebar:
         background: rgba(255,191,0,0.06) !important;
     }
     </style>""", unsafe_allow_html=True)
-    # New Session button
-    if st.button("✦ New Session", use_container_width=True,
-                 help="Clear all profiles, results and start fresh."):
-        st.session_state["_confirm_new"] = True
-        st.rerun()
-
-    if st.session_state.get("_confirm_new"):
-        st.warning("All data will be lost!", icon="⚠️")
-        cc1, cc2 = st.columns(2)
-        with cc1:
-            if st.button("✅ Confirm", use_container_width=True):
-                _clear_all()
-                st.session_state["_confirm_new"] = False
-                st.rerun()
-        with cc2:
-            if st.button("❌ Cancel", use_container_width=True):
-                st.session_state["_confirm_new"] = False
-                st.rerun()
-
-    # Load demo data — instant onboarding (Reference + Test profiles, ready to analyse)
-    if st.button("⚗ Load demo data", use_container_width=True,
-                 help="Load example Reference + Test profiles so you can try fitting and f2 instantly."):
-        extras.load_demo_data()
-        st.session_state["_pending_nav"] = "Data Input"
-        st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
-        st.rerun()
+    # (New Session + Load demo moved to the top header, right side.)
 
     # Data privacy — same button style as above; opens a dialog with the statement
     @st.dialog("🔒 Data privacy")
@@ -354,30 +327,49 @@ with st.sidebar:
 
 
 # ===========================================================================
-# HEADER
+# HEADER  (title left · actions right: New Session · Load demo · auth · Try Free)
 # ===========================================================================
-st.markdown(
-    '<h1 style="margin:0;font-size:2.4rem;color:#FFFFFF;">' +
-    'Dissolv<span style="color:#FFCC00;">A</span><sup style="font-size:1rem;color:#8593AD;">(TM)</sup> ' +
-    '<span style="font-size:1rem;color:#9fb0d0;font-style:italic;font-weight:400;">' +
-    '- Predictive Dissolution Suite</span></h1>' +
-    '<div style="color:#7E8DAB;font-size:0.9rem;margin-top:4px;">' +
-    'FDA/EMA guidance-aligned · 62 Kinetic Models · f1/f2 · Bootstrap f2 · Statistical Profiling' +
-    '<span style="background:rgba(255,204,0,0.10);color:#FFCC00;border:1px solid rgba(255,204,0,0.35);font-size:0.7rem;font-weight:600;' +
-    'padding:1px 8px;border-radius:10px;margin-left:8px;">BETA · research use only</span></div>',
-    unsafe_allow_html=True
-)
-st.markdown('<hr style="border:1px solid #FFCC00;margin:10px 0 4px 0;">', unsafe_allow_html=True)
-st.markdown(
-    "<div style='font-size:0.76rem;color:#8aadcc;padding:3px 0 14px 0;'>"
-    "<strong style='color:#5a8ab0;'>DissolvA Team</strong>"
-    ""
-    " &nbsp;&bull;&nbsp; "
-    "<a href='mailto:dissolva.app@gmail.com' style='color:#7a9dbf;text-decoration:none;'>"
-    "dissolva.app@gmail.com</a>"
-    "</div>",
-    unsafe_allow_html=True
-)
+@st.dialog("Start a new session?")
+def _new_session_dialog():
+    st.write("This clears all loaded profiles and results. This cannot be undone.")
+    _dc1, _dc2 = st.columns(2)
+    if _dc1.button("Yes, clear everything", type="primary", use_container_width=True):
+        _clear_all()
+        st.rerun()
+    if _dc2.button("Cancel", use_container_width=True):
+        st.rerun()
+
+_hl, _hr = st.columns([0.56, 0.44])
+with _hl:
+    st.markdown(
+        '<h1 style="margin:0;font-size:2.0rem;color:#FFFFFF;">'
+        'Dissolv<span style="color:#FFCC00;">A</span><sup style="font-size:0.85rem;color:#8593AD;">(TM)</sup> '
+        '<span style="font-size:0.92rem;color:#9fb0d0;font-style:italic;font-weight:400;">'
+        '- Predictive Dissolution Suite</span></h1>'
+        '<div style="color:#7E8DAB;font-size:0.84rem;margin-top:4px;">'
+        'FDA/EMA guidance-aligned · 62 Kinetic Models · f1/f2 · Bootstrap f2 · Statistical Profiling'
+        '<span style="background:rgba(255,204,0,0.10);color:#FFCC00;border:1px solid rgba(255,204,0,0.35);'
+        'font-size:0.7rem;font-weight:600;padding:1px 8px;border-radius:10px;margin-left:8px;">'
+        'BETA · research use only</span></div>',
+        unsafe_allow_html=True
+    )
+with _hr:
+    with st.container(horizontal=True, horizontal_alignment="right", key="hdractions"):
+        if st.button("New Session", icon=":material/add:", key="hdr_new",
+                     help="Clear all profiles and results and start fresh."):
+            _new_session_dialog()
+        if st.button("Load demo", icon=":material/science:", key="hdr_demo",
+                     help="Load example Reference + Test profiles."):
+            extras.load_demo_data()
+            st.session_state["_pending_nav"] = "Data Input"
+            st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
+            st.rerun()
+        auth.render_sidebar_auth()
+        st.markdown(
+            '<a href="#" style="color:#FFD86B;font-weight:600;font-size:0.86rem;'
+            'text-decoration:none;white-space:nowrap;padding:6px 4px;">Try Free</a>',
+            unsafe_allow_html=True)
+st.markdown('<hr style="border:1px solid #FFCC00;margin:8px 0 4px 0;">', unsafe_allow_html=True)
 
 # GDPR cookie/usage consent — dismissible, shown until accepted (session-level).
 extras.consent_banner(_privacy_dialog)
@@ -396,16 +388,17 @@ if not (st.session_state.get("academy_open") or st.session_state.get("admin_open
     _chips = []
     for i, (label, _) in enumerate(_PHASES):
         if i == _active:
-            bg, col, bd = "#BA7517", "#FAEEDA", "#BA7517"
+            bg, col, bd, sh = ("rgba(255,204,0,0.12)", "#FFCC00", "rgba(255,204,0,0.40)",
+                               "box-shadow:0 0 0 1px rgba(255,204,0,0.28),0 0 12px rgba(255,204,0,0.10);")
         elif i < _active:
-            bg, col, bd = "rgba(186,117,23,0.10)", "#854F0B", "rgba(186,117,23,0.5)"
+            bg, col, bd, sh = "rgba(255,204,0,0.06)", "#C9A94A", "rgba(255,204,0,0.22)", ""
         else:
-            bg, col, bd = "transparent", "#9aa6b5", "rgba(150,166,181,0.4)"
+            bg, col, bd, sh = "transparent", "#7E8DAB", "rgba(126,141,171,0.35)", ""
         _chips.append(
-            f'<span style="background:{bg};color:{col};border:1px solid {bd};'
+            f'<span style="background:{bg};color:{col};border:1px solid {bd};{sh}'
             f'border-radius:14px;padding:3px 12px;font-size:0.72rem;font-weight:600;'
             f'white-space:nowrap;">{i+1}. {label}</span>')
-    _sep = '<span style="color:#c3ccd6;">→</span>'
+    _sep = '<span style="color:#4a5a7e;">→</span>'
     st.markdown(
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;'
         'padding:2px 0 12px 0;">' + _sep.join(_chips) + '</div>',
