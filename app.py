@@ -124,35 +124,87 @@ with st.sidebar:
 
     # Logical flow: Setup -> Analysis -> Report -> Reference.
     # Returned value is the canonical key; the displayed label is decorated via _nav_label (routing intact).
-    _NAV_LABELS = {
-        "IVIVC Analysis": "IVIVC Analysis — Coming Soon",   # disabled / under construction
-    }
-    def _nav_label(key: str) -> str:
-        return _NAV_LABELS.get(key, key)
-
-    _nav_options = [
-        # Setup
-        "Method Settings", "Analytical Settings", "Data Input",
-        # Analysis
-        "Kinetic Model Fitting", "Statistical Analysis",
-        "f1 and f2 Similarity", "Bootstrap f2 Analysis", "IVIVC Analysis",
-        # Report
-        "Excel Report",
-        # Reference
-        "API Information", "All References",
+    # ── Categorized icon navigation (button-based; routing VALUES unchanged) ──
+    # Each item = (routing_value, display_label, material_icon). Display labels may
+    # differ from the canonical routing value; the page dispatch still uses the value.
+    _NAV_CATEGORIES = [
+        ("Configuration & Setup", [
+            ("Method Settings",       "Method Settings",       ":material/settings:"),
+            ("Analytical Settings",   "Analytical Settings",   ":material/science:"),
+            ("Data Input",            "Data Input",            ":material/table_chart:"),
+        ]),
+        ("Predictive Analysis", [
+            ("Kinetic Model Fitting", "Kinetic Model Fitting", ":material/show_chart:"),
+            ("Statistical Analysis",  "Statistical Analysis",  ":material/functions:"),
+            ("f1 and f2 Similarity",  "f1 & f2 Similarity",    ":material/compare_arrows:"),
+            ("Bootstrap f2 Analysis", "Bootstrap f2",          ":material/sync:"),
+            ("IVIVC Analysis",        "IVIVC Correlation",     ":material/link:"),
+        ]),
+        ("Results & Documentation", [
+            ("Excel Report",          "Excel Reporting",       ":material/description:"),
+            ("All References",        "References",            ":material/menu_book:"),
+            ("API Information",       "API Information",        ":material/medication:"),
+        ]),
     ]
-    # Native st.radio (no iframe) so the dark-sidebar theming in theme.py applies
-    # cleanly: transparent rows, light text, amber hover + amber active pill
-    # ("Midnight + Amber" palette). Text-only labels, no leading icons.
+    _nav_options = [v for _, _items in _NAV_CATEGORIES for v, _, _ in _items]
 
-    # Programmatic navigation (e.g. the demo-data button) must set the radio's key
-    # BEFORE the widget is instantiated — buffer it via a plain session key.
+    # Programmatic navigation (e.g. the demo-data button) sets the target first.
     _pending = st.session_state.pop("_pending_nav", None)
     if _pending in _nav_options:
         st.session_state["main_nav_radio"] = _pending
+    nav = st.session_state.get("main_nav_radio") or _nav_options[0]
+    if nav not in _nav_options:
+        nav = _nav_options[0]
+    st.session_state["main_nav_radio"] = nav
 
-    nav = st.radio("Navigation", _nav_options, format_func=_nav_label,
-        label_visibility="collapsed", key="main_nav_radio")
+    # Nav-row styling scoped to the navmenu container (extra .st-key-navmenu class →
+    # higher specificity, so it overrides the generic sidebar-button styles).
+    st.markdown("""<style>
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button {
+        background: transparent !important; border: none !important; box-shadow: none !important;
+        justify-content: flex-start !important; text-align: left !important;
+        padding: 7px 12px !important; border-radius: 7px !important;
+    }
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button,
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button * {
+        color: #9fb0d0 !important; font-weight: 400 !important; font-size: 0.9rem !important; letter-spacing: 0 !important;
+    }
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button:hover { background: rgba(255,204,0,0.12) !important; }
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button:hover,
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button:hover * { color: #FFCC00 !important; }
+    [data-testid="stSidebar"] .st-key-navmenu [data-testid="stBaseButton-primary"] {
+        background: rgba(255,204,0,0.10) !important;
+        box-shadow: 0 0 0 1px rgba(255,204,0,0.28), 0 0 14px rgba(255,204,0,0.10) !important;
+    }
+    [data-testid="stSidebar"] .st-key-navmenu [data-testid="stBaseButton-primary"],
+    [data-testid="stSidebar"] .st-key-navmenu [data-testid="stBaseButton-primary"] * {
+        color: #FFCC00 !important; font-weight: 600 !important;
+    }
+    [data-testid="stSidebar"] .nav-cat {
+        font-size: 0.6rem !important; letter-spacing: 1.5px !important; text-transform: uppercase !important;
+        color: rgba(203,213,225,0.45) !important; padding: 12px 12px 3px !important; font-weight: 600 !important;
+    }
+    [data-testid="stSidebar"] .st-key-navmenu .stCaption, [data-testid="stSidebar"] .st-key-navmenu .stCaption * {
+        color: rgba(255,204,0,0.65) !important; font-size: 0.66rem !important; padding-left: 12px !important;
+    }
+    </style>""", unsafe_allow_html=True)
+
+    with st.container(key="navmenu"):
+        for _cat, _items in _NAV_CATEGORIES:
+            st.markdown(f"<div class='nav-cat'>{_cat}</div>", unsafe_allow_html=True)
+            for _val, _label, _icon in _items:
+                if st.button(_label, icon=_icon, key=f"nav_{_val}", use_container_width=True,
+                             type=("primary" if nav == _val else "secondary")):
+                    st.session_state["main_nav_radio"] = _val
+                    st.rerun()
+            if _cat == "Predictive Analysis":
+                st.caption("IVIVC Correlation · v3.5 — coming soon")
+        # Learn — DissolvA Academy (free overlay; not a routed page)
+        st.markdown("<div class='nav-cat'>Learn</div>", unsafe_allow_html=True)
+        if st.button("DissolvA Academy", icon=":material/school:", key="nav_academy",
+                     use_container_width=True, type="secondary"):
+            st.session_state.academy_open = True
+            st.rerun()
 
     # Leave any full-screen overlay (Academy/Admin) when navigating to a page.
     if nav != st.session_state.get("_nav_key"):
@@ -232,12 +284,6 @@ with st.sidebar:
         extras.load_demo_data()
         st.session_state["_pending_nav"] = "Data Input"
         st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
-        st.rerun()
-
-    # DissolvA Academy — free / public, open to everyone (outside the paywall)
-    if st.button("🎓 DissolvA Academy", use_container_width=True,
-                 help="Free kinetic-model school — open to everyone, no account needed."):
-        st.session_state.academy_open = True
         st.rerun()
 
     # Data privacy — same button style as above; opens a dialog with the statement
