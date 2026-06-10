@@ -1,6 +1,7 @@
 """DissolvA kinetic model library: 62 dissolution models, the MODEL_DEFS registry,
 statistical metrics (R2/AIC/MSC), MDT/DE and the fit_model curve-fitting engine.
 Extracted from app.py (Phase 1.4 modularization)."""
+import re
 import numpy as np
 from scipy.optimize import curve_fit, root
 from scipy.stats import norm as sp_norm
@@ -68,8 +69,8 @@ def m_combined(t, kH, k1, alpha):
 def m_pade(t, a0, a1, b1): return (a0+a1*t)/(1+b1*t)
 def m_hPLC(t, A, B, n): return 100*(1-(1+A*t**n)**(-B))
 def m_compreg(t, k, n, m): return 100*(1-np.exp(-k*t**n))**m
-def m_biexp_abs(t, F, ka, k):
-    return F*100*(ka/(ka-k+1e-9))*(np.exp(-k*t)-np.exp(-ka*t))
+def m_biexp_abs(t, Fr, ka, k):
+    return Fr*100*(ka/(ka-k+1e-9))*(np.exp(-k*t)-np.exp(-ka*t))
 def m_mb_mod(t, k, n, b, c): return k*np.abs(t)**n*np.exp(-b*t)+c
 def m_probit_log(t, mu, sigma, A): return A*sp_norm.cdf(np.log10(_nz(t)), mu, abs(sigma))
 def m_henriksen(t, A, k1, k2): return A*(np.exp(-k1*t)-np.exp(-k2*t))
@@ -255,7 +256,7 @@ MODEL_DEFS = {
     "Double Exponential":    (m_double_exp,       [60.0,0.05,40.0,0.005],     ["A1","k1","A2","k2"],    "F=A1*(1-e^-k1t)+A2*(1-e^-k2t)", "Empirical",            "Multi-Phase"),
     "Triple Exponential":    (m_triple_exp,       [40.0,0.1,40.0,0.02,20.0,0.005],["A1","k1","A2","k2","A3","k3"],"F=sum Ai*(1-e^-kit)","Empirical",             "Multi-Phase"),
     "Power-Exponential":     (m_power_exp,        [100.0,0.05,1.2],           ["A","k","n"],            "F=A*(1-exp(-k*t^n))",             "Zhang 2010",           "Multi-Phase"),
-    "Biexp. Absorption":     (m_biexp_abs,        [1.0,0.2,0.05],             ["F","ka","k"],           "F=F*100*ka/(ka-k)*(e^-kt-e^-kat)","PK-based",            "Multi-Phase"),
+    "Biexp. Absorption":     (m_biexp_abs,        [1.0,0.2,0.05],             ["Fr","ka","k"],          "F=Fr*100*ka/(ka-k)*(exp(-k*t)-exp(-ka*t))","PK-based",            "Multi-Phase"),
     "Gallagher-Corrigan":    (m_gallagher_corrigan,[100.0,0.05,0.02,60.0],    ["Amax","k1","k2","tmax"],"Biphasic burst+slow",             "Gallagher 2000",       "Multi-Phase"),
     "Combined Higuchi+FO":   (m_combined,         [10.0,0.05,0.5],            ["kH","k1","alpha"],      "F=alpha*kH*sqrt(t)+(1-alpha)*FO","Empirical",            "Multi-Phase"),
     "Henriksen":             (m_henriksen,        [80.0,0.1,0.5],             ["A","k1","k2"],          "F=A*(exp(-k1*t)-exp(-k2*t))",     "Henriksen et al.",     "Multi-Phase"),
@@ -519,6 +520,31 @@ def _compute_tx(func, popt, t_lo, t_hi, targets=(25.0, 50.0, 80.0, 90.0), n=400)
         return {k: None for k in keys}
 
 
+# -- Parameter-substituted fitted equation (additive; DDSolver parity) --
+def _fitted_equation(eq_template, pnames, popt):
+    """Substitute fitted parameter VALUES into the symbolic equation template.
+
+    e.g. "F=k*t^n" with k=10.6, n=0.34 → "F=10.6*t^0.34" (like DDSolver). Each
+    parameter NAME is replaced by its value formatted to 4 significant figures.
+    Replacement is WHOLE-TOKEN ONLY (boundary lookarounds) and parameter names are
+    processed LONGEST-FIRST so e.g. "k1" is substituted before "k" and a 1-char
+    name like "A" never clobbers "Amax". The time variable "t", math tokens
+    (exp/log/sqrt/Phi), digits and "100" are left untouched. Descriptive templates
+    with no real formula (e.g. "Biphasic burst+slow") simply pass through. Any
+    error → return the original template unchanged."""
+    try:
+        s = str(eq_template)
+        order = sorted(range(len(pnames)), key=lambda i: len(str(pnames[i])), reverse=True)
+        for i in order:
+            name = str(pnames[i])
+            value = f"{float(popt[i]):.4g}"
+            s = re.sub(r'(?<![A-Za-z0-9_])' + re.escape(name) + r'(?![A-Za-z0-9_])',
+                       value, s)
+        return s
+    except Exception:
+        return eq_template
+
+
 # -- Curve-fitting engine --
 def fit_model(t, y, name, weight_scheme="none", sd=None):
     func, p0, pnames, eq, ref, cat = MODEL_DEFS[name]
@@ -558,7 +584,9 @@ def fit_model(t, y, name, weight_scheme="none", sd=None):
                 "bic":bic_fn(yv,ypv,np_),"msc":msc_fn(yv,ypv,np_),
                 "rmse":rmse_fn(yv,ypv),
                 "params":dict(zip(pnames,popt)),"param_ci":param_ci,"yp":yp,
-                "n_params":np_,"equation":eq,"reference":ref,"error":None,
+                "n_params":np_,"equation":eq,
+                "equation_fitted":_fitted_equation(eq,pnames,popt),
+                "reference":ref,"error":None,
                 "weight_scheme":eff_scheme,
                 "diagnostics":_residual_diagnostics(yv,ypv),
                 "tx":_compute_tx(func,popt,float(np.min(t)),float(np.max(t)))}
@@ -569,5 +597,6 @@ def fit_model(t, y, name, weight_scheme="none", sd=None):
                 "bic":np.nan,"msc":np.nan,"rmse":np.nan,
                 "params":{},"param_ci":{},"yp":np.full(len(t),np.nan),
                 "n_params":len(p0),"equation":MODEL_DEFS[name][3],
+                "equation_fitted":None,
                 "reference":MODEL_DEFS[name][4],"error":str(e),
                 "diagnostics":None,"tx":None}

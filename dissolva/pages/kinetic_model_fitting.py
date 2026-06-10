@@ -295,6 +295,9 @@ def render():
             with st.expander(f"{mn}  |  R2adj={_fmt(v.get('r2adj'),4)}  |  "
                              f"RMSE={_fmt(v.get('rmse'),3)}  |  AICc={_fmt(v.get('aicc'),2)}"):
                 st.markdown(f"<div class='eq-box'>{v.get('equation','')}</div>",unsafe_allow_html=True)
+                _eqf = v.get("equation_fitted")
+                if _eqf:
+                    st.caption(f"Fitted: {_eqf}")
                 if v.get("bounds_enforced") is False:
                     st.caption("⚠️ Unconstrained fit — physical bounds could not be applied; "
                                "interpret parameters with caution.")

@@ -15,7 +15,7 @@ from scipy.optimize import curve_fit, root
 from scipy.stats import norm as sp_norm
 from scipy.integrate import trapezoid
 from scipy.interpolate import interp1d
-from dissolva.theme import OXFORD, AMBER, PALETTE, style_ax
+from dissolva.theme import OXFORD, AMBER, PALETTE, style_ax, FIGSIZE
 from dissolva.models import (MODEL_DEFS, CATEGORIES, fit_model, compute_mdt,
     compute_de, r2s, r2adj, aic_fn, msc_fn, _nz)
 from dissolva.state import (current_tier, require_tier, _safe_profile_names,
@@ -130,6 +130,32 @@ def render():
                 cols[i%ncols].info(
                     f"ℹ️ {_isn_s}: No data point at t={_ist_s:.0f} {time_unit} for {nm}."
                 )
+
+    # ── Dissolution Rate (dF/dt) — model-independent, observed data only ───
+    st.markdown("---")
+    st.subheader("Dissolution Rate (dF/dt)")
+    fig_dr, ax_dr = plt.subplots(figsize=FIGSIZE); style_ax(fig_dr, ax_dr)
+    _dr_plotted = 0
+    for i, nm in enumerate(names):
+        ta = np.array(st.session_state.profiles[nm]["time"], dtype=float)
+        ra = np.array(st.session_state.profiles[nm]["release"], dtype=float)
+        if len(ta) < 2:  # np.gradient needs >= 2 points
+            continue
+        rate = np.gradient(ra, ta)
+        ax_dr.plot(ta, rate, "o-", color=PALETTE[i % len(PALETTE)],
+                   lw=2, ms=5, label=nm)
+        _dr_plotted += 1
+    if _dr_plotted > 0:
+        ax_dr.set_xlabel(f"Time ({time_unit})")
+        ax_dr.set_ylabel(f"Release rate (%/{time_unit})")
+        ax_dr.set_xlim(left=0)
+        ax_dr.legend(fontsize=8)
+        st.pyplot(fig_dr)
+    plt.close(fig_dr)
+    st.caption(
+        "Model-independent dissolution rate (numerical derivative of the observed "
+        "profile); peaks show the fastest-release phase."
+    )
 
     # ── Per-Profile Statistics (moved from Data Input) ─────────────────────
     st.markdown("---")
