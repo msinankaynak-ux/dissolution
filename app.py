@@ -165,6 +165,16 @@ with st.sidebar:
         justify-content: flex-start !important; text-align: left !important;
         padding: 7px 12px !important; border-radius: 7px !important;
     }
+    /* Force left-alignment robustly across Streamlit versions (button inner wrappers) */
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button > div,
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button > div > div,
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button [data-testid="stMarkdownContainer"] {
+        justify-content: flex-start !important; text-align: left !important; width: 100% !important;
+    }
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button p,
+    [data-testid="stSidebar"] .st-key-navmenu .stButton > button span {
+        text-align: left !important; margin: 0 !important;
+    }
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button,
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button * {
         color: #9fb0d0 !important; font-weight: 400 !important; font-size: 0.9rem !important; letter-spacing: 0 !important;
