@@ -1,8 +1,21 @@
 # DissolvA — Project Guide & Handoff (read me first)
 
 > This file travels with the repo so any machine/Claude session is fully oriented.
-> Last updated: 2026-06-10 (free beta shipped: F1–F4 + value-adds; native nav
-> palette + slim consent banner; ready for the school-distribution day).
+> Last updated: 2026-06-11 (dark-mode UI consistency pass shipped to main).
+
+## ⚠️ Brand & dark-mode conventions (read before touching UI)
+- **Brand wordmark:** ALWAYS render via `theme.brand_html()` (white `Dissolv` + gold
+  `A` + small grey `™`). Never re-spell the brand inline; never use `(TM)`. Version
+  string = `theme.VERSION`.
+- **Sidebar top logo (`app.py` ~L66–98): DO NOT TOUCH** — the owner styles it himself.
+  The "A" mark is the official logo; leave it.
+- **Dark theme:** base is dark (`.streamlit/config.toml`), workspace `#1C2541`,
+  surface `#16203F`, gold `#FFCC00`, text `#FFFFFF`/`#CBD5E1`. NEVER add light
+  backgrounds (`#fff`, `#f0ece0`, `#fff3cd`, etc.) or dark text (`#002147`, `#666`)
+  in the main workspace. Use the reusable classes `.dv-note/.dv-warn/.dv-pass/.dv-fail`
+  (in `theme.py`) for status boxes instead of ad-hoc hex.
+- **Active nav** = `st.button` primary (solid amber pill + left bar); **sign-in** =
+  compact Google button → avatar chip + `st.popover` when signed in (`auth.py`).
 
 ## ⚠️ Language rule (always)
 **All user-facing app text MUST be in English** — every UI label, button,
