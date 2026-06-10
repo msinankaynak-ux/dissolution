@@ -32,8 +32,8 @@ def render():
 
     # ---- Page header --------------------------------------------------------
     st.markdown(
-        "<h2 style='color:#002147;margin:0 0 4px;'>Bootstrap f2 Analysis</h2>"
-        "<p style='color:#888;font-size:0.88rem;margin:0 0 12px;'>"
+        "<h2 style='color:#FFFFFF;margin:0 0 4px;'>Bootstrap f2 Analysis</h2>"
+        "<p style='color:#9fb0d0;font-size:0.88rem;margin:0 0 12px;'>"
         "FDA-compliant bootstrap simulation for the f2 similarity factor. "
         "Reports the <strong>5th percentile</strong> (lower bound of 90% CI) "
         "as required by FDA. Requires raw vessel data (Excel upload mode).</p>",

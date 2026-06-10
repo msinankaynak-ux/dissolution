@@ -33,8 +33,8 @@ def render():
     q_limit = cfg["q_limit"]
     import datetime
     st.markdown(
-        '<h2 style="color:#002147;margin:0 0 4px;">Excel Report</h2>'
-        '<p style="color:#888;font-size:0.88rem;margin:0 0 20px;">'
+        '<h2 style="color:#FFFFFF;margin:0 0 4px;">Excel Report</h2>'
+        '<p style="color:#9fb0d0;font-size:0.88rem;margin:0 0 20px;">'
         'Customize your report, add your logo, select sheets, and download a professional Excel file.</p>',
         unsafe_allow_html=True
     )

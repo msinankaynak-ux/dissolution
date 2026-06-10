@@ -301,17 +301,17 @@ with st.sidebar:
 # HEADER
 # ===========================================================================
 st.markdown(
-    '<h1 style="margin:0;font-size:2.4rem;color:#002147;">' +
-    'DissolvA<sup style="font-size:1rem;">(TM)</sup> ' +
-    '<span style="font-size:1rem;color:#888;font-style:italic;font-weight:400;">' +
+    '<h1 style="margin:0;font-size:2.4rem;color:#FFFFFF;">' +
+    'Dissolv<span style="color:#FFCC00;">A</span><sup style="font-size:1rem;color:#8593AD;">(TM)</sup> ' +
+    '<span style="font-size:1rem;color:#9fb0d0;font-style:italic;font-weight:400;">' +
     '- Predictive Dissolution Suite</span></h1>' +
-    '<div style="color:#5a6480;font-size:0.9rem;margin-top:4px;">' +
+    '<div style="color:#7E8DAB;font-size:0.9rem;margin-top:4px;">' +
     'FDA/EMA guidance-aligned · 62 Kinetic Models · f1/f2 · Bootstrap f2 · Statistical Profiling' +
-    '<span style="background:#eef2f7;color:#5a6480;font-size:0.7rem;font-weight:600;' +
+    '<span style="background:rgba(255,204,0,0.10);color:#FFCC00;border:1px solid rgba(255,204,0,0.35);font-size:0.7rem;font-weight:600;' +
     'padding:1px 8px;border-radius:10px;margin-left:8px;">BETA · research use only</span></div>',
     unsafe_allow_html=True
 )
-st.markdown('<hr style="border:1px solid #FFBF00;margin:10px 0 4px 0;">', unsafe_allow_html=True)
+st.markdown('<hr style="border:1px solid #FFCC00;margin:10px 0 4px 0;">', unsafe_allow_html=True)
 st.markdown(
     "<div style='font-size:0.76rem;color:#8aadcc;padding:3px 0 14px 0;'>"
     "<strong style='color:#5a8ab0;'>DissolvA Team</strong>"

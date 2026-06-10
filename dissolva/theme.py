@@ -1,12 +1,10 @@
-"""DissolvA theme: brand color, global CSS injection and matplotlib axis styling.
-Extracted from app.py (Phase 1.4 modularization)."""
+"""DissolvA theme: brand colors, global CSS injection and matplotlib axis styling.
+Premium dark-mode workspace (sidebar #0B132B, workspace #1C2541, gold #FFCC00)."""
 import streamlit as st
 
+# Chart constants (UNCHANGED — charts render as light cards on the dark workspace)
 OXFORD = "#002147"
 AMBER  = "#FFBF00"
-# Shared chart sizing — keep page-width dissolution charts visually consistent
-# and export at print quality. Use via plt.subplots(figsize=FIGSIZE); style_ax()
-# raises the DPI for all figures uniformly.
 FIGSIZE = (10, 5)
 DPI = 150
 PALETTE = [
@@ -15,23 +13,31 @@ PALETTE = [
     "#aaffc3","#000075","#a9a9a9","#ffe119","#008080","#ffd8b1",
 ]
 
+# Premium dark-mode UI palette (chrome / CSS only)
+NAVY_SIDEBAR = "#0B132B"   # sidebar background
+GRAPHITE     = "#1C2541"   # workspace background
+SURFACE      = "#16203F"   # cards / inputs
+GOLD         = "#FFCC00"   # premium accent / highlights
+TXT          = "#FFFFFF"   # primary text (headers)
+TXT2         = "#CBD5E1"   # secondary text (descriptions)
+
 _CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
 html, body, [class*="css"] {
   font-family: 'EB Garamond', Georgia, serif !important;
-  background: #F5F0E8 !important;
-  color: #1a1a2e !important;
 }
+
+/* ── Sidebar — premium navy ─────────────────────────────────────────────── */
 section[data-testid="stSidebar"] {
-  background: #001a3d !important;
-  border-right: 3px solid #FFBF00 !important;
+  background: #0B132B !important;
+  border-right: 1px solid rgba(255,204,0,0.18) !important;
 }
-section[data-testid="stSidebar"] * { color: #e8e0d0 !important; }
+section[data-testid="stSidebar"] * { color: #CBD5E1 !important; }
 
 section[data-testid="stSidebar"] label {
-  color: rgba(232,224,208,0.65) !important;
+  color: rgba(203,213,225,0.65) !important;
   font-size: 0.78rem !important;
   font-weight: 400 !important;
   letter-spacing: 0.02em !important;
@@ -41,226 +47,138 @@ section[data-testid="stSidebar"] label {
 }
 
 section[data-testid="stSidebar"] .stRadio { margin-top: 0 !important; }
-
 section[data-testid="stSidebar"] .stRadio > div {
-  gap: 4px !important;
-  display: flex !important;
-  flex-direction: column !important;
+  gap: 4px !important; display: flex !important; flex-direction: column !important;
 }
-
 section[data-testid="stSidebar"] .stRadio label {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 10px !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 5px !important;
-  padding: 8px 12px !important;
-  font-size: 0.91rem !important;
-  color: #7a9dbf !important;
-  cursor: pointer !important;
-  transition: background 0.15s, color 0.15s !important;
-  width: 100% !important;
-  letter-spacing: 0.01em !important;
-  white-space: nowrap !important;
+  display: flex !important; flex-direction: row !important; align-items: center !important;
+  gap: 10px !important; background: transparent !important; border: none !important;
+  border-radius: 7px !important; padding: 8px 12px !important;
+  font-size: 0.91rem !important; color: #9fb0d0 !important; cursor: pointer !important;
+  transition: background 0.15s, color 0.15s !important; width: 100% !important;
+  letter-spacing: 0.01em !important; white-space: nowrap !important;
 }
-
 section[data-testid="stSidebar"] .stRadio label:hover {
-  background: rgba(255,191,0,0.12) !important;
-  color: #FFBF00 !important;
+  background: rgba(255,204,0,0.12) !important; color: #FFCC00 !important;
 }
-
-section[data-testid="stSidebar"] .stRadio label:hover > div:first-child {
-  border-color: #FFBF00 !important;
-}
-
+section[data-testid="stSidebar"] .stRadio label:hover > div:first-child { border-color: #FFCC00 !important; }
 section[data-testid="stSidebar"] .stRadio label > div:first-child {
-  width: 16px !important;
-  height: 16px !important;
-  min-width: 16px !important;
-  border-radius: 50% !important;
-  border: 1.5px solid rgba(255,255,255,0.30) !important;
-  background: transparent !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
+  width: 16px !important; height: 16px !important; min-width: 16px !important;
+  border-radius: 50% !important; border: 1.5px solid rgba(255,255,255,0.25) !important;
+  background: transparent !important; display: flex !important; align-items: center !important;
+  justify-content: center !important; flex-shrink: 0 !important;
 }
-
 section[data-testid="stSidebar"] .stRadio label > div:first-child > div {
-  width: 7px !important;
-  height: 7px !important;
-  border-radius: 50% !important;
-  background: transparent !important;
+  width: 7px !important; height: 7px !important; border-radius: 50% !important; background: transparent !important;
 }
-
 section[data-testid="stSidebar"] .stRadio label > div[data-testid="stMarkdownContainer"] {
-  display: flex !important;
-  align-items: center !important;
-  flex: 1 !important;
+  display: flex !important; align-items: center !important; flex: 1 !important;
 }
-
 section[data-testid="stSidebar"] .stRadio label > div[data-testid="stMarkdownContainer"] p {
-  color: inherit !important;
-  font-size: 0.91rem !important;
-  margin: 0 !important;
-  line-height: 1.2 !important;
-  font-weight: inherit !important;
-  white-space: nowrap !important;
+  color: inherit !important; font-size: 0.91rem !important; margin: 0 !important;
+  line-height: 1.2 !important; font-weight: inherit !important; white-space: nowrap !important;
 }
-
 section[data-testid="stSidebar"] .stRadio input[type="radio"]:checked + label,
 section[data-testid="stSidebar"] .stRadio label:has(input:checked) {
-  background: rgba(255,191,0,0.10) !important;
-  color: #FFBF00 !important;
-  font-weight: 600 !important;
+  background: rgba(255,204,0,0.10) !important; color: #FFCC00 !important; font-weight: 600 !important;
+  box-shadow: 0 0 0 1px rgba(255,204,0,0.28), 0 0 14px rgba(255,204,0,0.10) !important;
 }
-
 section[data-testid="stSidebar"] .stRadio input[type="radio"]:checked + label > div:first-child,
 section[data-testid="stSidebar"] .stRadio label:has(input:checked) > div:first-child {
-  border-color: #FFBF00 !important;
-  background: #FFBF00 !important;
+  border-color: #FFCC00 !important; background: #FFCC00 !important;
 }
-
 section[data-testid="stSidebar"] .stRadio input[type="radio"]:checked + label > div:first-child > div,
 section[data-testid="stSidebar"] .stRadio label:has(input:checked) > div:first-child > div {
-  background: #001a3d !important;
+  background: #0B132B !important;
 }
 
-section[data-testid="stSidebar"] .stSelectbox > div > div {
-  background: #002a5c !important;
-  border: 1px solid rgba(255,191,0,0.40) !important;
-  border-radius: 5px !important;
-}
-section[data-testid="stSidebar"] .stSelectbox > div > div > div {
-  background: #002a5c !important;
-  border: none !important;
-  color: #e8e0d0 !important;
-}
-section[data-testid="stSidebar"] .stNumberInput > div {
-  background: #002a5c !important;
-  border: 1px solid rgba(255,191,0,0.40) !important;
-  border-radius: 5px !important;
-}
-section[data-testid="stSidebar"] .stNumberInput input {
-  background: #002a5c !important;
-  border: none !important;
-  color: #e8e0d0 !important;
-}
+/* Sidebar inputs — dark */
+section[data-testid="stSidebar"] .stSelectbox > div > div,
+section[data-testid="stSidebar"] .stNumberInput > div,
 section[data-testid="stSidebar"] .stTextInput input {
-  background: #002a5c !important;
-  border: 1px solid rgba(255,191,0,0.40) !important;
-  color: #e8e0d0 !important;
-  border-radius: 5px !important;
+  background: #16203F !important; border: 1px solid rgba(255,204,0,0.30) !important;
+  border-radius: 6px !important; color: #E6ECF8 !important;
 }
+section[data-testid="stSidebar"] .stSelectbox > div > div > div { background: #16203F !important; border: none !important; color: #E6ECF8 !important; }
+section[data-testid="stSidebar"] .stNumberInput input { background: #16203F !important; border: none !important; color: #E6ECF8 !important; }
 section[data-testid="stSidebar"] .stSelectbox svg,
-section[data-testid="stSidebar"] .stNumberInput svg {
-  fill: #FFD966 !important;
+section[data-testid="stSidebar"] .stNumberInput svg { fill: #FFD966 !important; }
+section[data-testid="stSidebar"] .stNumberInput button { background: #16203F !important; border: none !important; color: #FFD966 !important; }
+
+/* ── Workspace metric cards — dark ──────────────────────────────────────── */
+[data-testid="metric-container"], [data-testid="stMetric"] {
+  background: #16203F; border: 1px solid rgba(255,255,255,0.07);
+  border-left: 4px solid #FFCC00; border-radius: 8px; padding: 12px;
 }
-section[data-testid="stSidebar"] .stNumberInput button {
-  background: #002a5c !important;
-  border: none !important;
-  color: #FFD966 !important;
-}
-[data-testid="metric-container"] {
-  background: white; border: 1px solid #ddd;
-  border-left: 4px solid #FFBF00; border-radius: 4px; padding: 12px;
-}
+
+/* ── Workspace primary buttons ──────────────────────────────────────────── */
 .stButton > button {
-  background: #002147 !important; color: #FFBF00 !important;
-  border: 2px solid #FFBF00 !important;
+  background: #16203F !important; color: #FFCC00 !important;
+  border: 1px solid #FFCC00 !important;
   font-family: 'EB Garamond', serif !important;
   font-size: 1rem !important; font-weight: 600 !important;
-  border-radius: 4px !important; padding: 8px 20px !important;
+  border-radius: 7px !important; padding: 8px 20px !important;
 }
-.stButton > button:hover { background: #FFBF00 !important; color: #002147 !important; }
-/* Sidebar buttons simplified */
+.stButton > button:hover { background: #FFCC00 !important; color: #0B132B !important; }
+
+/* Sidebar buttons */
 [data-testid="stSidebar"] .stButton > button {
-  background: transparent !important;
-  color: rgba(232,224,208,0.65) !important;
-  border: 1px solid rgba(255,191,0,0.25) !important;
+  background: transparent !important; color: rgba(203,213,225,0.7) !important;
+  border: 1px solid rgba(255,204,0,0.25) !important;
   font-size: 0.85rem !important; font-weight: 400 !important;
-  padding: 5px 14px !important; border-radius: 6px !important;
+  padding: 5px 14px !important; border-radius: 7px !important;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
-  background: rgba(255,191,0,0.1) !important;
-  color: #FFBF00 !important;
-  border-color: rgba(255,191,0,0.6) !important;
+  background: rgba(255,204,0,0.1) !important; color: #FFCC00 !important; border-color: rgba(255,204,0,0.6) !important;
 }
-/* Force-target sidebar buttons by testid (overrides Streamlit secondary's default white bg) */
 [data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] {
-  background: rgba(255,191,0,0.10) !important;
-  color: #FFBF00 !important;
-  border: 1px solid rgba(255,191,0,0.5) !important;
-  font-weight: 600 !important;
+  background: rgba(255,204,0,0.10) !important; color: #FFCC00 !important;
+  border: 1px solid rgba(255,204,0,0.5) !important; font-weight: 600 !important;
 }
-[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] * {
-  color: #FFBF00 !important;
-}
-[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover {
-  background: #FFBF00 !important;
-  border-color: #FFBF00 !important;
-}
-[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover * {
-  color: #002147 !important;
-}
-/* streamlit-oauth "Sign in with Google" button (iframe). We can't reach inside the
-   iframe to shrink its font, so scale the whole iframe down to size the label
-   proportionally; width/margin compensation refills the box. Color & shape kept. */
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] * { color: #FFCC00 !important; }
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover { background: #FFCC00 !important; border-color: #FFCC00 !important; }
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover * { color: #0B132B !important; }
+
+/* streamlit-oauth "Sign in with Google" button (iframe) — scaled to size the label proportionally */
 [data-testid="stSidebar"] iframe[title="streamlit_oauth.authorize_button"] {
-  border-radius: 12px !important;
-  overflow: hidden !important;
-  transform: scale(0.68) !important;
-  transform-origin: top left !important;
-  width: 147% !important;
-  margin-bottom: -23px !important;
+  border-radius: 12px !important; overflow: hidden !important;
+  transform: scale(0.68) !important; transform-origin: top left !important;
+  width: 147% !important; margin-bottom: -23px !important;
 }
 .stDownloadButton > button {
-  background: #FFBF00 !important; color: #002147 !important;
-  border: 2px solid #002147 !important;
+  background: #FFCC00 !important; color: #0B132B !important;
+  border: 1px solid #FFCC00 !important;
   font-family: 'EB Garamond', serif !important; font-weight: 700 !important;
 }
 button[data-baseweb="tab"] { font-family: 'EB Garamond', serif !important; font-size: 1.05rem !important; }
-button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFBF00 !important; font-weight: 700 !important; }
+button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFCC00 !important; font-weight: 700 !important; }
+
+/* ── Custom content boxes — dark surfaces + light text ──────────────────── */
 .eq-box {
-  font-family: 'JetBrains Mono', monospace;
-  background: #f0ece0; border-left: 4px solid #FFBF00;
-  padding: 8px 14px; font-size: 0.82rem;
-  border-radius: 0 4px 4px 0; margin: 4px 0 8px 0;
+  font-family: 'JetBrains Mono', monospace; color: #E6ECF8;
+  background: #16203F; border-left: 4px solid #FFCC00;
+  padding: 8px 14px; font-size: 0.82rem; border-radius: 0 6px 6px 0; margin: 4px 0 8px 0;
 }
 .info-banner {
-  background: #e8f0f7; border: 1px solid #b8d0e8;
-  border-radius: 4px; padding: 10px 14px;
-  font-size: 0.93rem; margin: 8px 0;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(120,160,220,0.30); color: #DDE6F2;
+  border-radius: 6px; padding: 10px 14px; font-size: 0.93rem; margin: 8px 0;
 }
 .step-box {
-  background: #fff8e6; border: 1px solid #FFBF00;
-  border-radius: 6px; padding: 12px 16px; margin: 6px 0;
-  font-size: 0.93rem;
+  background: rgba(255,204,0,0.07); border: 1px solid rgba(255,204,0,0.30); color: #E7D9A8;
+  border-radius: 8px; padding: 12px 16px; margin: 6px 0; font-size: 0.93rem;
 }
 .nav-active {
-  border-left: 3px solid #FFBF00 !important;
-  background: rgba(255,191,0,0.10) !important;
-  color: #FFBF00 !important;
-  font-weight: 600 !important;
+  border-left: 3px solid #FFCC00 !important; background: rgba(255,204,0,0.10) !important;
+  color: #FFCC00 !important; font-weight: 600 !important;
 }
 .nav-section-label {
-  font-size: 0.58rem !important;
-  letter-spacing: 2px !important;
-  text-transform: uppercase !important;
-  color: rgba(255,191,0,0.55) !important;
-  padding: 10px 12px 2px 12px !important;
-  display: block !important;
+  font-size: 0.58rem !important; letter-spacing: 2px !important; text-transform: uppercase !important;
+  color: rgba(255,204,0,0.55) !important; padding: 10px 12px 2px 12px !important; display: block !important;
 }
 .nav-divider {
-  border: none !important;
-  border-top: 1px solid rgba(255,191,0,0.15) !important;
-  margin: 6px 0 !important;
+  border: none !important; border-top: 1px solid rgba(255,204,0,0.15) !important; margin: 6px 0 !important;
 }
 </style>
-
-<!-- Sidebar group headers/beta badge: inline JS removed (does not run inside Streamlit st.markdown). Rich grouping will come in Phase 2 via streamlit-option-menu. -->
 """
 
 def inject_theme():
@@ -269,7 +187,9 @@ def inject_theme():
 
 
 def style_ax(fig, ax):
-    try: fig.set_dpi(DPI)   # uniform print-quality resolution across all charts
+    # Charts stay light (render as clean light cards on the dark workspace) — zero
+    # risk to existing chart text/markers that use OXFORD.
+    try: fig.set_dpi(DPI)
     except Exception: pass
     fig.patch.set_facecolor("#FDFAF5")
     ax.set_facecolor("#F8F4EC")

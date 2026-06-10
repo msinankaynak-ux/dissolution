@@ -27,8 +27,8 @@ def render():
     q_limit = cfg["q_limit"]
     cfg = st.session_state.method_cfg
     st.markdown(
-        "<h2 style='color:#002147;margin:0 0 4px;'>Method & Parameter Settings</h2>"
-        "<p style='color:#888;font-size:0.88rem;margin:0 0 20px;'>"
+        "<h2 style='color:#FFFFFF;margin:0 0 4px;'>Method & Parameter Settings</h2>"
+        "<p style='color:#9fb0d0;font-size:0.88rem;margin:0 0 20px;'>"
         "General parameters, dissolution apparatus and medium conditions. "
         "All settings are saved automatically and included in the Excel report.</p>",
         unsafe_allow_html=True

@@ -344,8 +344,8 @@ def render():
 
     # ── Page title ─────────────────────────────────────────────────────────
     st.markdown(
-        '<h2 style="color:#002147;margin:0 0 4px;">💊 API Information</h2>'
-        '<p style="color:#888;font-size:0.87rem;margin:0 0 14px;">'
+        '<h2 style="color:#FFFFFF;margin:0 0 4px;">💊 API Information</h2>'
+        '<p style="color:#9fb0d0;font-size:0.87rem;margin:0 0 14px;">'
         'Active-substance physicochemical profile, FDA dissolution methods, and '
         'peer-reviewed literature — on a single screen.</p>',
         unsafe_allow_html=True

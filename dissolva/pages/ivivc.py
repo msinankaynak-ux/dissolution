@@ -33,7 +33,7 @@ def render():
     # -- Title ────────────────────────────────────────────────────────────────
     st.markdown(
         '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">'
-        '<h2 style="margin:0;color:#002147;">IVIVC Analysis</h2>'
+        '<h2 style="margin:0;color:#FFFFFF;">IVIVC Analysis</h2>'
         '<span style="background:#FFBF00;color:#002147;font-size:0.62rem;font-weight:700;'
         'letter-spacing:1.5px;text-transform:uppercase;padding:3px 8px;border-radius:3px;">β BETA VERSION</span>'
         '</div>',
