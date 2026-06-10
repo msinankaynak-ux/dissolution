@@ -360,6 +360,47 @@ MODEL_BOUNDS = {
     "Gompertz 2 (DDSolver)":   ([-_INF, -_INF, 0.0],   [_INF, _INF, 120.0]),
 }
 
+# -- Weighted least squares: weighting scheme → (sigma, absolute_sigma) --
+def _build_sigma(y, weight_scheme="none", sd=None):
+    """Translate a weighting scheme into curve_fit's (sigma, absolute_sigma).
+
+    scipy curve_fit minimizes Σ ((y_i - f_i)/sigma_i)². Weighted LS with weights
+    w_i (minimize Σ w_i (y_i - f_i)²) therefore needs sigma_i = 1/sqrt(w_i):
+      - "none"  → sigma=None, absolute_sigma=False  (UNCHANGED current behavior)
+      - "1/y"   → w=1/y   → sigma_i = sqrt(|y_i|); absolute_sigma=False
+      - "1/y2"  → w=1/y²  → sigma_i = |y_i|;       absolute_sigma=False
+      - "1/sd"  → w=1/SD² → sigma_i = SD_i;        absolute_sigma=True
+                  (real measurement std devs → pcov reflects true uncertainty)
+    Any sigma_i <= 0 or non-finite is floored to eps = 1e-8 * max(|y|) so no point
+    gets infinite weight and curve_fit never divides by zero. For "1/sd": if sd is
+    None, the wrong length, or all ~0, FALL BACK to "none".
+
+    Returns (sigma, absolute_sigma, effective_scheme).
+    """
+    ya = np.asarray(y, dtype=float)
+    eps = 1e-8 * float(np.max(np.abs(ya))) if ya.size else 1e-8
+    if eps <= 0.0:
+        eps = 1e-8
+
+    def _floor(arr):
+        arr = np.asarray(arr, dtype=float)
+        bad = ~np.isfinite(arr) | (arr <= 0.0)
+        arr[bad] = eps
+        return arr
+
+    if weight_scheme == "1/y":
+        return _floor(np.sqrt(np.abs(ya))), False, "1/y"
+    if weight_scheme == "1/y2":
+        return _floor(np.abs(ya)), False, "1/y2"
+    if weight_scheme == "1/sd":
+        sda = np.asarray(sd, dtype=float).ravel() if sd is not None else None
+        if (sda is None or sda.size != ya.size
+                or not np.any(np.isfinite(sda) & (sda > 0.0))):
+            return None, False, "none"  # fall back, do not crash
+        return _floor(sda), True, "1/sd"
+    return None, False, "none"
+
+
 # -- Per-parameter 95% confidence intervals (additive; DDSolver parity) --
 def _compute_param_ci(pnames, popt, pcov, n_valid_points, n_params):
     """Build a {param: {value, se, ci_low, ci_high}} dict from curve_fit's pcov.
@@ -389,21 +430,27 @@ def _compute_param_ci(pnames, popt, pcov, n_valid_points, n_params):
 
 
 # -- Curve-fitting engine --
-def fit_model(t, y, name):
+def fit_model(t, y, name, weight_scheme="none", sd=None):
     func, p0, pnames, eq, ref, cat = MODEL_DEFS[name]
     bnds = MODEL_BOUNDS.get(name)
+    # Weighted least squares: build curve_fit's sigma/absolute_sigma. "none" →
+    # (None, False) keeps the unweighted behavior byte-for-byte identical.
+    sigma, absolute_sigma, eff_scheme = _build_sigma(y, weight_scheme, sd)
     try:
         if bnds is not None:
             lo, hi = bnds
             # p0'ı sınırların içine çek (curve_fit p0 ∈ [lo,hi] ister)
             p0c = [min(max(v, l), h) for v, l, h in zip(p0, lo, hi)]
             try:
-                popt, pcov = curve_fit(func, t, y, p0=p0c, bounds=(lo, hi), max_nfev=25000)
+                popt, pcov = curve_fit(func, t, y, p0=p0c, bounds=(lo, hi), max_nfev=25000,
+                                       sigma=sigma, absolute_sigma=absolute_sigma)
             except Exception:
                 # Bounded fit başarısızsa eski davranışa (sınırsız) düş — regresyon yok
-                popt, pcov = curve_fit(func, t, y, p0=p0, maxfev=25000)
+                popt, pcov = curve_fit(func, t, y, p0=p0, maxfev=25000,
+                                       sigma=sigma, absolute_sigma=absolute_sigma)
         else:
-            popt, pcov = curve_fit(func, t, y, p0=p0, maxfev=25000)
+            popt, pcov = curve_fit(func, t, y, p0=p0, maxfev=25000,
+                                   sigma=sigma, absolute_sigma=absolute_sigma)
         yp = np.array(func(t,*popt), dtype=float)
         valid = ~np.isnan(yp)
         if valid.sum() < 3: raise ValueError("Too few valid predictions")
@@ -416,7 +463,8 @@ def fit_model(t, y, name):
                 "bic":bic_fn(yv,ypv,np_),"msc":msc_fn(yv,ypv,np_),
                 "rmse":rmse_fn(yv,ypv),
                 "params":dict(zip(pnames,popt)),"param_ci":param_ci,"yp":yp,
-                "n_params":np_,"equation":eq,"reference":ref,"error":None}
+                "n_params":np_,"equation":eq,"reference":ref,"error":None,
+                "weight_scheme":eff_scheme}
     except Exception as e:
         return {"success":False,"name":name,"category":cat,
                 "r2":np.nan,"r2adj":np.nan,"aic":np.nan,"aicc":np.nan,

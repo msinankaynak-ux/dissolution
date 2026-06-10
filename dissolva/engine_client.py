@@ -86,26 +86,35 @@ def similarity(ref_time, ref_release, test_time, test_release):
 
 
 # ── Kinetic model fitting ────────────────────────────────────────────────────
-def fit_models(time, release, names, include_curves=True, curve_n=400):
+def fit_models(time, release, names, include_curves=True, curve_n=400,
+               weight_scheme="none", sd=None):
     """Fit `names` to the profile. Returns (results_by_name, best_by_aicc).
 
     Each result is a dict with the same keys the UI expects (name, category,
     success, params, r2, r2adj, rmse, aic, aicc, bic, msc, n_params, equation,
     reference, error) plus optional curve_t/curve_y for plotting (backend mode).
+
+    `weight_scheme` selects weighted least squares (none|1/y|1/y2|1/sd); `sd` is
+    the per-point standard deviation list required when weight_scheme='1/sd'.
     """
     if using_backend():
         try:
-            d = _post("/api/fit", {
+            payload = {
                 "time": _floats(time), "release": _floats(release),
                 "models": list(names),
                 "include_curves": bool(include_curves), "curve_n": int(curve_n),
-            })
+                "weight_scheme": weight_scheme,
+            }
+            if sd is not None:
+                payload["sd"] = _floats(sd)
+            d = _post("/api/fit", payload)
             return {r["name"]: r for r in d["results"]}, d.get("best_by_aicc")
         except Exception as e:
             st.caption(f"⚠️ Backend unavailable ({type(e).__name__}); computed locally.")
 
     t = np.asarray(time, float); y = np.asarray(release, float)
-    out = {n: _engine.fit_model(t, y, n) for n in names}
+    out = {n: _engine.fit_model(t, y, n, weight_scheme=weight_scheme, sd=sd)
+           for n in names}
     ok = [(n, r) for n, r in out.items() if r.get("success") and r.get("aicc") is not None]
     best = min(ok, key=lambda kv: kv[1]["aicc"])[0] if ok else None
     return out, best

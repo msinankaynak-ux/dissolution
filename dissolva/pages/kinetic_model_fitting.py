@@ -107,9 +107,34 @@ def render():
                     unsafe_allow_html=True
                 )
 
+    # ── Weighting scheme (weighted least squares) ────────────────────────────
+    _sd_list = d.get("sd")
+    _sd_arr = np.array(_sd_list, dtype=float) if _sd_list is not None else None
+    _has_sd = _sd_arr is not None and _sd_arr.size == len(r_arr) and bool(np.any(_sd_arr > 0))
+    _w_labels = ["None (ordinary least squares)", "1/y", "1/y²"]
+    _w_codes = ["none", "1/y", "1/y2"]
+    if _has_sd:
+        _w_labels.append("1/SD² (inverse variance)")
+        _w_codes.append("1/sd")
+    _w_label = st.selectbox(
+        "Weighting scheme", _w_labels, index=0, key=f"weight_scheme_{pname}",
+        help="Weighted least squares down-weights points with larger variance. "
+             "1/y and 1/y² are relative schemes; 1/SD² uses per-point SD from Data Input."
+    )
+    _weight_scheme = _w_codes[_w_labels.index(_w_label)]
+    st.caption(
+        "Weighting helps when later / high-release points carry larger variance "
+        "than early points, so they don't dominate the unweighted fit."
+    )
+    if not _has_sd:
+        st.caption("SD weighting needs per-point SD from Data Input.")
+
     if st.button("Run Model Fitting", type="primary") and selected_models:
+        _sd_for_fit = _sd_list if _weight_scheme == "1/sd" else None
         with st.spinner(f"Fitting {len(selected_models)} model(s)…"):
-            _results, _best = engine_client.fit_models(t_arr, r_arr, selected_models)
+            _results, _best = engine_client.fit_models(
+                t_arr, r_arr, selected_models,
+                weight_scheme=_weight_scheme, sd=_sd_for_fit)
         st.session_state.fit_results = _results
         st.success(f"Fitting complete - {len(selected_models)} models processed.")
 
