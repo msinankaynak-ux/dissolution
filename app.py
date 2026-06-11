@@ -500,6 +500,8 @@ st.markdown(
     + brand_html('font-size:0.78rem;') + f' v{VERSION} &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Powered by AI'
     ' &nbsp;·&nbsp; <a href="https://tally.so/r/44oM55" target="_blank" '
     'style="color:#9fb0d0;text-decoration:none;">Share Feedback</a>'
+    ' &nbsp;·&nbsp; <a href="https://github.com/msinankaynak-ux/dissolution" target="_blank" '
+    'style="color:#9fb0d0;text-decoration:none;">Source</a>'
     '</div>'
     '<a href="#pro" style="background:linear-gradient(135deg,#FFD43B,#E0A100);color:#1C2541;'
     'font-size:0.8rem;font-weight:700;border-radius:8px;padding:9px 18px;text-decoration:none;'
