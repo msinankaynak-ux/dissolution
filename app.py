@@ -18,7 +18,7 @@ except ImportError:
     _PLOTLY_OK = False
 
 from dissolva.theme import OXFORD, inject_theme, style_ax, brand_html, VERSION
-from dissolva.models import (MODEL_DEFS, CATEGORIES, fit_model,
+from dissolva.models import (MODEL_DEFS, CATEGORIES,
     compute_mdt, compute_de, r2s, r2adj, aic_fn, msc_fn, _nz)
 from dissolva.state import (init_session_state, TIER_RANK, current_tier, require_tier,
     _upgrade_cta, _safe_profile_names, _get_index, _rename_profile, _clear_all)

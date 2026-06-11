@@ -16,7 +16,7 @@ from scipy.stats import norm as sp_norm
 from scipy.integrate import trapezoid
 from scipy.interpolate import interp1d
 from dissolva.theme import OXFORD, AMBER, PALETTE, style_ax
-from dissolva.models import (MODEL_DEFS, CATEGORIES, fit_model, compute_mdt,
+from dissolva.models import (MODEL_DEFS, CATEGORIES, compute_mdt,
     compute_de, r2s, r2adj, aic_fn, msc_fn, _nz)
 from dissolva.state import (current_tier, require_tier, _safe_profile_names,
     _get_index, _rename_profile, _clear_all)
@@ -257,11 +257,8 @@ def render():
                 ct, cy = v.get("curve_t"), v.get("curve_y")
                 if ct and cy:
                     xs, ys = ct, cy                              # backend-provided curve
-                else:                                            # local fallback: recompute
-                    _pv = list((v.get("params") or {}).values())
-                    if not _pv or any((p is None or p != p) for p in _pv):
-                        _curve_skip.append(mn); continue
-                    xs, ys = t_sm, MODEL_DEFS[mn][0](t_sm, *_pv)
+                else:                                            # no backend curve -> skip
+                    _curve_skip.append(mn); continue
                 _r2a = v.get("r2adj")
                 _lbl = f"{mn} (R2adj={_r2a:.3f})" if isinstance(_r2a,(int,float)) and _r2a==_r2a else mn
                 ax.plot(xs,ys,color=PALETTE[i%len(PALETTE)],lw=1.6,alpha=0.85,label=_lbl)

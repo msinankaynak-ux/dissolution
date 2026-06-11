@@ -110,14 +110,11 @@ def fit_models(time, release, names, include_curves=True, curve_n=400,
             d = _post("/api/fit", payload)
             return {r["name"]: r for r in d["results"]}, d.get("best_by_aicc")
         except Exception as e:
-            st.caption(f"⚠️ Backend unavailable ({type(e).__name__}); computed locally.")
+            st.error(f"Model fitting service is unavailable ({type(e).__name__}). Please try again shortly.")
+            return {}, None
 
-    t = np.asarray(time, float); y = np.asarray(release, float)
-    out = {n: _engine.fit_model(t, y, n, weight_scheme=weight_scheme, sd=sd)
-           for n in names}
-    ok = [(n, r) for n, r in out.items() if r.get("success") and r.get("aicc") is not None]
-    best = min(ok, key=lambda kv: kv[1]["aicc"])[0] if ok else None
-    return out, best
+    st.error("Model fitting requires the DissolvA engine service, which is not configured.")
+    return {}, None
 
 
 # ── Vessel-level bootstrap f2 ────────────────────────────────────────────────
@@ -134,29 +131,11 @@ def bootstrap(ref_time, ref_raw, test_time, test_raw, method="nonparametric",
                 "lower_pctile": float(lower_pctile), "include_distribution": True,
             }, timeout=300)
         except Exception as e:
-            st.caption(f"⚠️ Backend unavailable ({type(e).__name__}); computed locally.")
+            st.error(f"Bootstrap f2 service is unavailable ({type(e).__name__}). Please try again shortly.")
+            return {"distribution": []}
 
-    # local fallback — mirror the engine pipeline
-    t_ref = np.asarray(ref_time, float); raw_ref = np.asarray(ref_raw, float)
-    t_tst = np.asarray(test_time, float); raw_tst = np.asarray(test_raw, float)
-    common = np.intersect1d(t_ref, t_tst)
-    ref_idx = [np.where(t_ref == ti)[0][0] for ti in common]
-    tst_idx = [np.where(t_tst == ti)[0][0] for ti in common]
-    rr_c = raw_ref[ref_idx, :]; rt_c = raw_tst[tst_idx, :]
-    rr_obs = rr_c.mean(axis=1); rt_obs = rt_c.mean(axis=1)
-    mask = _engine.fda_f2_mask(rr_obs)
-    f2_obs = float(_engine.f2_score(rr_obs[mask], rt_obs[mask]))
-    dist = _engine.bootstrap_f2(rr_c, rt_c, mask, iterations=int(iterations),
-                                seed=int(seed), method=method, progress=progress)
-    dist = dist[np.isfinite(dist)]
-    f2_lower = float(np.percentile(dist, lower_pctile))
-    return {
-        "f2_observed": f2_obs, "f2_lower": f2_lower,
-        "f2_upper": float(np.percentile(dist, 100 - lower_pctile)),
-        "f2_mean": float(dist.mean()), "f2_median": float(np.median(dist)),
-        "f2_sd": float(dist.std(ddof=1)), "n_iter": int(dist.size),
-        "similar": bool(f2_lower >= 50), "distribution": [float(x) for x in dist],
-    }
+    st.error("Bootstrap f2 requires the DissolvA engine service, which is not configured.")
+    return {"distribution": []}
 
 
 # ── Membership & usage analytics (best-effort; never block/raise to the UI) ──

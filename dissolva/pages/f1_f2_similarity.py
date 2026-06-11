@@ -16,7 +16,7 @@ from scipy.stats import norm as sp_norm
 from scipy.integrate import trapezoid
 from scipy.interpolate import interp1d
 from dissolva.theme import OXFORD, AMBER, PALETTE, style_ax
-from dissolva.models import (MODEL_DEFS, CATEGORIES, fit_model, compute_mdt,
+from dissolva.models import (MODEL_DEFS, CATEGORIES, compute_mdt,
     compute_de, r2s, r2adj, aic_fn, msc_fn, _nz, fda_f2_mask, f1_score, f2_score)
 from dissolva import engine_client
 from dissolva.state import (current_tier, require_tier, _safe_profile_names,
