@@ -55,54 +55,18 @@ def init_sentry():
 # Demo dataset — instant onboarding
 # ---------------------------------------------------------------------------
 def load_demo_data():
-    """Populate two realistic 6-vessel immediate-release profiles (Reference and
-    Test) and select them, so a first-time user can run fitting/f2 immediately."""
-    import numpy as np
-
-    time = [0.0, 5.0, 10.0, 15.0, 20.0, 30.0, 45.0, 60.0]
-    # Per-vessel cumulative release (%). Reference dissolves slightly faster than Test.
-    ref_raw = [
-        [0, 36, 57, 71, 81, 91, 97, 99],
-        [0, 33, 54, 69, 79, 90, 96, 99],
-        [0, 38, 59, 73, 83, 92, 98, 100],
-        [0, 34, 55, 70, 80, 89, 96, 98],
-        [0, 37, 58, 72, 82, 91, 97, 100],
-        [0, 35, 56, 70, 80, 90, 97, 99],
-    ]
-    test_raw = [
-        [0, 28, 47, 61, 72, 84, 92, 97],
-        [0, 26, 45, 59, 70, 82, 91, 96],
-        [0, 30, 49, 63, 74, 85, 93, 98],
-        [0, 27, 46, 60, 71, 83, 92, 97],
-        [0, 29, 48, 62, 73, 85, 93, 98],
-        [0, 25, 44, 58, 69, 81, 90, 96],
-    ]
-
-    def _profile(raw):
-        arr = np.array(raw, dtype=float)            # vessels x time
-        mean = arr.mean(axis=0)
-        sd = arr.std(axis=0, ddof=1)
-        with np.errstate(divide="ignore", invalid="ignore"):
-            rsd = np.where(mean > 0, 100.0 * sd / mean, 0.0)
-        return {
-            "time": list(time),
-            "release": mean.round(2).tolist(),
-            "sd": sd.round(2).tolist(),
-            "rsd": rsd.round(2).tolist(),
-            "cv": rsd.round(2).tolist(),
-            "n": arr.shape[0],
-            "vessels": [f"Vessel {i+1}" for i in range(arr.shape[0])],
-            "raw": arr.T.tolist(),                  # time x vessels (matches importer)
-        }
-
-    st.session_state.profiles = {
-        "Reference (demo)": _profile(ref_raw),
-        "Test (demo)": _profile(test_raw),
-    }
+    """Populate the example dataset (1 Reference + 2 generic test products,
+    12 vessels each, up to 90 min) and select Reference vs Test A, so a
+    first-time user can run fitting / f2 / bootstrap immediately.
+    Deterministic — identical data every call."""
+    from dissolva.templates import build_demo_profiles
+    profiles = build_demo_profiles()
+    st.session_state.profiles = profiles
     st.session_state.fit_results = {}
     st.session_state.bootstrap_results = None
-    st.session_state.selected_ref_id = "Reference (demo)"
-    st.session_state.selected_test_id = "Test (demo)"
+    _names = list(profiles.keys())
+    st.session_state.selected_ref_id = _names[0]
+    st.session_state.selected_test_id = _names[1] if len(_names) > 1 else _names[0]
 
 
 # ---------------------------------------------------------------------------

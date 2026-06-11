@@ -66,6 +66,30 @@ def render():
         unsafe_allow_html=True
     )
 
+    # ── Example dataset (1 Reference + 2 generics · 12 vessels · 90 min) ──────
+    with st.expander("\U0001F9EA Example dataset — try it instantly or download the format"):
+        st.caption(
+            "1 Reference + 2 generic test products \u00b7 12 vessels each \u00b7 up to 90 min. "
+            "Load it into the app to explore, or download a correctly-formatted Excel file "
+            "to see the exact layout the uploader expects."
+        )
+        _ex1, _ex2 = st.columns(2)
+        with _ex1:
+            if st.button("\U0001F4E5 Load example into app", key="load_demo_data_page",
+                         use_container_width=True):
+                from dissolva import extras as _ex
+                _ex.load_demo_data()
+                st.success("Example profiles loaded: Reference + Test A + Test B.")
+                st.rerun()
+        with _ex2:
+            from dissolva.templates import build_demo_xlsx as _bdx
+            st.download_button(
+                "\u2B07\uFE0F Download example .xlsx", data=_bdx(),
+                file_name="DissolvA_example_dataset.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_demo_xlsx", use_container_width=True,
+            )
+
     input_mode = st.radio(
         "Input Mode",
         ["Excel / CSV Upload (Raw Vessel Data)", "Inline Spreadsheet Editor", "Manual Mean Entry"],
