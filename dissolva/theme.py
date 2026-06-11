@@ -160,6 +160,7 @@ section[data-testid="stSidebar"] .stNumberInput button { background: #16203F !im
 /* OAuth button in the TOP HEADER (right actions) — rounded, keep one line */
 .st-key-hdractions iframe[title="streamlit_oauth.authorize_button"] {
   border-radius: 8px !important; overflow: hidden !important;
+  transform: scale(0.82) !important; transform-origin: right center !important;
 }
 .st-key-hdractions { align-items: center !important; gap: 10px !important; }
 .stDownloadButton > button {

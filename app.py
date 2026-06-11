@@ -195,6 +195,7 @@ with st.sidebar:
         font-size: 21px !important; width: 21px !important; height: 21px !important;
     }
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button:hover { background: rgba(255,204,0,0.12) !important; }
+    [data-testid="stSidebar"] .st-key-navmenu .stButton { margin-top:-5px !important; margin-bottom:-5px !important; }
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button:hover,
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button:hover * { color: #FFCC00 !important; }
     /* Active page — solid amber pill + dark bold text + left accent bar (unmistakable).
@@ -233,7 +234,11 @@ with st.sidebar:
                     st.session_state["main_nav_radio"] = _val
                     st.rerun()
             if _cat == "Predictive Analysis":
-                st.caption("IVIVC Correlation · v3.5 — coming soon")
+                st.markdown(
+                    "<div style='margin:-2px 0 8px 12px;'><span style='background:rgba(255,255,255,0.06);"
+                    "color:#7e8db0;font-size:0.66rem;font-weight:600;letter-spacing:0.3px;"
+                    "padding:2px 9px;border-radius:8px;'>IVIVC v3.5 · coming soon</span></div>",
+                    unsafe_allow_html=True)
         # Learn — DissolvA Academy (free overlay; not a routed page)
         st.markdown("<div class='nav-cat'>Learn</div>", unsafe_allow_html=True)
         if st.button("DissolvA Academy", icon=":material/school:", key="nav_academy",
@@ -387,7 +392,7 @@ with _hl:
         '<div style="color:#7E8DAB;font-size:0.84rem;margin-top:4px;">'
         'FDA/EMA guidance-aligned · 62 Kinetic Models · f1/f2 · Bootstrap f2 · Statistical Profiling'
         '<span style="background:rgba(255,204,0,0.10);color:#FFCC00;border:1px solid rgba(255,204,0,0.35);'
-        'font-size:0.7rem;font-weight:600;padding:1px 8px;border-radius:10px;margin-left:8px;">'
+        'font-size:0.7rem;font-weight:600;padding:1px 8px;border-radius:10px;margin-left:8px;display:inline-block;white-space:nowrap;">'
         'BETA · research use only</span></div>',
         unsafe_allow_html=True
     )
@@ -405,7 +410,7 @@ with _hr:
         auth.render_sidebar_auth()
         st.markdown(
             '<a href="#" style="color:#FFD86B;font-weight:600;font-size:0.86rem;'
-            'text-decoration:none;white-space:nowrap;padding:6px 4px;">Try Free</a>',
+            'text-decoration:none;white-space:nowrap;padding:5px 12px;border:1px solid rgba(255,204,0,0.45);border-radius:8px;">Try Free</a>',
             unsafe_allow_html=True)
 st.markdown('<hr style="border:1px solid #FFCC00;margin:8px 0 4px 0;">', unsafe_allow_html=True)
 
