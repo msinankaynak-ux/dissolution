@@ -1,5 +1,6 @@
 """DissolvA page module: f1 and f2 Similarity. Extracted from app.py (Phase 3b modularization)."""
 import streamlit as st
+from dissolva.theme import release_label as _rlabel
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -246,7 +247,7 @@ def render():
     ax.set_ylim(bottom=0, top=112)
 
     ax.set_xlabel(f"Time ({time_unit})", fontsize=11)
-    ax.set_ylabel("Cumulative Drug Released (%)", fontsize=11)
+    ax.set_ylabel(_rlabel(st.session_state.method_cfg), fontsize=11)
     ax.set_title(
         f"f1 = {f1:.2f}  |  f2 = {f2:.2f}  |  {ref_nm} vs {test_nm}",
         fontsize=12, color=OXFORD, pad=12

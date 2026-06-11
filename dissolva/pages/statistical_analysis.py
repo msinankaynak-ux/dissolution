@@ -45,6 +45,35 @@ def render():
     _df_mdt.index = range(1, len(_df_mdt)+1)
     st.dataframe(_df_mdt, use_container_width=True)
 
+    # ── Permeation metrics (Franz / IVPT) — shown for permeation methods or µg/cm² data ──
+    _app = cfg.get("apparatus", "")
+    _du = cfg.get("data_unit", "% released")
+    if ("Franz" in _app) or (_du == "µg/cm²"):
+        from dissolva.permeation import permeation_metrics
+        st.subheader("Permeation Metrics — Jss · lag-time · Kp")
+        _dc = float(cfg.get("franz_donor_conc", 0.0)) or None
+        _tu = "h" if cfg.get("time_unit") == "hours" else "min"
+        _unit = _du if _du != "% released" else "%"
+        prows = []
+        for nm in names:
+            ta = np.array(st.session_state.profiles[nm]["time"], float)
+            ra = np.array(st.session_state.profiles[nm]["release"], float)
+            pm = permeation_metrics(ta, ra, donor_conc=_dc)
+            prows.append({
+                "Profile": nm,
+                f"Jss ({_unit}/{_tu})": round(pm["jss"], 4) if pm["jss"] is not None else "—",
+                f"Lag ({_tu})": round(pm["lag"], 3) if pm["lag"] is not None else "—",
+                "Kp": round(pm["kp"], 5) if pm["kp"] is not None else "—",
+                "R² (steady-state)": round(pm["r2"], 4) if pm["r2"] is not None else "—",
+                "n pts": pm["n_points"],
+            })
+        _dfp = pd.DataFrame(prows)
+        _dfp.index = range(1, len(_dfp) + 1)
+        st.dataframe(_dfp, use_container_width=True)
+        st.caption("Steady-state flux Jss = slope of the terminal linear region; lag-time = x-intercept; "
+                   "Kp = Jss / donor concentration (set it in Method Settings → Apparatus). "
+                   "Standard Fick's-law / Franz-cell analysis. Set Data Unit to µg/cm² for proper flux units.")
+
     st.subheader("Individual Profile Plots")
     # Visual options
     _is_cfg_s  = st.session_state.method_cfg

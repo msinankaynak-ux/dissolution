@@ -260,3 +260,14 @@ def style_ax(fig, ax):
     ax.tick_params(colors=OXFORD, labelsize=9)
     ax.xaxis.label.set_color(OXFORD); ax.yaxis.label.set_color(OXFORD)
     ax.title.set_color(OXFORD)
+
+
+def release_label(cfg):
+    """Y-axis label for release/permeation plots based on the entered data unit."""
+    u = (cfg or {}).get("data_unit", "% released")
+    return {
+        "% released": "Cumulative Drug Released (%)",
+        "µg/cm²":     "Cumulative Amount (µg/cm\u00b2)",
+        "µg":         "Cumulative Amount (µg)",
+        "mg":         "Cumulative Amount (mg)",
+    }.get(u, "Cumulative Drug Released (%)")

@@ -1,5 +1,6 @@
 """DissolvA page module: Data Input. Extracted from app.py (Phase 3b modularization)."""
 import streamlit as st
+from dissolva.theme import release_label as _rlabel
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -663,7 +664,7 @@ def render():
                               edgecolor='#27ae60', alpha=0.92))
 
         ax.set_xlabel(f"Time ({time_unit})")
-        ax.set_ylabel("Cumulative Drug Released (%)")
+        ax.set_ylabel(_rlabel(st.session_state.method_cfg))
         ax.set_title("Mean Dissolution Profiles  (Mean ± SD)")
         t_all = np.concatenate([np.array(d["time"]) for d in st.session_state.profiles.values()])
         ax.set_xlim(left=0, right=t_all.max() * 1.05)

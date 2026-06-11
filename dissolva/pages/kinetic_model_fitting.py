@@ -1,5 +1,6 @@
 """DissolvA page module: Kinetic Model Fitting. Extracted from app.py (Phase 3b modularization)."""
 import streamlit as st
+from dissolva.theme import release_label as _rlabel
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -265,7 +266,7 @@ def render():
             except Exception:
                 _curve_skip.append(mn)
         ax.set_xlabel(f"Time ({time_unit})")
-        ax.set_ylabel("Cumulative Drug Released (%)")
+        ax.set_ylabel(_rlabel(st.session_state.method_cfg))
         ax.set_xlim(left=0)
         ax.set_title(f"Kinetic Model Fitting — {pname}"); ax.set_ylim(0,112)
         # Legend outside the axes (right) so dense curve sets stay readable

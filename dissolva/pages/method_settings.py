@@ -48,6 +48,17 @@ def render():
                 ["mg/mL", "ug/mL", "mg/L"], index=["mg/mL","ug/mL","mg/L"].index(cfg["conc_unit"]))
         with c3:
             cfg["dose_mg"] = st.number_input("Dose (mg)", value=float(cfg["dose_mg"]), min_value=0.1)
+        du_opts = ["% released", "µg/cm²", "µg", "mg"]
+        cur_du = cfg.get("data_unit", "% released")
+        if cur_du not in du_opts:
+            cur_du = "% released"
+        cfg["data_unit"] = st.selectbox(
+            "Data Unit (what your entered values represent)", du_opts,
+            index=du_opts.index(cur_du),
+            help="'%' for classic dissolution; µg/cm² for Franz/permeation — enables steady-state flux (Jss), Kp and lag-time in Statistical Analysis.")
+        if cfg["data_unit"] != "% released":
+            st.caption("Note: FDA f2 / Q (85%) rules assume % released. For amount-based units use "
+                       "kinetic fitting and the Permeation Metrics section (Statistical Analysis).")
 
     # ── TAB 2: FDA/USP Acceptance Criterion (Q) ──────────────────────────────
     with tab_q:
@@ -168,6 +179,10 @@ def render():
                 cfg["membrane"] = st.text_input(
                     "Membrane", value=cfg.get("membrane", ""),
                     placeholder="e.g. synthetic / skin / epidermis")
+            cfg["franz_donor_conc"] = st.number_input(
+                "Donor Concentration (for Kp; in your concentration unit)",
+                value=float(cfg.get("franz_donor_conc", 0.0)), min_value=0.0, step=0.1,
+                help="Drug concentration in the donor compartment. Used for permeability Kp = Jss / Cd. Leave 0 to skip Kp.")
             st.caption("Permeation data are usually cumulative amount per area (\u00b5g/cm\u00b2); "
                        "steady-state flux (Jss), permeability (Kp) and lag-time can be derived. "
                        "Amount-based input units are coming to Data Input.")
