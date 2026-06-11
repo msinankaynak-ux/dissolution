@@ -9,6 +9,7 @@ from scipy.optimize import curve_fit, root
 from scipy.stats import norm as sp_norm
 from scipy.integrate import trapezoid
 import io
+import os
 
 try:
     import plotly.figure_factory as ff
@@ -45,9 +46,10 @@ def _is_admin():
     em = (auth.current_user() or {}).get("email") or ""
     return em.strip().lower() in _admin_emails()
 
+_FAVICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dissolva", "assets", "favicon.png")
 st.set_page_config(
     page_title="DissolvA - Predictive Dissolution Suite",
-    page_icon="D",
+    page_icon=(_FAVICON if os.path.exists(_FAVICON) else "🧪"),
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -73,14 +75,14 @@ with st.sidebar:
     section[data-testid="stSidebar"] .dvlogo-sub   { color:rgba(255,204,0,0.60) !important; }
     </style>
     <div style="padding:18px 16px 12px;display:flex;justify-content:center;">
-      <div style="position:relative;width:48px;height:48px;background:#003171;border-radius:11px;
+      <div style="position:relative;width:64px;height:64px;background:#003171;border-radius:15px;
                   display:flex;align-items:center;justify-content:center;
                   box-shadow:0 0 0 1px rgba(255,204,0,0.14);">
-        <div style="position:absolute;top:0;right:0;width:13px;height:3px;
-                    background:#FFCC00;border-radius:0 11px 0 2px;"></div>
-        <div style="position:absolute;top:0;right:0;width:3px;height:13px;
-                    background:#FFCC00;border-radius:0 11px 0 2px;"></div>
-        <span class="dvlogo-gold" style="font-size:27px;font-weight:700;line-height:1;
+        <div style="position:absolute;top:0;right:0;width:17px;height:4px;
+                    background:#FFCC00;border-radius:0 15px 0 3px;"></div>
+        <div style="position:absolute;top:0;right:0;width:4px;height:17px;
+                    background:#FFCC00;border-radius:0 15px 0 3px;"></div>
+        <span class="dvlogo-gold" style="font-size:39px;font-weight:700;line-height:1;
                      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">A</span>
       </div>
     </div>
@@ -214,24 +216,35 @@ with st.sidebar:
     </style>""", unsafe_allow_html=True)
 
     with st.container(key="navmenu"):
+        st.markdown("""<style>
+        .st-key-navmenu [data-testid="stExpander"]{border:none !important;background:transparent !important;box-shadow:none !important;margin-bottom:0 !important;}
+        .st-key-navmenu [data-testid="stExpander"] details{border:none !important;background:transparent !important;}
+        .st-key-navmenu [data-testid="stExpander"] summary{position:relative;padding:9px 8px 4px 18px !important;list-style:none;cursor:pointer;}
+        .st-key-navmenu [data-testid="stExpander"] summary::-webkit-details-marker{display:none;}
+        .st-key-navmenu [data-testid="stExpander"] summary::before{content:'';position:absolute;left:6px;top:11px;width:3px;height:13px;background:#FFCC00;border-radius:2px;}
+        .st-key-navmenu [data-testid="stExpander"] summary p,
+        .st-key-navmenu [data-testid="stExpander"] summary span{font-size:11px !important;font-weight:600 !important;letter-spacing:0.5px !important;text-transform:uppercase !important;color:#cbd5e1 !important;margin:0 !important;}
+        .st-key-navmenu [data-testid="stExpander"] summary:hover p,
+        .st-key-navmenu [data-testid="stExpander"] summary:hover span{color:#FFCC00 !important;}
+        .st-key-navmenu [data-testid="stExpanderDetails"]{padding:0 4px !important;}
+        </style>""", unsafe_allow_html=True)
         for _cat, _items in _NAV_CATEGORIES:
-            st.markdown(f"<div class='nav-cat'>{_cat}</div>", unsafe_allow_html=True)
-            for _val, _label, _icon in _items:
-                if st.button(_label, icon=_icon, key=f"nav_{_val}", use_container_width=True,
-                             type=("primary" if nav == _val else "secondary")):
-                    st.session_state["main_nav_radio"] = _val
-                    st.rerun()
-            if _cat == "Predictive Analysis":
-                st.markdown(
-                    "<div style='margin:-2px 0 8px 12px;'><span style='background:rgba(255,255,255,0.06);"
-                    "color:#7e8db0;font-size:0.66rem;font-weight:600;letter-spacing:0.3px;"
-                    "padding:2px 9px;border-radius:8px;'>IVIVC v3.5 · coming soon</span></div>",
-                    unsafe_allow_html=True)
-        # Learn — DissolvA Academy (free overlay; not a routed page)
-        st.markdown("<div class='nav-cat'>Learn</div>", unsafe_allow_html=True)
-        if st.button("DissolvA Academy", icon=":material/school:", key="nav_academy",
-                     use_container_width=True, type="secondary"):
-            st.session_state.academy_open = True
+            with st.expander(_cat, expanded=True):
+                for _val, _label, _icon in _items:
+                    if st.button(_label, icon=_icon, key=f"nav_{_val}", use_container_width=True,
+                                 type=("primary" if nav == _val else "secondary")):
+                        st.session_state["main_nav_radio"] = _val
+                        st.rerun()
+                if _cat == "Predictive Analysis":
+                    st.markdown(
+                        "<div style='margin:-2px 0 4px 4px;'><span style='background:rgba(255,255,255,0.06);"
+                        "color:#7e8db0;font-size:0.66rem;font-weight:600;letter-spacing:0.3px;"
+                        "padding:2px 9px;border-radius:8px;'>IVIVC v3.5 · coming soon</span></div>",
+                        unsafe_allow_html=True)
+        with st.expander("Learn", expanded=True):
+            if st.button("DissolvA Academy", icon=":material/school:", key="nav_academy",
+                         use_container_width=True, type="secondary"):
+                st.session_state.academy_open = True
             st.rerun()
 
     # Leave any full-screen overlay (Academy/Admin) when navigating to a page.
@@ -372,9 +385,10 @@ with st.sidebar:
                 unsafe_allow_html=True)
 
     st.markdown(
-        '<div style="margin-top:16px;font-size:0.72rem;color:#9fb0d0;line-height:1.45;">'
-        '<span style="color:#FFCC00;font-weight:600;">✦ Free during beta.</span> '
-        'Pro &amp; Enterprise activate at launch.</div>',
+        '<div style="margin-top:16px;margin-bottom:6px;">'
+        '<span style="display:inline-block;background:rgba(255,204,0,0.12);'
+        'border:1px solid rgba(255,204,0,0.25);color:#FFCC00;font-size:0.62rem;font-weight:600;'
+        'padding:2px 8px;border-radius:7px;">✦ Free during beta</span></div>',
         unsafe_allow_html=True
     )
     if st.button("View plans", key="view_plans", use_container_width=True):
@@ -422,6 +436,7 @@ with _hr:
             st.session_state["_pending_nav"] = "Data Input"
             st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
             st.rerun()
+    with st.container(horizontal=True, horizontal_alignment="right", key="hdrauth"):
         auth.render_sidebar_auth()
 st.markdown('<hr style="border:1px solid #FFCC00;margin:8px 0 4px 0;">', unsafe_allow_html=True)
 
