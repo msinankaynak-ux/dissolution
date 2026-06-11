@@ -161,11 +161,11 @@ def render():
 
     vf1="PASS - f1 <= 15: Profiles have acceptable difference" if f1<=15 else "FAIL - f1 > 15: Significant difference detected"
     vf2="SIMILAR - f2 >= 50: Profiles are bioequivalent (FDA)" if f2>=50 else "DISSIMILAR - f2 < 50: Profiles are NOT similar"
-    color1="#c6efce" if f1<=15 else "#ffc7ce"
-    color2="#c6efce" if f2>=50 else "#ffc7ce"
+    color1="#c6efce" if f1<=15 else "#ffc7ce"; text1="#14532d" if f1<=15 else "#7b1a1a"
+    color2="#c6efce" if f2>=50 else "#ffc7ce"; text2="#14532d" if f2>=50 else "#7b1a1a"
     st.markdown(
-        f'<div style="background:{color1};border-radius:5px;padding:10px 14px;margin:6px 0;"><strong>f1:</strong> {vf1}</div>' +
-        f'<div style="background:{color2};border-radius:5px;padding:10px 14px;margin:6px 0;"><strong>f2:</strong> {vf2}</div>',
+        f'<div style="background:{color1};color:{text1};border-radius:5px;padding:10px 14px;margin:6px 0;"><strong>f1:</strong> {vf1}</div>' +
+        f'<div style="background:{color2};color:{text2};border-radius:5px;padding:10px 14px;margin:6px 0;"><strong>f2:</strong> {vf2}</div>',
         unsafe_allow_html=True
     )
 

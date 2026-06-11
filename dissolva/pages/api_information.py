@@ -972,7 +972,7 @@ def render():
                     _ro5_color = "#c6efce" if _lipo["druglike"] else "#ffc7ce"
                     _ro5_msg = "Orally active - no violations" if _lipo["druglike"] else "Violations present"
                     st.markdown(
-                        f'<div style="background:{_ro5_color};border-radius:7px;padding:7px 12px;"'
+                        f'<div style="background:{_ro5_color};border-radius:7px;padding:7px 12px;'
                         f'font-size:12px;font-weight:500;color:#002147;margin-top:8px;">'
                         f'{_ro5_msg}</div>',
                         unsafe_allow_html=True

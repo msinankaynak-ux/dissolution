@@ -95,7 +95,7 @@ def render():
         badge_color  = "#002147" if professional else "#27ae60"
         badge_text   = "🔒 Professional" if professional else "✅ All Plans"
         st.markdown(
-            f'<div style="background:#f0ece0;border-left:4px solid {badge_color};'
+            f'<div style="background:#f0ece0;color:#2c2c2a;border-left:4px solid {badge_color};'
             f'border-radius:4px;padding:12px 16px;margin-top:8px;">'
             f'<strong>{label}</strong><br>'
             f'<span style="font-size:0.88rem;color:#555;">{desc.replace(" [Professional]","")}</span><br><br>'
@@ -585,8 +585,9 @@ def render():
                             r2_mc = np.corrcoef(diss_x, pk_vals)[0,1]**2
                         r2_results[ph] = r2_mc
                         color_r2 = "#c6efce" if r2_mc >= 0.9 else "#ffc7ce"
+                        text_r2 = "#14532d" if r2_mc >= 0.9 else "#7b1a1a"
                         st.markdown(
-                            f'<div style="background:{color_r2};border-radius:4px;'
+                            f'<div style="background:{color_r2};color:{text_r2};border-radius:4px;'
                             f'padding:8px 14px;font-weight:600;">'
                             f'R² = {r2_mc:.4f} {"✅ R² ≥ 0.90" if r2_mc>=0.9 else "❌ R² < 0.90"}</div>',
                             unsafe_allow_html=True

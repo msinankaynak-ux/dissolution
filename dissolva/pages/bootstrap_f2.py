@@ -228,9 +228,10 @@ def render():
 
         # ---- Key metric card (big) ------------------------------------------
         verdict_color = "#c6efce" if is_similar else "#ffc7ce"
+        verdict_text  = "#14532d" if is_similar else "#7b1a1a"
         verdict_icon  = "✅ SIMILAR" if is_similar else "❌ NOT SIMILAR"
         st.markdown(
-            f"<div style='background:{verdict_color};border-radius:8px;"
+            f"<div style='background:{verdict_color};color:{verdict_text};border-radius:8px;"
             f"padding:16px 22px;font-size:1.15rem;font-weight:700;margin:14px 0;"
             f"border-left:6px solid {'#27ae60' if is_similar else '#e74c3c'};'>"
             f"{verdict_icon} &nbsp;|&nbsp; "
