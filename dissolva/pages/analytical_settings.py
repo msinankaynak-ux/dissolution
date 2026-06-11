@@ -33,10 +33,26 @@ def render():
     cur_anal = cfg.get("analytical", "UV-Vis Spectrophotometry")
     if cur_anal not in anal_opts:
         cur_anal = "UV-Vis Spectrophotometry"
-    cfg["analytical"] = st.radio(
-        "Analytical Method", anal_opts,
-        horizontal=True,
-        index=anal_opts.index(cur_anal))
+
+    # Tab-style selector — same look as the Method Settings tab bar. The radio
+    # keeps the selection persistent (Excel report reads cfg["analytical"]);
+    # scoped CSS restyles it into an underlined tab bar.
+    st.markdown("""<style>
+    .st-key-analbar div[role="radiogroup"]{display:flex;gap:0;flex-wrap:wrap;
+        border-bottom:1px solid rgba(255,255,255,0.12);margin-bottom:4px;}
+    .st-key-analbar div[role="radiogroup"]>label{margin:0 26px 0 0 !important;
+        padding:9px 2px !important;border-bottom:2px solid transparent !important;}
+    .st-key-analbar div[role="radiogroup"]>label>div:first-child{display:none !important;}
+    .st-key-analbar div[role="radiogroup"]>label p{color:#7e8db0 !important;font-size:1rem !important;}
+    .st-key-analbar div[role="radiogroup"]>label:hover p{color:#cfd8ea !important;}
+    .st-key-analbar div[role="radiogroup"]>label:has(input:checked){border-bottom-color:#FFCC00 !important;}
+    .st-key-analbar div[role="radiogroup"]>label:has(input:checked) p{color:#FFCC00 !important;font-weight:500 !important;}
+    </style>""", unsafe_allow_html=True)
+    with st.container(key="analbar"):
+        cfg["analytical"] = st.radio(
+            "Analytical Method", anal_opts,
+            horizontal=True, label_visibility="collapsed",
+            index=anal_opts.index(cur_anal))
 
     st.markdown("---")
 
