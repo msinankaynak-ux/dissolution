@@ -385,14 +385,12 @@ with st.sidebar:
                 unsafe_allow_html=True)
 
     st.markdown(
-        '<div style="margin-top:14px;border-radius:12px;padding:13px 14px 8px;'
-        'background:linear-gradient(135deg,#FFD43B,#E0A100);">'
-        '<div style="color:#1C2541;font-size:0.85rem;font-weight:700;">★ Plans</div>'
-        '<div style="color:#5b4500;font-size:0.7rem;margin:5px 0 4px;line-height:1.4;">'
-        'Free during beta · paid at launch. Pro &amp; Enterprise features below.</div></div>',
+        '<div style="margin-top:16px;font-size:0.72rem;color:#9fb0d0;line-height:1.45;">'
+        '<span style="color:#FFCC00;font-weight:600;">✦ Free during beta.</span> '
+        'Pro &amp; Enterprise activate at launch.</div>',
         unsafe_allow_html=True
     )
-    if st.button("View all plans", key="view_plans", use_container_width=True):
+    if st.button("View plans", key="view_plans", use_container_width=True):
         _plans_dialog()
 
 
@@ -533,9 +531,10 @@ st.markdown(
     ' &nbsp;·&nbsp; <a href="https://github.com/msinankaynak-ux/dissolution" target="_blank" '
     'style="color:#9fb0d0;text-decoration:none;">Source</a>'
     '</div>'
-    '<a href="#pro" style="background:linear-gradient(135deg,#FFD43B,#E0A100);color:#1C2541;'
-    'font-size:0.8rem;font-weight:700;border-radius:8px;padding:9px 18px;text-decoration:none;'
-    'white-space:nowrap;">⚡ Try DissolvA Pro — Upgrade Now</a>'
+    '<a href="https://doi.org/10.5281/zenodo.20650463" target="_blank" '
+    'style="font-size:0.72rem;color:#9fb0d0;text-decoration:none;white-space:nowrap;'
+    'border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 12px;">'
+    '📄 DOI: 10.5281/zenodo.20650463</a>'
     '</div>',
     unsafe_allow_html=True
 )
