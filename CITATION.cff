@@ -9,6 +9,7 @@ type: software
 authors:
   - family-names: "Kaynak"
     given-names: "Mustafa Sinan"
+    affiliation: "Anadolu University, Faculty of Pharmacy, Department of Pharmaceutical Technology, Eskişehir, Türkiye"
 version: "3.0"
 date-released: "2026-06-12"
 url: "https://www.dissolva.app"

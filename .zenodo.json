@@ -5,7 +5,10 @@
   "access_right": "open",
   "license": "AGPL-3.0-or-later",
   "creators": [
-    { "name": "Kaynak, Mustafa Sinan" }
+    {
+      "name": "Kaynak, Mustafa Sinan",
+      "affiliation": "Anadolu University, Faculty of Pharmacy, Department of Pharmaceutical Technology, Eskişehir, Türkiye"
+    }
   ],
   "keywords": [
     "dissolution",
@@ -16,6 +19,10 @@
     "pharmaceutical software"
   ],
   "related_identifiers": [
-    { "relation": "isSupplementTo", "identifier": "https://www.dissolva.app", "scheme": "url" }
+    {
+      "relation": "isSupplementTo",
+      "identifier": "https://www.dissolva.app",
+      "scheme": "url"
+    }
   ]
 }
