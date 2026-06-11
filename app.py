@@ -398,7 +398,7 @@ with st.sidebar:
 
 
 # ===========================================================================
-# HEADER  (title left · actions right: New Session · Load demo · auth · Try Free)
+# HEADER  (title left · actions right: New Session · Load demo · Google sign-in)
 # ===========================================================================
 @st.dialog("Start a new session?")
 def _new_session_dialog():
@@ -436,10 +436,6 @@ with _hr:
             st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
             st.rerun()
         auth.render_sidebar_auth()
-        st.markdown(
-            '<a href="#" style="color:#FFD86B;font-weight:600;font-size:0.86rem;'
-            'text-decoration:none;white-space:nowrap;padding:5px 12px;border:1px solid rgba(255,204,0,0.45);border-radius:8px;">Try Free</a>',
-            unsafe_allow_html=True)
 st.markdown('<hr style="border:1px solid #FFCC00;margin:8px 0 4px 0;">', unsafe_allow_html=True)
 
 # GDPR cookie/usage consent — dismissible, shown until accepted (session-level).
