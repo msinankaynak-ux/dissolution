@@ -1,0 +1,21 @@
+{
+  "title": "DissolvA: Predictive Dissolution Suite",
+  "description": "A free, web-based pharmaceutical dissolution analysis platform: FDA/EMA guidance-aligned f1/f2 similarity, 62 kinetic models, bootstrap f2, USP monograph compliance checks, and professional reporting.",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "AGPL-3.0-or-later",
+  "creators": [
+    { "name": "Kaynak, Mustafa Sinan" }
+  ],
+  "keywords": [
+    "dissolution",
+    "drug release kinetics",
+    "f2 similarity factor",
+    "bootstrap f2",
+    "kinetic modeling",
+    "pharmaceutical software"
+  ],
+  "related_identifiers": [
+    { "relation": "isSupplementTo", "identifier": "https://www.dissolva.app", "scheme": "url" }
+  ]
+}

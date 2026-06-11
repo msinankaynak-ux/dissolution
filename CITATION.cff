@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use DissolvA in your work, please cite it as below."
+title: "DissolvA: Predictive Dissolution Suite"
+abstract: >-
+  A free, web-based pharmaceutical dissolution analysis platform: FDA/EMA
+  guidance-aligned f1/f2 similarity, 62 kinetic models, bootstrap f2, USP
+  monograph compliance checks, and professional reporting.
+type: software
+authors:
+  - family-names: "Kaynak"
+    given-names: "Mustafa Sinan"
+version: "3.0"
+date-released: "2026-06-12"
+url: "https://www.dissolva.app"
+repository-code: "https://github.com/msinankaynak-ux/dissolution"
+license: AGPL-3.0-or-later
+keywords:
+  - dissolution
+  - drug release kinetics
+  - f2 similarity factor
+  - bootstrap f2
+  - kinetic modeling
+  - pharmaceutical software
