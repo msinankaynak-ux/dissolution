@@ -146,4 +146,98 @@ METHODS = {
         '<text x="150" y="220" text-anchor="middle" '+_LBL+'>holders reciprocate into small tubes</text>'
         '</svg>',
  },
+ "franz_cell": {
+  "name": "Franz Diffusion Cell (IVRT / IVPT)",
+  "dosage_forms": "Topical semisolids (creams, gels, ointments), transdermal systems, and nanoparticle/permeation studies. IVRT uses a synthetic membrane; IVPT uses skin/epidermis.",
+  "conditions": "Vertical donor/receptor cell with a fixed diffusion area (cm2) and receptor volume (mL), 32-37 C, stirred receptor; sampling from the receptor arm over time.",
+  "description": "The formulation is applied to a membrane mounted between a donor and a receptor compartment. Drug diffuses across the membrane into the stirred receptor fluid, which is sampled over time. Results are expressed as cumulative amount per area (ug/cm2); steady-state flux (Jss), permeability (Kp) and lag-time are derived from the linear region.",
+  "refs": ["Pantelic et al. (2018) Hem Ind 72(1):47-53", "Alves et al. (2021) Pharmaceutics 13(4):555", "Jin et al. (2023) Pharmaceutics 15(6):1707"],
+  "figure_credit": "",
+  "svg": _S + '<rect x="128" y="35" width="44" height="40" '+_VES+'/>'
+        '<rect x="130" y="60" width="40" height="13" '+_AMB+'/>'
+        '<line x1="106" y1="78" x2="194" y2="78" stroke="#cfd8ea" stroke-width="3"/>'
+        '<path d="M108 80 L192 80 L183 150 Q150 186 117 150 Z" '+_VES+'/>'
+        '<path d="M114 110 L186 110 L179 148 Q150 178 121 148 Z" '+_LIQ+'/>'
+        '<path d="M186 96 Q216 92 216 58" fill="none" stroke="#aebfda" stroke-width="2"/>'
+        '<ellipse cx="150" cy="165" rx="10" ry="4" fill="#cfd8ea"/>'
+        '<text x="150" y="28" text-anchor="middle" '+_LBL+'>donor (formulation)</text>'
+        '<text x="198" y="76" '+_LBL+'>membrane</text>'
+        '<text x="222" y="56" '+_LBL+'>sampling</text>'
+        '<text x="20" y="125" '+_LBL+'>receptor</text>'
+        '</svg>',
+ },
+ "dialysis_bag": {
+  "name": "Dialysis Membrane (bag / sac)",
+  "dosage_forms": "Nanoparticles, liposomes, micelles, microemulsions and other colloidal carriers — the dispersion is retained while free drug diffuses out.",
+  "conditions": "Dispersion sealed in a dialysis bag (defined MWCO) immersed in stirred release medium at 37 C; free drug crosses the membrane and is sampled from the outer medium.",
+  "description": "The carrier dispersion is placed inside a semipermeable bag of defined molecular-weight cut-off; released free drug diffuses into the surrounding medium and is quantified over time. Simple and widely used, but the membrane can become a diffusion barrier and mis-estimate fast release (choose MWCO and volumes carefully).",
+  "refs": ["Rawat et al. (2010) Curr Drug Deliv 7(1):44-50", "Weng, Tong & Chow (2020) Pharmaceutics 12(8):732"],
+  "figure_credit": "",
+  "svg": _S + '<path d="M70 50 Q60 50 60 65 L60 180 Q60 205 90 205 L210 205 Q240 205 240 180 L240 65 Q240 50 230 50" '+_VES+'/>'
+        '<path d="M62 95 L62 180 Q62 203 90 203 L210 203 Q238 203 238 180 L238 95 Z" '+_LIQ+'/>'
+        '<rect x="132" y="55" width="36" height="122" rx="15" fill="none" stroke="#FFCC00" stroke-width="2"/>'
+        '<rect x="135" y="82" width="30" height="92" rx="13" fill="rgba(255,204,0,0.16)"/>'
+        '<circle cx="150" cy="108" r="3" '+_AMB+'/><circle cx="145" cy="134" r="3" '+_AMB+'/><circle cx="157" cy="152" r="3" '+_AMB+'/>'
+        '<ellipse cx="150" cy="196" rx="9" ry="4" fill="#cfd8ea"/>'
+        '<text x="150" y="46" text-anchor="middle" '+_AMB+' font-size="11" font-family="sans-serif">dialysis bag (MWCO)</text>'
+        '<text x="150" y="225" text-anchor="middle" '+_LBL+'>release medium (free drug sampled here)</text>'
+        '</svg>',
+ },
+ "reverse_dialysis": {
+  "name": "Reverse Dialysis",
+  "dosage_forms": "Fast-releasing nanocarriers where the classic bag method under-reads release — the geometry is inverted to keep sink conditions.",
+  "conditions": "The carrier dispersion is in the bulk vessel; several small dialysis sacs filled with fresh medium are immersed in it; released drug diffuses INTO the sacs, which are sampled.",
+  "description": "An inversion of the dialysis-bag setup: the dispersion sits outside, and small sacs of medium act as the sink. Because released drug rapidly partitions into many small sacs, the membrane is less rate-limiting — better for carriers with rapid release.",
+  "refs": ["Weng, Tong & Chow (2020) Pharmaceutics 12(8):732", "Costa & Sousa Lobo (2001) Eur J Pharm Sci 13(2):123-133"],
+  "figure_credit": "",
+  "svg": _S + '<path d="M70 45 Q58 45 58 62 L58 185 Q58 208 92 208 L208 208 Q242 208 242 185 L242 62 Q242 45 230 45" '+_VES+'/>'
+        '<path d="M60 80 L60 185 Q60 206 92 206 L208 206 Q240 206 240 185 L240 80 Z" fill="rgba(255,204,0,0.10)"/>'
+        '<g fill="rgba(120,160,230,0.30)" stroke="#aebfda" stroke-width="1.5">'
+        '<rect x="92" y="120" width="26" height="46" rx="11"/><rect x="137" y="135" width="26" height="46" rx="11"/><rect x="182" y="118" width="26" height="46" rx="11"/>'
+        '</g>'
+        '<circle cx="80" cy="120" r="3" '+_AMB+'/><circle cx="130" cy="105" r="3" '+_AMB+'/><circle cx="175" cy="160" r="3" '+_AMB+'/><circle cx="215" cy="130" r="3" '+_AMB+'/>'
+        '<text x="150" y="38" text-anchor="middle" '+_AMB+' font-size="11" font-family="sans-serif">NP dispersion (bulk)</text>'
+        '<text x="150" y="226" text-anchor="middle" '+_LBL+'>dialysis sacs = sink (sampled)</text>'
+        '</svg>',
+ },
+ "sample_separate": {
+  "name": "Sample-and-Separate",
+  "dosage_forms": "Nanoparticles, liposomes, SLNs — direct release measurement without a membrane barrier.",
+  "conditions": "Dispersion stirred in medium at 37 C; aliquots withdrawn at intervals, then free drug is separated from carrier by centrifugation, ultrafiltration or filtration before assay.",
+  "description": "Aliquots of the stirred dispersion are taken over time and the free (released) drug is physically separated from the nanocarrier (e.g., centrifugal ultrafiltration) before assay. Avoids membrane-barrier artefacts; reported as the most accurate/repeatable for many polymeric nanoparticles, but separation must be fast and clean.",
+  "refs": ["Weng, Tong & Chow (2020) Pharmaceutics 12(8):732", "Yurtsever, Jiang & Mudalige (2023) J Pharm Sci 113(3):791-797"],
+  "figure_credit": "",
+  "svg": _S + '<path d="M40 70 Q32 70 32 82 L32 150 Q32 172 60 172 L108 172 Q136 172 136 150 L136 82 Q136 70 128 70" '+_VES+'/>'
+        '<path d="M34 100 L34 150 Q34 170 60 170 L108 170 Q134 170 134 150 L134 100 Z" fill="rgba(255,204,0,0.16)"/>'
+        '<circle cx="70" cy="120" r="3" '+_AMB+'/><circle cx="95" cy="138" r="3" '+_AMB+'/><circle cx="84" cy="150" r="3" '+_AMB+'/>'
+        '<ellipse cx="84" cy="162" rx="9" ry="4" fill="#cfd8ea"/>'
+        '<line x1="142" y1="115" x2="186" y2="115" stroke="#5dd0ff" stroke-width="2"/><path d="M186 115 l-9 -5 v10 z" fill="#5dd0ff"/>'
+        '<path d="M210 80 L250 80 L234 150 Q230 158 222 150 Z" '+_VES+'/>'
+        '<path d="M214 120 L246 120 L234 148 Q230 156 224 148 Z" '+_LIQ+'/>'
+        '<ellipse cx="230" cy="146" rx="7" ry="3" '+_AMB+'/>'
+        '<text x="84" y="62" text-anchor="middle" '+_LBL+'>dispersion (stirred)</text>'
+        '<text x="164" y="108" text-anchor="middle" '+_LBL+'>aliquot</text>'
+        '<text x="230" y="72" text-anchor="middle" '+_LBL+'>centrifuge /</text>'
+        '<text x="230" y="172" text-anchor="middle" '+_LBL+'>free drug assayed</text>'
+        '</svg>',
+ },
+ "continuous_flow": {
+  "name": "Continuous Flow / Flow-Through (non-USP)",
+  "dosage_forms": "Low-solubility drugs, particulate/colloidal systems and implants needing continuous fresh medium and easy sink conditions.",
+  "conditions": "Medium pumped continuously from a reservoir through a cell holding the sample (often with an inline filter/membrane), then to a detector or collector; defined flow rate at 37 C.",
+  "description": "A generalised flow-through arrangement: a pump circulates fresh medium past the dosage form within a cell (an inline filter/membrane retains particulates), and the effluent is measured online or collected. Maintains sink conditions and gives high time-resolution release profiles.",
+  "refs": ["USP General Chapter <711> Dissolution (Apparatus 4)", "Costa & Sousa Lobo (2001) Eur J Pharm Sci 13(2):123-133"],
+  "figure_credit": "",
+  "svg": _S + '<rect x="30" y="120" width="48" height="60" rx="4" '+_VES+'/><rect x="32" y="140" width="44" height="38" '+_LIQ+'/>'
+        '<text x="54" y="195" text-anchor="middle" '+_LBL+'>reservoir</text>'
+        '<rect x="96" y="138" width="34" height="24" rx="3" '+_VES+'/><text x="113" y="175" text-anchor="middle" '+_LBL+'>pump</text>'
+        '<rect x="150" y="95" width="40" height="70" rx="5" '+_VES+'/><rect x="153" y="120" width="34" height="42" '+_LIQ+'/>'
+        '<ellipse cx="170" cy="135" rx="9" ry="6" '+_AMB+'/><line x1="150" y1="150" x2="190" y2="150" stroke="#cfd8ee" stroke-width="1" stroke-dasharray="2 2"/>'
+        '<text x="170" y="185" text-anchor="middle" '+_LBL+'>cell + filter</text>'
+        '<rect x="210" y="120" width="48" height="34" rx="4" '+_VES+'/><text x="234" y="170" text-anchor="middle" '+_LBL+'>detector</text>'
+        '<line x1="78" y1="150" x2="96" y2="150" stroke="#5dd0ff" stroke-width="2"/><path d="M96 150 l-9 -5 v10 z" fill="#5dd0ff"/>'
+        '<line x1="130" y1="150" x2="150" y2="135" stroke="#5dd0ff" stroke-width="2"/><path d="M150 135 l-10 -1 5 9 z" fill="#5dd0ff"/>'
+        '<line x1="190" y1="135" x2="210" y2="137" stroke="#5dd0ff" stroke-width="2"/><path d="M210 137 l-9 -5 v10 z" fill="#5dd0ff"/>'
+        '</svg>',
+ },
 }
