@@ -25,7 +25,8 @@ from dissolva.state import (init_session_state, TIER_RANK, current_tier, require
 from dissolva.content import show_literature, show_all_references, analyze_profile_shape
 from dissolva.pages import (method_settings, analytical_settings, all_references,
     data_input, kinetic_model_fitting, statistical_analysis, f1_f2_similarity,
-    bootstrap_f2, ivivc, excel_report, api_information, academy, admin)
+    bootstrap_f2, ivivc, excel_report, api_information, academy, admin,
+    template_builder)
 from dissolva import auth, engine_client, extras
 
 
@@ -136,6 +137,7 @@ with st.sidebar:
             ("Method Settings",       "Method Settings",       ":material/settings:"),
             ("Analytical Settings",   "Analytical Settings",   ":material/science:"),
             ("Data Input",            "Data Input",            ":material/table_chart:"),
+            ("Template Builder",      "Template Builder",      ":material/grid_on:"),
         ]),
         ("Predictive Analysis", [
             ("Kinetic Model Fitting", "Kinetic Model Fitting", ":material/show_chart:"),
@@ -465,6 +467,8 @@ elif nav == "Analytical Settings":
     analytical_settings.render()
 if nav == "Data Input":
     data_input.render()
+elif nav == "Template Builder":
+    template_builder.render()
 elif nav == "Kinetic Model Fitting":
     kinetic_model_fitting.render()
 elif nav == "Statistical Analysis":
