@@ -110,30 +110,95 @@ def render():
 
     # ── TAB 3: Dissolution Apparatus & Medium ────────────────────────────────
     with tab_app:
-        c1, c2 = st.columns(2)
-        with c1:
+        # ── Study system + release/diffusion method (literature-based) ─────
+        sm1, sm2 = st.columns(2)
+        with sm1:
+            system_opts = [
+                "Solid oral (tablet/capsule)", "Powder / granule / pellet",
+                "Suspension", "Modified / extended release",
+                "Transdermal / patch", "Topical semisolid (cream/gel/ointment)",
+                "Nanoparticle / liposome / micelle", "Implant / depot", "Other"
+            ]
+            cur_sys = cfg.get("system", system_opts[0])
+            if cur_sys not in system_opts:
+                cur_sys = "Other"
+            cfg["system"] = st.selectbox(
+                "Study System / Dosage Form", system_opts,
+                index=system_opts.index(cur_sys),
+                help="The kind of system studied. Guides which release/diffusion methods are typical.")
+        with sm2:
             apparatus_opts = [
                 "USP I (Basket)", "USP II (Paddle)",
                 "USP III (Reciprocating Cylinder)",
-                "USP IV (Flow-Through Cell)", "Other"
+                "USP IV (Flow-Through Cell)",
+                "USP V (Paddle over Disk)", "USP VI (Cylinder)",
+                "USP VII (Reciprocating Holder)",
+                "Franz Diffusion Cell (IVRT/IVPT)",
+                "Dialysis Membrane (bag/sac)", "Reverse Dialysis",
+                "Sample-and-Separate",
+                "Continuous Flow / Flow-Through (non-USP)", "Other"
             ]
             cur_app = cfg.get("apparatus", "USP II (Paddle)")
             if cur_app not in apparatus_opts:
-                cur_app = "USP II (Paddle)"
-            cfg["apparatus"] = st.selectbox("Dissolution Apparatus",
-                apparatus_opts, index=apparatus_opts.index(cur_app))
-        with c2:
-            medium_opts = [
-                "0.1N HCl (pH 1.2)", "Acetate Buffer (pH 4.5)",
-                "Phosphate Buffer (pH 6.8)", "Phosphate Buffer (pH 7.4)",
-                "Purified Water", "SGF (Simulated Gastric Fluid)",
-                "SIF (Simulated Intestinal Fluid)", "FaSSIF", "FeSSIF", "Other"
-            ]
-            cur_med = cfg.get("medium", "0.1N HCl (pH 1.2)")
-            if cur_med not in medium_opts:
-                cur_med = "Other"
-            cfg["medium"] = st.selectbox("Dissolution Medium",
-                medium_opts, index=medium_opts.index(cur_med))
+                cur_app = "Other"
+            cfg["apparatus"] = st.selectbox(
+                "Release / Diffusion Method", apparatus_opts,
+                index=apparatus_opts.index(cur_app),
+                help="USP apparatus or membrane/diffusion method. Pick 'Other' to type your own.")
+
+        if cfg["apparatus"] == "Other":
+            cfg["apparatus_custom"] = st.text_input(
+                "Specify method", value=cfg.get("apparatus_custom", ""),
+                placeholder="e.g. adapted USP-IV, custom diffusion cell, in situ method...")
+
+        # ── Method-specific parameters (shown only when relevant) ──
+        _app = cfg["apparatus"]
+        if "Franz" in _app:
+            st.markdown("**Franz Diffusion Cell Parameters**")
+            fz1, fz2, fz3 = st.columns(3)
+            with fz1:
+                cfg["franz_area_cm2"] = st.number_input(
+                    "Diffusion Area (cm\u00b2)", value=float(cfg.get("franz_area_cm2", 1.0)),
+                    min_value=0.0, step=0.1)
+            with fz2:
+                cfg["franz_receptor_ml"] = st.number_input(
+                    "Receptor Volume (mL)", value=float(cfg.get("franz_receptor_ml", 12.0)),
+                    min_value=0.0, step=0.5)
+            with fz3:
+                cfg["membrane"] = st.text_input(
+                    "Membrane", value=cfg.get("membrane", ""),
+                    placeholder="e.g. synthetic / skin / epidermis")
+            st.caption("Permeation data are usually cumulative amount per area (\u00b5g/cm\u00b2); "
+                       "steady-state flux (Jss), permeability (Kp) and lag-time can be derived. "
+                       "Amount-based input units are coming to Data Input.")
+        elif "Dialysis" in _app:
+            st.markdown("**Dialysis Parameters**")
+            dz1, dz2 = st.columns(2)
+            with dz1:
+                cfg["mwco_kda"] = st.number_input(
+                    "Membrane MWCO (kDa)", value=float(cfg.get("mwco_kda", 12.0)),
+                    min_value=0.0, step=0.5)
+            with dz2:
+                cfg["membrane"] = st.text_input(
+                    "Membrane / bag", value=cfg.get("membrane", ""),
+                    placeholder="e.g. cellulose, Float-A-Lyzer")
+        elif ("Flow-Through" in _app) or ("Continuous Flow" in _app):
+            cfg["flow_rate_ml_min"] = st.number_input(
+                "Flow Rate (mL/min)", value=float(cfg.get("flow_rate_ml_min", 8.0)),
+                min_value=0.0, step=0.5)
+
+        st.markdown("---")
+        medium_opts = [
+            "0.1N HCl (pH 1.2)", "Acetate Buffer (pH 4.5)",
+            "Phosphate Buffer (pH 6.8)", "Phosphate Buffer (pH 7.4)",
+            "Purified Water", "SGF (Simulated Gastric Fluid)",
+            "SIF (Simulated Intestinal Fluid)", "FaSSIF", "FeSSIF", "Other"
+        ]
+        cur_med = cfg.get("medium", "0.1N HCl (pH 1.2)")
+        if cur_med not in medium_opts:
+            cur_med = "Other"
+        cfg["medium"] = st.selectbox("Dissolution / Receptor Medium",
+            medium_opts, index=medium_opts.index(cur_med))
 
         if cfg["medium"] == "Other":
             cfg["medium_custom"] = st.text_input(
