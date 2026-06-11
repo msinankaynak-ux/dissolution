@@ -28,6 +28,7 @@ from dissolva.pages import (method_settings, analytical_settings, all_references
     bootstrap_f2, ivivc, excel_report, api_information, academy, admin,
     template_builder)
 from dissolva import auth, engine_client, extras
+from dissolva import tiers as _tiers
 
 
 def _admin_emails():
@@ -347,23 +348,52 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    # ── Unlock Pro CTA card (placeholder until WS-C/Stripe) ──────────────────
+    # ── Plans (config-driven; free during beta) ──────────────────────────────
+    @st.dialog("DissolvA — Plans")
+    def _plans_dialog():
+        st.markdown(
+            "<div style='background:rgba(255,204,0,0.10);border:1px solid rgba(255,204,0,0.3);"
+            "border-radius:8px;padding:10px 14px;margin-bottom:14px;color:#FFCC00;font-size:0.86rem;'>"
+            "🎁 <b>Free during beta</b> — every feature below is unlocked for everyone right now. "
+            "Pricing activates at launch; founding members lock in early pricing.</div>",
+            unsafe_allow_html=True)
+        _cols = st.columns(3)
+        for _col, _p in zip(_cols, _tiers.plans()):
+            _feats = ""
+            for _f in _p["features"]:
+                _ic = "✅" if _f["status"] == "live" else "○"
+                _sb = "" if _f["status"] == "live" else (
+                    " <span style='font-size:0.58rem;background:rgba(255,255,255,0.1);"
+                    "color:#9fb0d0;padding:1px 5px;border-radius:6px;'>soon</span>")
+                _feats += (f"<div style='font-size:0.73rem;color:#cfd8ea;margin:4px 0;'>"
+                           f"{_ic} {_f['label']}{_sb}</div>")
+            if _p["cta_type"] == "contact":
+                _cta = (f"<a href='mailto:dissolva.app@gmail.com?subject=DissolvA%20Enterprise' "
+                        f"style='display:block;text-align:center;font-size:0.74rem;font-weight:700;"
+                        f"color:#0B132B;background:{_p['color']};border-radius:7px;padding:6px 0;"
+                        f"text-decoration:none;'>{_p['cta']}</a>")
+            else:
+                _cta = (f"<div style='text-align:center;font-size:0.68rem;color:#9fb0d0;'>"
+                        f"{_p['cta']} · free in beta</div>")
+            _col.markdown(
+                f"<div style='border:1px solid {_p['color']}55;border-radius:10px;padding:14px;'>"
+                f"<div style='font-weight:700;color:{_p['color']};font-size:1.05rem;'>{_p['label']}</div>"
+                f"<div style='font-size:1.3rem;font-weight:700;color:#fff;'>{_p['price']}</div>"
+                f"<div style='font-size:0.65rem;color:#9fb0d0;margin-bottom:6px;'>{_p['price_note']}</div>"
+                f"<div style='font-size:0.7rem;color:#7e8db0;margin-bottom:10px;min-height:30px;'>{_p['audience']}</div>"
+                f"{_feats}<div style='margin-top:10px;'>{_cta}</div></div>",
+                unsafe_allow_html=True)
+
     st.markdown(
-        '<style>'
-        'section[data-testid="stSidebar"] .upro-dark{color:#1C2541 !important;}'
-        'section[data-testid="stSidebar"] .upro-mut{color:#5b4500 !important;}'
-        'section[data-testid="stSidebar"] .upro-gold{color:#FFCC00 !important;}'
-        '</style>'
-        '<div style="margin-top:14px;border-radius:12px;padding:13px 14px;'
+        '<div style="margin-top:14px;border-radius:12px;padding:13px 14px 8px;'
         'background:linear-gradient(135deg,#FFD43B,#E0A100);">'
-        '<div class="upro-dark" style="font-size:0.85rem;font-weight:700;">★ Unlock Pro</div>'
-        '<div class="upro-mut" style="font-size:0.7rem;margin:5px 0 10px;line-height:1.4;">'
-        'IVIVC, batch &amp; AI insights, advanced reports.</div>'
-        '<a href="#pro" class="upro-gold" style="display:block;text-align:center;font-size:0.78rem;'
-        'font-weight:700;background:#0B132B;border-radius:8px;padding:8px 0;text-decoration:none;">Go Pro</a>'
-        '</div>',
+        '<div style="color:#1C2541;font-size:0.85rem;font-weight:700;">★ Plans</div>'
+        '<div style="color:#5b4500;font-size:0.7rem;margin:5px 0 4px;line-height:1.4;">'
+        'Free during beta · paid at launch. Pro &amp; Enterprise features below.</div></div>',
         unsafe_allow_html=True
     )
+    if st.button("View all plans", key="view_plans", use_container_width=True):
+        _plans_dialog()
 
 
 # --- Constants ---

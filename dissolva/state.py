@@ -1,6 +1,7 @@
 """DissolvA session state and membership (tier) helpers.
 Extracted from app.py (Phase 3a modularization)."""
 import streamlit as st
+from dissolva import tiers as _tiers
 
 _SS_DEFAULTS = {
     "profiles":           {},
@@ -24,7 +25,7 @@ _SS_DEFAULTS = {
     },
     # ── Membership / entitlement (filled with real auth + Stripe in Phase 2) ──
     "user_email": None,
-    "tier":       "core",   # "core" | "research" | "pro"
+    "tier":       "free",   # "free" | "pro" | "enterprise" (legacy core/research/pro auto-mapped)
 }
 
 def init_session_state():
@@ -35,23 +36,29 @@ def init_session_state():
 
 
 # ── Membership tier helpers (Phase 1 skeleton; enforcement activates in Phase 2) ──
-TIER_RANK = {"core": 0, "research": 1, "pro": 2}
+TIER_RANK = _tiers.TIER_RANK  # {"free":0,"pro":1,"enterprise":2}
 
 def current_tier() -> str:
-    """Current user's membership tier. Defaults to 'core' in Phase 1."""
-    return st.session_state.get("tier", "core")
+    """Current user's canonical membership tier (free|pro|enterprise).
+    Legacy values (core/research/pro) are auto-normalized."""
+    return _tiers.normalize_tier(st.session_state.get("tier", "free"))
 
 def require_tier(min_tier: str, feature: str = "This feature") -> bool:
-    """True if current_tier >= min_tier; otherwise renders an inline upgrade CTA and returns False."""
-    if TIER_RANK.get(current_tier(), 0) >= TIER_RANK.get(min_tier, 99):
+    """True if the feature is available to the user. During the beta everything
+    is unlocked (BETA); after launch, gates on tier rank."""
+    if _tiers.BETA:
         return True
-    _upgrade_cta(feature, min_tier)
+    mt = _tiers.normalize_tier(min_tier)
+    if TIER_RANK.get(current_tier(), 0) >= TIER_RANK.get(mt, 99):
+        return True
+    _upgrade_cta(feature, mt)
     return False
 
 def _upgrade_cta(feature: str, min_tier: str):
-    """Upgrade CTA for a locked feature. Stripe Payment Link + Portal wired in Phase 2."""
-    label = {"research": "Research ($9/mo)", "pro": "Pro ($39/mo)"}.get(min_tier, min_tier.title())
-    st.warning(f"🔒 **{feature}** requires the **{label}** plan.")
+    """Upgrade CTA for a locked feature (post-beta)."""
+    t = _tiers.normalize_tier(min_tier)
+    label = _tiers.TIERS.get(t, {}).get("label", t.title())
+    st.warning(f"🔒 **{feature}** is a **{label}** feature.")
 
 def _safe_profile_names():
     """Return current profile names."""
