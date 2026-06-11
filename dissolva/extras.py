@@ -80,7 +80,7 @@ def _citation_meta():
         "year": "2026",
         "version": "3.0",
         "url": "https://dissanalyze.streamlit.app",
-        "doi": "",  # set after a Zenodo deposit, e.g. 10.5281/zenodo.1234567
+        "doi": "10.5281/zenodo.20650463",  # Zenodo concept DOI (always resolves to latest version)
     }
     try:
         cfg = st.secrets.get("citation") or {}

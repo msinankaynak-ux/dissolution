@@ -15,6 +15,7 @@ date-released: "2026-06-12"
 url: "https://www.dissolva.app"
 repository-code: "https://github.com/msinankaynak-ux/dissolution"
 license: AGPL-3.0-or-later
+doi: "10.5281/zenodo.20650463"
 keywords:
   - dissolution
   - drug release kinetics
