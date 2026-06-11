@@ -72,29 +72,16 @@ with st.sidebar:
     section[data-testid="stSidebar"] .dvlogo-white { color:#FFFFFF !important; }
     section[data-testid="stSidebar"] .dvlogo-sub   { color:rgba(255,204,0,0.60) !important; }
     </style>
-    <div style="padding:16px 16px 14px;margin-bottom:8px;">
-      <div style="display:inline-flex;align-items:center;gap:12px;
-                  background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.22);
-                  border-radius:12px;padding:10px 14px;">
-        <div style="position:relative;width:44px;height:44px;background:#003171;border-radius:10px;
-                    display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <div style="position:absolute;top:0;right:0;width:12px;height:3px;
-                      background:#FFCC00;border-radius:0 10px 0 2px;"></div>
-          <div style="position:absolute;top:0;right:0;width:3px;height:12px;
-                      background:#FFCC00;border-radius:0 10px 0 2px;"></div>
-          <span class="dvlogo-gold" style="font-size:24px;font-weight:700;line-height:1;
-                       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">A</span>
-        </div>
-        <div style="display:flex;flex-direction:column;justify-content:center;gap:4px;">
-          <div class="dvlogo-white" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                      font-size:17px;font-weight:400;letter-spacing:-0.3px;line-height:1;">
-            Dissolv<span class="dvlogo-gold" style="font-weight:700;">A</span><sup class="dvlogo-white" style="font-size:8px;font-weight:400;">™</sup>
-          </div>
-          <div class="dvlogo-sub" style="font-size:8.5px;letter-spacing:1.4px;text-transform:uppercase;
-                      font-weight:600;line-height:1;">
-            Predictive Dissolution Suite
-          </div>
-        </div>
+    <div style="padding:18px 16px 12px;display:flex;justify-content:center;">
+      <div style="position:relative;width:48px;height:48px;background:#003171;border-radius:11px;
+                  display:flex;align-items:center;justify-content:center;
+                  box-shadow:0 0 0 1px rgba(255,204,0,0.14);">
+        <div style="position:absolute;top:0;right:0;width:13px;height:3px;
+                    background:#FFCC00;border-radius:0 11px 0 2px;"></div>
+        <div style="position:absolute;top:0;right:0;width:3px;height:13px;
+                    background:#FFCC00;border-radius:0 11px 0 2px;"></div>
+        <span class="dvlogo-gold" style="font-size:27px;font-weight:700;line-height:1;
+                     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">A</span>
       </div>
     </div>
     """, unsafe_allow_html=True)
