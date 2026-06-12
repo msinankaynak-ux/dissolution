@@ -337,12 +337,12 @@ with st.sidebar:
     # Feedback — styled like the New Session / Academy / Data privacy buttons above
     st.markdown(
         '''<a href="https://tally.so/r/44oM55" target="_blank"
-           style="display:block;text-align:center;background:transparent;
-                  border:1px solid rgba(255,191,0,0.35);color:rgba(255,191,0,0.75);
-                  font-size:0.78rem;font-weight:600;letter-spacing:0.5px;border-radius:8px;
+           style="display:block;text-align:center;background:rgba(255,204,0,0.10);
+                  border:1px solid rgba(255,204,0,0.5);color:#FFCC00;
+                  font-size:0.85rem;font-weight:600;border-radius:7px;
                   padding:0.5rem 0.75rem;margin-top:4px;text-decoration:none;"
-           onmouseover="this.style.borderColor='#FFBF00';this.style.color='#FFBF00';this.style.background='rgba(255,191,0,0.06)'"
-           onmouseout="this.style.borderColor='rgba(255,191,0,0.35)';this.style.color='rgba(255,191,0,0.75)';this.style.background='transparent'">
+           onmouseover="this.style.background='#FFCC00';this.style.color='#0B132B'"
+           onmouseout="this.style.background='rgba(255,204,0,0.10)';this.style.color='#FFCC00'">
           ✉ Share Feedback</a>''',
         unsafe_allow_html=True
     )
@@ -383,15 +383,21 @@ with st.sidebar:
                 f"{_feats}<div style='margin-top:10px;'>{_cta}</div></div>",
                 unsafe_allow_html=True)
 
-    st.markdown(
-        '<div style="margin-top:16px;margin-bottom:6px;">'
-        '<span style="display:inline-block;background:rgba(255,204,0,0.12);'
-        'border:1px solid rgba(255,204,0,0.25);color:#FFCC00;font-size:0.62rem;font-weight:600;'
-        'padding:2px 8px;border-radius:7px;">✦ Free during beta</span></div>',
-        unsafe_allow_html=True
-    )
-    if st.button("View plans", key="view_plans", use_container_width=True):
-        _plans_dialog()
+    with st.container(key="planscard"):
+        st.markdown(
+            '<style>'
+            '.st-key-planscard{border:1px solid rgba(255,204,0,0.28) !important;'
+            'background:rgba(255,204,0,0.05) !important;border-radius:12px !important;'
+            'padding:11px 12px 12px !important;margin-top:16px !important;}'
+            '.st-key-planscard .pc-title{color:#FFCC00;font-size:0.74rem;font-weight:600;text-align:center;}'
+            '.st-key-planscard .pc-sub{color:#9fb0d0;font-size:0.64rem;text-align:center;margin:3px 0 9px;}'
+            '</style>'
+            '<div class="pc-title">✦ Free during beta</div>'
+            '<div class="pc-sub">All features unlocked</div>',
+            unsafe_allow_html=True
+        )
+        if st.button("View plans", key="view_plans", use_container_width=True):
+            _plans_dialog()
 
 
 # --- Constants ---
