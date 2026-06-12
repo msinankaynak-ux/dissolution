@@ -113,11 +113,11 @@ def render_sidebar_auth():
         # The popover trigger is styled into a round avatar (photo if available,
         # else initials on a solid disc) scoped via the keyed wrapper container.
         if pic:
-            trig = (f"background-color:#2d6cdf !important;background-image:url('{pic}') !important;"
+            trig = (f"background-color:#003171 !important;background-image:url('{pic}') !important;"
                     f"background-size:cover !important;background-position:center !important;"
                     f"color:transparent !important;")
         else:
-            trig = "background:#2d6cdf !important;color:#fff !important;"
+            trig = "background:#003171 !important;color:#FFCC00 !important;"
         st.markdown(f"""<style>
         .st-key-acct_pop {{ width:auto !important; flex:0 0 auto !important; }}
         .st-key-acct_pop button {{
