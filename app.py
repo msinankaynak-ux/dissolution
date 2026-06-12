@@ -106,6 +106,34 @@ def _account_dialog():
         st.rerun()
 
 
+@st.dialog("Welcome to DissolvA")
+def _welcome_dialog():
+    _u = auth.current_user()
+    _parts = (_u.get("name") or "").split()
+    _fn = _parts[0] if _parts else "there"
+    st.markdown(f"**Welcome, {_fn}!** You're all set.")
+    st.markdown(
+        "<div style='margin:6px 0 2px;'><span style='background:rgba(255,204,0,0.12);"
+        "border:1px solid rgba(255,204,0,0.30);color:#caa400;font-size:0.74rem;font-weight:600;"
+        "padding:2px 10px;border-radius:8px;'>✦ Free plan · free during beta</span></div>"
+        "<div style='font-size:0.82rem;color:#8a98ab;margin:7px 0 0;'>All 62 kinetic models, "
+        "f1/f2 similarity and bootstrap f2 are unlocked for you.</div>",
+        unsafe_allow_html=True)
+    st.divider()
+    st.markdown(
+        "**What best describes your role?** &nbsp;"
+        "<span style='color:#8a98ab;font-size:0.72rem;'>(optional — helps us improve)</span>",
+        unsafe_allow_html=True)
+    _r = st.selectbox("Role", _ROLES, index=None, placeholder="Select your role…",
+                      key="welcome_role_sel", label_visibility="collapsed")
+    if _r:
+        st.session_state["role"] = _r
+    if st.button("Get started", icon=":material/arrow_forward:", type="primary",
+                 use_container_width=True, key="welcome_done"):
+        st.session_state["_welcomed"] = True
+        st.rerun()
+
+
 def _render_account():
     if not auth.is_authenticated():
         return
@@ -625,6 +653,10 @@ if st.session_state.get("demo_mode") and not auth.is_authenticated():
 # ===========================================================================
 # MAIN DISPATCH
 # ===========================================================================
+# First-login welcome — plan disclosure + optional role (once per session)
+if auth.is_authenticated() and not st.session_state.get("_welcomed") and not st.session_state.get("role"):
+    _welcome_dialog()
+
 # DissolvA Academy — free, open to everyone (no tier gate); opened via the sidebar button.
 if st.session_state.get("academy_open"):
     if st.button("← Back to app"):
