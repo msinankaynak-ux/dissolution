@@ -147,6 +147,38 @@ def _render_account():
             _account_dialog()
 
 
+def _render_gate():
+    """Not signed in and not in demo mode: block real work. Offer the sidebar
+    Google sign-in (for own data) or a no-login demo to explore the app."""
+    st.markdown(
+        "<div style='max-width:640px;margin:26px auto 0;text-align:center;'>"
+        "<div style='font-size:1.7rem;font-weight:700;color:#ffffff;line-height:1.25;'>"
+        "Sign in to start your analysis</div>"
+        "<div style='color:#9fb0d0;font-size:0.95rem;margin:13px 0 2px;line-height:1.65;'>"
+        "Use <b style='color:#fff;'>Sign in with Google</b> in the sidebar to work with your "
+        "own dissolution data, save projects and export reports.<br>"
+        "<span style='color:#7e8db0;font-size:0.86rem;'>Free during beta &middot; your dissolution data is never stored.</span>"
+        "</div></div>",
+        unsafe_allow_html=True)
+    _g1, _g2, _g3 = st.columns([1, 1.05, 1])
+    with _g2:
+        st.markdown(
+            "<div style='text-align:center;color:#7e8db0;font-size:0.8rem;margin:16px 0 6px;'>— or —</div>",
+            unsafe_allow_html=True)
+        if st.button("Explore the demo", icon=":material/science:",
+                     use_container_width=True, key="gate_demo"):
+            st.session_state["demo_mode"] = True
+            extras.load_demo_data()
+            st.session_state["_pending_nav"] = "Data Input"
+            st.rerun()
+        st.markdown(
+            "<div style='text-align:center;color:#7e8db0;font-size:0.74rem;margin-top:8px;'>"
+            "Browse the full app with example profiles &mdash; no sign-in needed.</div>",
+            unsafe_allow_html=True)
+    st.stop()
+
+
+
 extras.init_sentry()  # crash reporting (no-op without a DSN; never sends PII)
 
 # Feedback button at the bottom of the sidebar
@@ -533,6 +565,7 @@ with _hr:
             _new_session_dialog()
         if st.button("Load demo", icon=":material/science:", key="hdr_demo",
                      help="Load example Reference + Test profiles."):
+            st.session_state["demo_mode"] = True
             extras.load_demo_data()
             st.session_state["_pending_nav"] = "Data Input"
             st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
@@ -574,6 +607,19 @@ if not (st.session_state.get("academy_open") or st.session_state.get("admin_open
     st.markdown(
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;'
         'padding:2px 0 12px 0;">' + _sep.join(_chips) + '</div>',
+        unsafe_allow_html=True)
+
+# ── Access gate: real work needs sign-in; the demo is open to everyone ──────
+if auth.is_authenticated() and st.session_state.get("demo_mode"):
+    st.session_state["demo_mode"] = False          # signing in leaves demo mode
+if not (auth.is_authenticated() or st.session_state.get("demo_mode")):
+    _render_gate()                                   # renders gate, then st.stop()
+if st.session_state.get("demo_mode") and not auth.is_authenticated():
+    st.markdown(
+        "<div style='background:rgba(255,204,0,0.08);border:1px solid rgba(255,204,0,0.25);"
+        "border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:0.82rem;color:#FFCC00;'>"
+        "\U0001F9EA <b>Demo mode</b> \u2014 exploring with example data. "
+        "<span style='color:#9fb0d0;'>Sign in (sidebar) to use your own data, save projects and export.</span></div>",
         unsafe_allow_html=True)
 
 # ===========================================================================
