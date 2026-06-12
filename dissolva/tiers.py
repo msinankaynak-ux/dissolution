@@ -58,14 +58,17 @@ FEATURES = {
     "template_builder": {"tier": "free", "status": "live", "label": "Template Builder + example data"},
     "academy":          {"tier": "free", "status": "live", "label": "Academy — models & methods"},
     "excel_basic":      {"tier": "free", "status": "live", "label": "Excel report (research-use watermark)"},
+    "history_free":     {"tier": "free", "status": "live", "label": "Recent projects (current session)"},
     # Pro
     "excel_full":       {"tier": "pro", "status": "live", "label": "Full 8-sheet Excel report, no watermark"},
     "bootstrap_bca":    {"tier": "pro", "status": "live", "label": "Bootstrap f2 — nonparametric / BCa"},
+    "history_pro":      {"tier": "pro", "status": "soon", "label": "Saved project history + cloud sync"},
     "batch":            {"tier": "pro", "status": "soon", "label": "Batch (multi-profile) + comparative PDF"},
     "ai_reco":          {"tier": "pro", "status": "soon", "label": "AI model recommendation + regulatory guidance"},
     "ivivc":            {"tier": "pro", "status": "soon", "label": "IVIVC module"},
     "branding":         {"tier": "pro", "status": "soon", "label": "Custom branding on reports"},
     # Enterprise
+    "data_control":     {"tier": "enterprise", "status": "soon", "label": "Your data stays in your environment (no vendor storage)"},
     "part11":           {"tier": "enterprise", "status": "soon", "label": "21 CFR Part 11 — audit trail + e-signatures"},
     "validation":       {"tier": "enterprise", "status": "soon", "label": "Software validation package (IQ/OQ/PQ)"},
     "team_sso":         {"tier": "enterprise", "status": "soon", "label": "Team seats + admin console + SSO"},
