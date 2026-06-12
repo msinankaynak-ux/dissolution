@@ -37,7 +37,18 @@ def render():
         if "tier" in df.columns:
             from dissolva import tiers as _t
             df["tier"] = df["tier"].map(lambda x: _t.TIERS.get(_t.normalize_tier(x), {}).get("label", str(x)))
-        cols = [c for c in ["email", "name", "country", "tier", "created_at", "last_seen"] if c in df.columns]
+        # Online indicator: green dot if last_seen is within the last 5 minutes (server UTC).
+        import datetime as _dt
+        def _is_online(ls):
+            try:
+                return (_dt.datetime.utcnow() - _dt.datetime.fromisoformat(str(ls))).total_seconds() < 300
+            except Exception:
+                return False
+        if "last_seen" in df.columns:
+            _onl = df["last_seen"].map(_is_online)
+            df.insert(0, "•", _onl.map(lambda o: "🟢" if o else "⚪"))
+            st.caption(f"🟢 {int(_onl.sum())} online now · {len(df)} total (active = last_seen within 5 min)")
+        cols = [c for c in ["•", "email", "name", "country", "tier", "created_at", "last_seen"] if c in df.columns]
         st.dataframe(df[cols], use_container_width=True, hide_index=True)
     else:
         st.info("No members yet.")
