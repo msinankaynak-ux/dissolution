@@ -204,11 +204,12 @@ def _render_gate():
         "<span style='color:#7e8db0;font-size:0.86rem;'>Free during beta &middot; your dissolution data is never stored.</span>"
         "</div></div>",
         unsafe_allow_html=True)
-    _g1, _g2, _g3 = st.columns([1, 1.05, 1])
+    _g1, _g2, _g3 = st.columns([1.6, 1, 1.6])
     with _g2:
         st.markdown(
-            "<style>.st-key-gateauth{display:flex;justify-content:center;margin:4px 0 2px;}"
+            "<style>.st-key-gateauth{margin:4px 0 2px;text-align:center;}"
             ".st-key-gateauth iframe[title=\"streamlit_oauth.authorize_button\"]{width:300px !important;"
+            "display:block !important;margin-left:auto !important;margin-right:auto !important;"
             "border-radius:9px !important;overflow:hidden !important;}</style>",
             unsafe_allow_html=True)
         with st.container(key="gateauth"):
