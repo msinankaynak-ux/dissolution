@@ -387,10 +387,14 @@ with st.sidebar:
         st.markdown(
             '<style>'
             '.st-key-planscard{border:1px solid rgba(255,204,0,0.28) !important;'
-            'background:rgba(255,204,0,0.05) !important;border-radius:12px !important;'
+            'background:transparent !important;border-radius:12px !important;'
             'padding:11px 12px 12px !important;margin-top:16px !important;}'
             '.st-key-planscard .pc-title{color:#FFCC00;font-size:0.74rem;font-weight:600;text-align:center;}'
             '.st-key-planscard .pc-sub{color:#9fb0d0;font-size:0.64rem;text-align:center;margin:3px 0 9px;}'
+            '.st-key-planscard [data-testid="stBaseButton-secondary"]{background:rgba(255,204,0,0.10) !important;border:1px solid rgba(255,204,0,0.5) !important;}'
+            '.st-key-planscard [data-testid="stBaseButton-secondary"] p{color:#FFCC00 !important;}'
+            '.st-key-planscard [data-testid="stBaseButton-secondary"]:hover{background:#FFCC00 !important;border-color:#FFCC00 !important;}'
+            '.st-key-planscard [data-testid="stBaseButton-secondary"]:hover p{color:#0B132B !important;}'
             '</style>'
             '<div class="pc-title">✦ Free during beta</div>'
             '<div class="pc-sub">All features unlocked</div>',
