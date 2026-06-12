@@ -145,6 +145,8 @@ def _detect_country() -> str:
         import pytz
         for code, zones in pytz.country_timezones.items():
             if tz in zones:
+                if code == "TR":
+                    return "Türkiye"
                 return (pytz.country_names.get(code, "") or "")[:80]
     except Exception:
         pass

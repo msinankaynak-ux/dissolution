@@ -34,6 +34,9 @@ def render():
     ms = members.get("members", [])
     if ms:
         df = pd.DataFrame(ms)
+        if "tier" in df.columns:
+            from dissolva import tiers as _t
+            df["tier"] = df["tier"].map(lambda x: _t.TIERS.get(_t.normalize_tier(x), {}).get("label", str(x)))
         cols = [c for c in ["email", "name", "country", "tier", "created_at", "last_seen"] if c in df.columns]
         st.dataframe(df[cols], use_container_width=True, hide_index=True)
     else:
