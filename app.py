@@ -422,7 +422,7 @@ def _new_session_dialog():
     if _dc2.button("Cancel", use_container_width=True):
         st.rerun()
 
-_hl, _hr = st.columns([0.56, 0.44])
+_hl, _hr = st.columns([0.56, 0.44], vertical_alignment="bottom")
 with _hl:
     st.markdown(
         '<h1 style="margin:0;font-size:2.0rem;">'
