@@ -146,13 +146,13 @@ def _admin_key():
         return os.getenv("BACKEND_ADMIN_KEY") or ""
 
 
-def upsert_member(email, name=""):
+def upsert_member(email, name="", country=""):
     """Register/refresh the signed-in user as a free 'core' member. Silent no-op
     if the backend or email is missing."""
     if not (using_backend() and email):
         return
     try:
-        _post("/api/members/upsert", {"email": email, "name": name or ""}, timeout=15)
+        _post("/api/members/upsert", {"email": email, "name": name or "", "country": country or ""}, timeout=15)
     except Exception:
         pass
 

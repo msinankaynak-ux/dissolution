@@ -134,6 +134,23 @@ def render_account():
             _logout()
 
 
+def _detect_country() -> str:
+    """User's country from the BROWSER timezone (reliable, location-based).
+    Avoids server-IP geolocation, which on Streamlit Cloud always returns the
+    US datacenter. Falls back to '' (then the backend may geolocate)."""
+    try:
+        tz = getattr(getattr(st, "context", None), "timezone", None)
+        if not tz:
+            return ""
+        import pytz
+        for code, zones in pytz.country_timezones.items():
+            if tz in zones:
+                return (pytz.country_names.get(code, "") or "")[:80]
+    except Exception:
+        pass
+    return ""
+
+
 def render_sidebar_auth():
     """Sidebar sign-in / user card. Open-mode note when not configured."""
     cid, csec, redirect = _google_cfg()
@@ -168,7 +185,7 @@ def render_sidebar_auth():
         # Register the free "core" member (best-effort; backend no-op if DB disabled).
         try:
             from dissolva import engine_client
-            engine_client.upsert_member(info.get("email"), info.get("name"))
+            engine_client.upsert_member(info.get("email"), info.get("name"), _detect_country())
         except Exception:
             pass
         st.rerun()
