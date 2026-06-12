@@ -405,6 +405,9 @@ with st.sidebar:
         if st.button("View plans", key="view_plans", use_container_width=True):
             _plans_dialog()
 
+    # Signed-in account row — pinned at the sidebar bottom
+    auth.render_account()
+
 
 # --- Constants ---
 
@@ -425,7 +428,7 @@ def _new_session_dialog():
 _hl, _hr = st.columns([0.56, 0.44], vertical_alignment="bottom")
 with _hl:
     st.markdown(
-        '<h1 style="margin:0;font-size:2.0rem;">'
+        '<h1 style="margin:0;font-size:2.0rem;line-height:1.1;">'
         + brand_html('font-size:2.0rem;') +
         ' <span style="font-size:0.92rem;color:#9fb0d0;font-style:italic;font-weight:400;">'
         '- Predictive Dissolution Suite</span></h1>',
@@ -442,7 +445,7 @@ with _hr:
             st.session_state["_pending_nav"] = "Data Input"
             st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
             st.rerun()
-st.markdown('<hr style="border:1px solid #FFCC00;margin:8px 0 4px 0;">', unsafe_allow_html=True)
+st.markdown('<hr style="border:1px solid #FFCC00;margin:1px 0 4px 0;">', unsafe_allow_html=True)
 st.markdown(
     '<div style="color:#7E8DAB;font-size:0.84rem;margin:2px 0 6px;">'
     'FDA/EMA guidance-aligned · 62 Kinetic Models · f1/f2 · Bootstrap f2 · Statistical Profiling'

@@ -93,6 +93,47 @@ def _initials(s: str) -> str:
     return (parts[0][:2].upper() if parts else "U")
 
 
+def render_account():
+    """Sidebar bottom: signed-in account row (avatar + name + email + logout)."""
+    if not is_authenticated():
+        return
+    u = current_user()
+    pic = u.get("picture") or ""
+    name = u.get("name") or "User"
+    email = u.get("email") or ""
+    initials = _initials(name if name != "User" else email)
+    if pic:
+        avstyle = "background-image:url(" + pic + ");background-size:cover;background-position:center;"
+        avtxt = ""
+    else:
+        avstyle = "background:#003171;"
+        avtxt = '<span style="color:#FFCC00;font-size:0.78rem;font-weight:700;">' + initials + '</span>'
+    css = (
+        "<style>"
+        ".st-key-acctrow{position:relative;border-top:1px solid rgba(255,255,255,0.08);margin-top:14px;padding-top:12px;}"
+        ".acctrow-in{display:flex;align-items:center;gap:10px;padding-right:34px;}"
+        ".acctrow-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,204,0,0.45);}"
+        ".acctrow-name{color:#e8edf6 !important;font-size:0.8rem;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
+        ".acctrow-mail{color:#9fb0d0 !important;font-size:0.66rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
+        ".st-key-acct_logout{position:absolute !important;top:10px !important;right:0 !important;width:auto !important;flex:0 0 auto !important;}"
+        ".st-key-acct_logout button{background:transparent !important;border:none !important;min-height:0 !important;padding:6px !important;box-shadow:none !important;}"
+        ".st-key-acct_logout button p{display:none !important;}"
+        ".st-key-acct_logout button *{color:#9fb0d0 !important;}"
+        ".st-key-acct_logout button:hover *{color:#FFCC00 !important;}"
+        "</style>"
+    )
+    html = (
+        css
+        + '<div class="acctrow-in"><div class="acctrow-av" style="' + avstyle + '">' + avtxt + '</div>'
+        + '<div style="min-width:0;"><div class="acctrow-name">' + name + '</div>'
+        + '<div class="acctrow-mail">' + email + '</div></div></div>'
+    )
+    with st.container(key="acctrow"):
+        st.markdown(html, unsafe_allow_html=True)
+        if st.button("Log out", icon=":material/logout:", key="acct_logout", help="Sign out"):
+            _logout()
+
+
 def render_sidebar_auth():
     """Sidebar sign-in / user card. Open-mode note when not configured."""
     cid, csec, redirect = _google_cfg()
@@ -105,38 +146,7 @@ def render_sidebar_auth():
         return
 
     if is_authenticated():
-        u = current_user()
-        pic = u.get("picture") or ""
-        name = u.get("name") or "User"
-        email = u.get("email") or ""
-        initials = _initials(name if name != "User" else email)
-        # The popover trigger is styled into a round avatar (photo if available,
-        # else initials on a solid disc) scoped via the keyed wrapper container.
-        if pic:
-            trig = (f"background-color:#003171 !important;background-image:url('{pic}') !important;"
-                    f"background-size:cover !important;background-position:center !important;"
-                    f"color:transparent !important;")
-        else:
-            trig = "background:#003171 !important;color:#FFCC00 !important;"
-        st.markdown(f"""<style>
-        .st-key-acct_pop {{ width:auto !important; flex:0 0 auto !important; }}
-        .st-key-acct_pop button {{
-            width:38px !important; height:38px !important; min-width:38px !important;
-            min-height:38px !important; border-radius:50% !important; padding:0 !important;
-            overflow:hidden !important; border:2px solid rgba(255,204,0,0.45) !important;
-            font-size:12px !important; font-weight:700 !important; {trig}
-        }}
-        .st-key-acct_pop button:hover {{ border-color:#FFCC00 !important; }}
-        .st-key-acct_pop button p {{ color:inherit !important; margin:0 !important; }}
-        </style>""", unsafe_allow_html=True)
-        with st.container(key="acct_pop"):
-            with st.popover(initials, use_container_width=False):
-                st.markdown(f"**{name}**")
-                if email:
-                    st.caption(email)
-                if st.button("Log out", use_container_width=True, key="_logout_btn"):
-                    _logout()
-        return
+        return  # signed-in: account row rendered at sidebar bottom (render_account)
 
     oauth2 = OAuth2Component(cid, csec, _AUTHORIZE, _TOKEN, _TOKEN, _REVOKE)
     result = oauth2.authorize_button(
