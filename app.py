@@ -102,6 +102,7 @@ def _account_dialog():
         st.session_state["role"] = _r
     st.divider()
     if st.button("Save", icon=":material/check:", use_container_width=True, type="primary", key="acct_save_btn"):
+        _persist_profile()
         st.toast("Preferences saved.", icon="✅")
         st.rerun()
 
@@ -130,8 +131,22 @@ def _welcome_dialog():
         st.session_state["role"] = _r
     if st.button("Get started", icon=":material/arrow_forward:", type="primary",
                  use_container_width=True, key="welcome_done"):
+        _persist_profile()
         st.session_state["_welcomed"] = True
         st.rerun()
+
+
+def _persist_profile():
+    """Best-effort: save the signed-in user's role + theme to the backend."""
+    if not auth.is_authenticated():
+        return
+    _u = auth.current_user()
+    try:
+        engine_client.upsert_member(_u.get("email"), _u.get("name"),
+                                    role=st.session_state.get("role") or "",
+                                    theme=st.session_state.get("theme") or "")
+    except Exception:
+        pass
 
 
 def _render_account():

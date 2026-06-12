@@ -187,7 +187,18 @@ def render_sidebar_auth():
         # Register the free "core" member (best-effort; backend no-op if DB disabled).
         try:
             from dissolva import engine_client
-            engine_client.upsert_member(info.get("email"), info.get("name"), _detect_country())
+            _resp = engine_client.upsert_member(
+                info.get("email"), info.get("name"), _detect_country(),
+                role=st.session_state.get("role") or "", theme=st.session_state.get("theme") or "")
+            try:
+                if isinstance(_resp, dict):
+                    if _resp.get("role") and not st.session_state.get("role"):
+                        st.session_state["role"] = _resp["role"]
+                        st.session_state["_welcomed"] = True
+                    if _resp.get("theme"):
+                        st.session_state["theme"] = _resp["theme"]
+            except Exception:
+                pass
         except Exception:
             pass
         st.rerun()
