@@ -101,8 +101,9 @@ def _account_dialog():
     if _r:
         st.session_state["role"] = _r
     st.divider()
-    if st.button("Log out", icon=":material/logout:", use_container_width=True, key="acct_logout_btn"):
-        auth._logout()
+    if st.button("Save", icon=":material/check:", use_container_width=True, type="primary", key="acct_save_btn"):
+        st.toast("Preferences saved.", icon="✅")
+        st.rerun()
 
 
 def _render_account():
@@ -122,15 +123,16 @@ def _render_account():
     css = (
         "<style>"
         ".st-key-acctrow{position:relative;border-top:1px solid rgba(255,255,255,0.08);margin-top:14px;padding-top:12px;}"
-        ".acctrow-in{display:flex;align-items:center;gap:10px;padding-right:34px;}"
+        ".acctrow-in{display:flex;align-items:center;gap:10px;padding-right:62px;}"
         ".acctrow-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,204,0,0.45);}"
         ".acctrow-name{color:#e8edf6 !important;font-size:0.8rem;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
         ".acctrow-mail{color:#9fb0d0 !important;font-size:0.66rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
-        ".st-key-acct_gear{position:absolute !important;top:10px !important;right:0 !important;width:auto !important;flex:0 0 auto !important;}"
-        ".st-key-acct_gear button{background:transparent !important;border:none !important;min-height:0 !important;padding:6px !important;box-shadow:none !important;}"
-        ".st-key-acct_gear button p{display:none !important;}"
-        ".st-key-acct_gear button *{color:#9fb0d0 !important;}"
-        ".st-key-acct_gear button:hover *{color:#FFCC00 !important;}"
+        ".st-key-acct_gear,.st-key-acct_logout2{position:absolute !important;top:10px !important;width:auto !important;flex:0 0 auto !important;}"
+        ".st-key-acct_gear{right:0 !important;}.st-key-acct_logout2{right:34px !important;}"
+        ".st-key-acct_gear button,.st-key-acct_logout2 button{background:transparent !important;border:none !important;min-height:0 !important;padding:6px !important;box-shadow:none !important;}"
+        ".st-key-acct_gear button p,.st-key-acct_logout2 button p{display:none !important;}"
+        ".st-key-acct_gear button *,.st-key-acct_logout2 button *{color:#9fb0d0 !important;}"
+        ".st-key-acct_gear button:hover *,.st-key-acct_logout2 button:hover *{color:#FFCC00 !important;}"
         "</style>"
     )
     html = (css +
@@ -139,6 +141,8 @@ def _render_account():
         "<div class='acctrow-mail'>" + email + "</div></div></div>")
     with st.container(key="acctrow"):
         st.markdown(html, unsafe_allow_html=True)
+        if st.button("Log out", icon=":material/logout:", key="acct_logout2", help="Log out"):
+            auth._logout()
         if st.button("Account", icon=":material/settings:", key="acct_gear", help="Account & settings"):
             _account_dialog()
 
