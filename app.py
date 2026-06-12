@@ -57,6 +57,92 @@ st.set_page_config(
 inject_theme()
 st.session_state.setdefault("theme", "dark")
 st.markdown(f"<div class='dvtheme-{st.session_state['theme']}'></div>", unsafe_allow_html=True)
+st.session_state.setdefault("role", None)
+
+
+_ROLES = [
+    "Formulation Development", "Analytical Development / R&D",
+    "Quality Control (QC) / QA", "Regulatory Affairs / CMC",
+    "Biopharmaceutics / Bioequivalence", "Process / Manufacturing Sciences",
+    "Academia / Researcher", "Student", "Other", "Prefer not to say",
+]
+_THEME_MAP = {"Dark": "dark", "Hybrid": "hybrid", "Light": "light"}
+
+
+@st.dialog("My account")
+def _account_dialog():
+    u = auth.current_user()
+    name = u.get("name") or "User"
+    email = u.get("email") or ""
+    st.markdown(f"**{name}**")
+    if email:
+        st.caption(email)
+    _plan = current_tier()
+    _plabel = _tiers.TIERS.get(_plan, {}).get("label", _plan.title())
+    st.markdown(
+        "<div style='margin:6px 0 2px;'><span style='background:rgba(255,204,0,0.12);"
+        "border:1px solid rgba(255,204,0,0.30);color:#caa400;font-size:0.72rem;font-weight:600;"
+        "padding:2px 10px;border-radius:8px;'>✦ " + _plabel + " plan · free during beta</span></div>"
+        "<div style='font-size:0.7rem;color:#8a98ab;margin:3px 0 0;'>All 62 models, f1/f2 and bootstrap are unlocked.</div>",
+        unsafe_allow_html=True)
+    st.divider()
+    st.markdown("**Appearance**")
+    _cur = next((k for k, v in _THEME_MAP.items() if v == st.session_state.get("theme", "dark")), "Dark")
+    _sel = st.segmented_control("Theme", list(_THEME_MAP.keys()), default=_cur,
+                                key="acct_theme_seg", label_visibility="collapsed")
+    if _sel and _THEME_MAP[_sel] != st.session_state.get("theme"):
+        st.session_state["theme"] = _THEME_MAP[_sel]
+        st.rerun()
+    st.markdown("**Your role** &nbsp;<span style='color:#8a98ab;font-size:0.72rem;'>(helps us improve — optional)</span>",
+                unsafe_allow_html=True)
+    _ridx = _ROLES.index(st.session_state["role"]) if st.session_state.get("role") in _ROLES else None
+    _r = st.selectbox("Role", _ROLES, index=_ridx, placeholder="Select your role…",
+                      key="acct_role_sel", label_visibility="collapsed")
+    if _r:
+        st.session_state["role"] = _r
+    st.divider()
+    if st.button("Log out", icon=":material/logout:", use_container_width=True, key="acct_logout_btn"):
+        auth._logout()
+
+
+def _render_account():
+    if not auth.is_authenticated():
+        return
+    u = auth.current_user()
+    pic = u.get("picture") or ""
+    name = u.get("name") or "User"
+    email = u.get("email") or ""
+    initials = auth._initials(name if name != "User" else email)
+    if pic:
+        avstyle = "background-image:url(" + pic + ");background-size:cover;background-position:center;"
+        avtxt = ""
+    else:
+        avstyle = "background:#003171;"
+        avtxt = "<span style='color:#FFCC00;font-size:0.78rem;font-weight:700;'>" + initials + "</span>"
+    css = (
+        "<style>"
+        ".st-key-acctrow{position:relative;border-top:1px solid rgba(255,255,255,0.08);margin-top:14px;padding-top:12px;}"
+        ".acctrow-in{display:flex;align-items:center;gap:10px;padding-right:34px;}"
+        ".acctrow-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,204,0,0.45);}"
+        ".acctrow-name{color:#e8edf6 !important;font-size:0.8rem;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
+        ".acctrow-mail{color:#9fb0d0 !important;font-size:0.66rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
+        ".st-key-acct_gear{position:absolute !important;top:10px !important;right:0 !important;width:auto !important;flex:0 0 auto !important;}"
+        ".st-key-acct_gear button{background:transparent !important;border:none !important;min-height:0 !important;padding:6px !important;box-shadow:none !important;}"
+        ".st-key-acct_gear button p{display:none !important;}"
+        ".st-key-acct_gear button *{color:#9fb0d0 !important;}"
+        ".st-key-acct_gear button:hover *{color:#FFCC00 !important;}"
+        "</style>"
+    )
+    html = (css +
+        "<div class='acctrow-in'><div class='acctrow-av' style=\"" + avstyle + "\">" + avtxt + "</div>"
+        "<div style='min-width:0;'><div class='acctrow-name'>" + name + "</div>"
+        "<div class='acctrow-mail'>" + email + "</div></div></div>")
+    with st.container(key="acctrow"):
+        st.markdown(html, unsafe_allow_html=True)
+        if st.button("Account", icon=":material/settings:", key="acct_gear", help="Account & settings"):
+            _account_dialog()
+
+
 extras.init_sentry()  # crash reporting (no-op without a DSN; never sends PII)
 
 # Feedback button at the bottom of the sidebar
@@ -286,14 +372,6 @@ with st.sidebar:
         )
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.15);margin:10px 0 6px 0;">', unsafe_allow_html=True)
-    _TH = {"Dark": "dark", "Hybrid": "hybrid", "Light": "light"}
-    _cur = next((k for k, v in _TH.items() if v == st.session_state.get("theme", "dark")), "Dark")
-    with st.container(key="themesel"):
-        st.markdown("<div style='font-size:0.66rem;color:#7e8db0;letter-spacing:1px;margin:2px 0 3px 2px;'>THEME</div>", unsafe_allow_html=True)
-        _sel = st.segmented_control("Theme", list(_TH.keys()), default=_cur, key="theme_seg", label_visibility="collapsed")
-    if _sel and _TH.get(_sel) and _TH[_sel] != st.session_state.get("theme"):
-        st.session_state["theme"] = _TH[_sel]
-        st.rerun()
 
     st.markdown("""<style>
     div[data-testid="stSidebarContent"] div.stButton > button {
@@ -416,7 +494,7 @@ with st.sidebar:
             _plans_dialog()
 
     # Signed-in account row — pinned at the sidebar bottom
-    auth.render_account()
+    _render_account()
 
 
 # --- Constants ---
