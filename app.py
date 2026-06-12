@@ -219,7 +219,7 @@ with st.sidebar:
         st.markdown("""<style>
         .st-key-navmenu [data-testid="stExpander"]{border:none !important;background:transparent !important;box-shadow:none !important;margin-bottom:0 !important;}
         .st-key-navmenu [data-testid="stExpander"] details{border:none !important;background:transparent !important;}
-        .st-key-navmenu [data-testid="stExpander"] summary{position:relative;padding:9px 28px 4px 18px !important;list-style:none;cursor:pointer;}
+        .st-key-navmenu [data-testid="stExpander"] summary{position:relative;padding:9px 28px 4px 18px !important;list-style:none;cursor:pointer;background:transparent !important;box-shadow:none !important;}
         .st-key-navmenu [data-testid="stExpander"] summary [data-testid="stIconMaterial"]{position:absolute !important;right:8px !important;top:9px !important;}
         .st-key-navmenu [data-testid="stExpander"] summary::-webkit-details-marker{display:none;}
         .st-key-navmenu [data-testid="stExpander"] summary::before{content:'';position:absolute;left:6px;top:11px;width:3px;height:13px;background:#FFCC00;border-radius:2px;}
@@ -227,7 +227,7 @@ with st.sidebar:
         .st-key-navmenu [data-testid="stExpander"] summary span{font-size:11px !important;font-weight:600 !important;letter-spacing:0.5px !important;text-transform:uppercase !important;color:#cbd5e1 !important;margin:0 !important;}
         .st-key-navmenu [data-testid="stExpander"] summary:hover p,
         .st-key-navmenu [data-testid="stExpander"] summary:hover span{color:#FFCC00 !important;}
-        .st-key-navmenu [data-testid="stExpanderDetails"]{padding:0 4px !important;}
+        .st-key-navmenu [data-testid="stExpanderDetails"]{padding:14px 4px 2px !important;}
         </style>""", unsafe_allow_html=True)
         for _cat, _items in _NAV_CATEGORIES:
             with st.expander(_cat, expanded=True):

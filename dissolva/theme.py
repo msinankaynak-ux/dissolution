@@ -153,9 +153,9 @@ section[data-testid="stSidebar"] .stNumberInput button { background: #16203F !im
 
 /* streamlit-oauth "Sign in with Google" button (iframe) — sidebar variant (scaled) */
 [data-testid="stSidebar"] iframe[title="streamlit_oauth.authorize_button"] {
-  border-radius: 12px !important; overflow: hidden !important;
-  transform: scale(0.68) !important; transform-origin: top left !important;
-  width: 147% !important; margin-bottom: -23px !important;
+  border-radius: 11px !important; overflow: hidden !important;
+  width: 297px !important; transform: scale(0.80) !important; transform-origin: top left !important;
+  margin-bottom: -14px !important;
 }
 /* OAuth button in the TOP HEADER (right actions) — rounded, keep one line */
 .st-key-hdrauth iframe[title="streamlit_oauth.authorize_button"] {
