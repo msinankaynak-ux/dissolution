@@ -16,6 +16,7 @@ from scipy.stats import norm as sp_norm
 from scipy.integrate import trapezoid
 from scipy.interpolate import interp1d
 from dissolva.theme import OXFORD, AMBER, PALETTE, style_ax
+from dissolva import auth
 from dissolva.models import (MODEL_DEFS, CATEGORIES, compute_mdt,
     compute_de, r2s, r2adj, aic_fn, msc_fn, _nz)
 from dissolva.state import (current_tier, require_tier, _safe_profile_names,
@@ -38,6 +39,12 @@ def render():
         'Customize your report, add your logo, select sheets, and download a professional Excel file.</p>',
         unsafe_allow_html=True
     )
+    if not auth.is_authenticated():
+        st.info(
+            "\U0001F512 **Reports & exports are a signed-in feature.** You're exploring in demo mode \u2014 "
+            "sign in with **Google** (sidebar) to generate and download your Excel, PDF and figure reports."
+        )
+        st.stop()
     if not st.session_state.profiles:
         st.warning("No profiles loaded. Please go to Data Input first.")
         st.stop()
