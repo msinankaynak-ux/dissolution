@@ -166,16 +166,18 @@ def _render_account():
     css = (
         "<style>"
         ".st-key-acctrow{position:relative;border-top:1px solid rgba(255,255,255,0.08);margin-top:14px;padding-top:12px;}"
-        ".acctrow-in{display:flex;align-items:center;gap:10px;padding-right:62px;}"
+        ".acctrow-in{display:flex;align-items:center;gap:10px;padding-right:86px;}"
         ".acctrow-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,204,0,0.45);}"
         ".acctrow-name{color:#e8edf6 !important;font-size:0.8rem;font-weight:600;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
         ".acctrow-mail{color:#9fb0d0 !important;font-size:0.66rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}"
-        ".st-key-acct_gear,.st-key-acct_logout2{position:absolute !important;top:10px !important;width:auto !important;flex:0 0 auto !important;}"
-        ".st-key-acct_gear{right:0 !important;}.st-key-acct_logout2{right:34px !important;}"
-        ".st-key-acct_gear button,.st-key-acct_logout2 button{background:transparent !important;border:none !important;min-height:0 !important;padding:6px !important;box-shadow:none !important;}"
+        ".st-key-acct_gear,.st-key-acct_logout2{position:absolute !important;top:8px !important;width:30px !important;height:30px !important;min-width:30px !important;flex:0 0 auto !important;}"
+        ".st-key-acct_gear{right:6px !important;}.st-key-acct_logout2{right:48px !important;}"
+        ".st-key-acct_gear button,.st-key-acct_logout2 button{background:transparent !important;border:none !important;min-height:0 !important;width:30px !important;height:30px !important;padding:0 !important;display:flex !important;align-items:center !important;justify-content:center !important;box-shadow:none !important;}"
         ".st-key-acct_gear button p,.st-key-acct_logout2 button p{display:none !important;}"
         ".st-key-acct_gear button *,.st-key-acct_logout2 button *{color:#9fb0d0 !important;}"
         ".st-key-acct_gear button:hover *,.st-key-acct_logout2 button:hover *{color:#FFCC00 !important;}"
+        "[data-testid=\"stSidebar\"] .st-key-acct_gear button:hover,[data-testid=\"stSidebar\"] .st-key-acct_logout2 button:hover{background:transparent !important;border:none !important;}"
+        ".st-key-acct_gear button:focus,.st-key-acct_logout2 button:focus,.st-key-acct_gear button:active,.st-key-acct_logout2 button:active{background:transparent !important;box-shadow:none !important;outline:none !important;}"
         "</style>"
     )
     html = (css +
