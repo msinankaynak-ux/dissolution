@@ -45,9 +45,10 @@ def _is_admin():
     em = (auth.current_user() or {}).get("email") or ""
     return em.strip().lower() in _admin_emails()
 
+_FAVICON_URI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzAwMzE3MSIvPgogIDxyZWN0IHg9IjIwIiB5PSIwIiB3aWR0aD0iMTIiIGhlaWdodD0iNCIgcng9IjIiIGZpbGw9IiNGRkJGMDAiLz4KICA8cmVjdCB4PSIyOCIgeT0iMCIgd2lkdGg9IjQiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZCRjAwIi8+CiAgPHRleHQgeD0iMTYiIHk9IjIzIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiIGZvbnQtd2VpZ2h0PSI1MDAiIGZpbGw9IiNGRkJGMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkE8L3RleHQ+Cjwvc3ZnPg=="
 st.set_page_config(
     page_title="DissolvA - Predictive Dissolution Suite",
-    page_icon="D",
+    page_icon=_FAVICON_URI,
     layout="wide",
     initial_sidebar_state="expanded"
 )
