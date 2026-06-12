@@ -8,6 +8,7 @@ from dissolva.models import MODEL_DEFS, CATEGORIES
 from dissolva.academy_content import ACADEMY
 from dissolva.methods_content import METHODS, METHOD_ORDER
 from dissolva import explorer
+from dissolva import i18n
 import os
 
 
@@ -60,8 +61,8 @@ def _model_page(name):
 
 
 def render():
-    st.header("🎓 DissolvA Academy")
-    _t_models, _t_methods = st.tabs(["📐 Kinetic Models", "🧫 Dissolution Methods"])
+    st.header(i18n.t("🎓 DissolvA Academy"))
+    _t_models, _t_methods = st.tabs([i18n.t("📐 Kinetic Models"), i18n.t("🧫 Dissolution Methods")])
     with _t_models:
         _render_kinetic()
     with _t_methods:
@@ -79,10 +80,10 @@ def _render_kinetic():
     cats = [c for c in CATEGORIES if grouped.get(c)]
     col1, col2 = st.columns(2)
     with col1:
-        cat = st.selectbox("Category", cats, key="acad_cat",
+        cat = st.selectbox(i18n.t("Category"), cats, key="acad_cat",
                            format_func=lambda c: f"{c}  ({len(grouped.get(c, []))})")
     with col2:
-        model = st.selectbox("Model", grouped.get(cat, []), key="acad_model")
+        model = st.selectbox(i18n.t("Model"), grouped.get(cat, []), key="acad_model")
 
     st.markdown("---")
     if model:
@@ -109,7 +110,7 @@ def _render_methods():
         "Select a method to open its page."
     )
     keys = [k for k in METHOD_ORDER if k in METHODS]
-    sel = st.selectbox("Method", keys, key="acad_method",
+    sel = st.selectbox(i18n.t("Method"), keys, key="acad_method",
                        format_func=lambda k: METHODS[k]["name"])
     st.markdown("---")
     if sel:

@@ -18,6 +18,7 @@ except ImportError:
     _PLOTLY_OK = False
 
 from dissolva.theme import OXFORD, inject_theme, style_ax, brand_html, VERSION
+from dissolva import i18n
 from dissolva.models import (MODEL_DEFS, CATEGORIES,
     compute_mdt, compute_de, r2s, r2adj, aic_fn, msc_fn, _nz)
 from dissolva.state import (init_session_state, TIER_RANK, current_tier, require_tier,
@@ -56,6 +57,7 @@ st.set_page_config(
 
 inject_theme()
 st.session_state.setdefault("theme", "dark")
+st.session_state.setdefault("lang", "en")
 st.markdown(f"<div class='dvtheme-{st.session_state['theme']}'></div>", unsafe_allow_html=True)
 st.session_state.setdefault("role", None)
 
@@ -82,28 +84,35 @@ def _account_dialog():
     st.markdown(
         "<div style='margin:6px 0 2px;'><span style='background:rgba(255,204,0,0.12);"
         "border:1px solid rgba(255,204,0,0.30);color:#caa400;font-size:0.72rem;font-weight:600;"
-        "padding:2px 10px;border-radius:8px;'>✦ " + _plabel + " plan · free during beta</span></div>"
+        "padding:2px 10px;border-radius:8px;'>✦ " + _plabel + i18n.t(" plan · free during beta") + "</span></div>"
         "<div style='font-size:0.7rem;color:#8a98ab;margin:3px 0 0;'>All 62 models, f1/f2 and bootstrap are unlocked.</div>",
         unsafe_allow_html=True)
     st.divider()
-    st.markdown("**Appearance**")
+    st.markdown("**" + i18n.t("Appearance") + "**")
     _cur = next((k for k, v in _THEME_MAP.items() if v == st.session_state.get("theme", "dark")), "Dark")
     _sel = st.segmented_control("Theme", list(_THEME_MAP.keys()), default=_cur,
                                 key="acct_theme_seg", label_visibility="collapsed")
     if _sel and _THEME_MAP[_sel] != st.session_state.get("theme"):
         st.session_state["theme"] = _THEME_MAP[_sel]
         st.rerun()
-    st.markdown("**Your role** &nbsp;<span style='color:#8a98ab;font-size:0.72rem;'>(helps us improve — optional)</span>",
+    st.markdown("**" + i18n.t("Language") + "**")
+    _lcur = next((k for k, v in i18n.LANGS.items() if v == st.session_state.get("lang", "en")), "English")
+    _lsel = st.segmented_control("Language", list(i18n.LANGS.keys()), default=_lcur,
+                                 key="acct_lang_seg", label_visibility="collapsed")
+    if _lsel and i18n.LANGS[_lsel] != st.session_state.get("lang"):
+        st.session_state["lang"] = i18n.LANGS[_lsel]
+        st.rerun()
+    st.markdown("**" + i18n.t("Your role") + "** &nbsp;<span style='color:#8a98ab;font-size:0.72rem;'>" + i18n.t("(helps us improve — optional)") + "</span>",
                 unsafe_allow_html=True)
     _ridx = _ROLES.index(st.session_state["role"]) if st.session_state.get("role") in _ROLES else None
-    _r = st.selectbox("Role", _ROLES, index=_ridx, placeholder="Select your role…",
+    _r = st.selectbox("Role", _ROLES, index=_ridx, placeholder=i18n.t("Select your role…"), format_func=lambda r: i18n.t(r),
                       key="acct_role_sel", label_visibility="collapsed")
     if _r:
         st.session_state["role"] = _r
     st.divider()
-    if st.button("Save", icon=":material/check:", use_container_width=True, type="primary", key="acct_save_btn"):
+    if st.button(i18n.t("Save"), icon=":material/check:", use_container_width=True, type="primary", key="acct_save_btn"):
         _persist_profile()
-        st.toast("Preferences saved.", icon="✅")
+        st.toast(i18n.t("Preferences saved."), icon="✅")
         st.rerun()
 
 
@@ -112,7 +121,7 @@ def _welcome_dialog():
     _u = auth.current_user()
     _parts = (_u.get("name") or "").split()
     _fn = _parts[0] if _parts else "there"
-    st.markdown(f"**Welcome, {_fn}!** You're all set.")
+    st.markdown(i18n.tt("**Welcome, {name}!** You're all set.", name=_fn))
     st.markdown(
         "<div style='margin:6px 0 2px;'><span style='background:rgba(255,204,0,0.12);"
         "border:1px solid rgba(255,204,0,0.30);color:#caa400;font-size:0.74rem;font-weight:600;"
@@ -125,11 +134,11 @@ def _welcome_dialog():
         "**What best describes your role?** &nbsp;"
         "<span style='color:#8a98ab;font-size:0.72rem;'>(optional — helps us improve)</span>",
         unsafe_allow_html=True)
-    _r = st.selectbox("Role", _ROLES, index=None, placeholder="Select your role…",
+    _r = st.selectbox("Role", _ROLES, index=None, placeholder=i18n.t("Select your role…"), format_func=lambda r: i18n.t(r),
                       key="welcome_role_sel", label_visibility="collapsed")
     if _r:
         st.session_state["role"] = _r
-    if st.button("Get started", icon=":material/arrow_forward:", type="primary",
+    if st.button(i18n.t("Get started"), icon=":material/arrow_forward:", type="primary",
                  use_container_width=True, key="welcome_done"):
         _persist_profile()
         st.session_state["_welcomed"] = True
@@ -186,9 +195,9 @@ def _render_account():
         "<div class='acctrow-mail'>" + email + "</div></div></div>")
     with st.container(key="acctrow"):
         st.markdown(html, unsafe_allow_html=True)
-        if st.button("Log out", icon=":material/logout:", key="acct_logout2", help="Log out"):
+        if st.button(i18n.t("Log out"), icon=":material/logout:", key="acct_logout2", help=i18n.t("Log out")):
             auth._logout()
-        if st.button("Account", icon=":material/settings:", key="acct_gear", help="Account & settings"):
+        if st.button(i18n.t("Account"), icon=":material/settings:", key="acct_gear", help=i18n.t("Account & settings")):
             _account_dialog()
 
 
@@ -217,7 +226,7 @@ def _render_gate():
         st.markdown(
             "<div style='text-align:center;color:#7e8db0;font-size:0.8rem;margin:14px 0 6px;'>— or —</div>",
             unsafe_allow_html=True)
-        if st.button("Explore the demo", icon=":material/science:",
+        if st.button(i18n.t("Explore the demo"), icon=":material/science:",
                      use_container_width=True, key="gate_demo"):
             st.session_state["demo_mode"] = True
             extras.load_demo_data()
@@ -406,9 +415,9 @@ with st.sidebar:
         .st-key-navmenu [data-testid="stExpanderDetails"]{padding:14px 4px 2px !important;}
         </style>""", unsafe_allow_html=True)
         for _cat, _items in _NAV_CATEGORIES:
-            with st.expander(_cat, expanded=True):
+            with st.expander(i18n.t(_cat), expanded=True):
                 for _val, _label, _icon in _items:
-                    if st.button(_label, icon=_icon, key=f"nav_{_val}", use_container_width=True,
+                    if st.button(i18n.t(_label), icon=_icon, key=f"nav_{_val}", use_container_width=True,
                                  type=("primary" if nav == _val else "secondary")):
                         st.session_state["main_nav_radio"] = _val
                         st.rerun()
@@ -418,8 +427,8 @@ with st.sidebar:
                         "color:#7e8db0;font-size:0.66rem;font-weight:600;letter-spacing:0.3px;"
                         "padding:2px 9px;border-radius:8px;'>IVIVC v3.5 · coming soon</span></div>",
                         unsafe_allow_html=True)
-        with st.expander("Learn", expanded=True):
-            if st.button("DissolvA Academy", icon=":material/school:", key="nav_academy",
+        with st.expander(i18n.t("Learn"), expanded=True):
+            if st.button(i18n.t("DissolvA Academy"), icon=":material/school:", key="nav_academy",
                          use_container_width=True, type="secondary"):
                 st.session_state.academy_open = True
                 st.rerun()
@@ -496,7 +505,7 @@ with st.sidebar:
             "(a commercial citation service by Digital Science). Your dissolution data is never sent."
         )
 
-    if st.button("🔒 Data privacy", use_container_width=True,
+    if st.button(i18n.t("🔒 Data privacy"), use_container_width=True,
                  help="How DissolvA handles your data."):
         _privacy_dialog()
 
@@ -612,15 +621,15 @@ with _hl:
     )
 with _hr:
     with st.container(horizontal=True, horizontal_alignment="right", key="hdractions"):
-        if st.button("New Session", icon=":material/add:", key="hdr_new",
+        if st.button(i18n.t("New Session"), icon=":material/add:", key="hdr_new",
                      help="Clear all profiles and results and start fresh."):
             _new_session_dialog()
-        if st.button("Load demo", icon=":material/science:", key="hdr_demo",
+        if st.button(i18n.t("Load demo"), icon=":material/science:", key="hdr_demo",
                      help="Load example Reference + Test profiles."):
             st.session_state["demo_mode"] = True
             extras.load_demo_data()
             st.session_state["_pending_nav"] = "Data Input"
-            st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
+            st.toast(i18n.t("Demo profiles loaded — open Data Input or Kinetic Model Fitting."), icon="⚗")
             st.rerun()
 st.markdown('<hr style="border:1px solid #FFCC00;margin:1px 0 4px 0;">', unsafe_allow_html=True)
 st.markdown(
