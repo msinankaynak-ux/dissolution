@@ -218,7 +218,8 @@ with st.sidebar:
         st.markdown("""<style>
         .st-key-navmenu [data-testid="stExpander"]{border:none !important;background:transparent !important;box-shadow:none !important;margin-bottom:0 !important;}
         .st-key-navmenu [data-testid="stExpander"] details{border:none !important;background:transparent !important;}
-        .st-key-navmenu [data-testid="stExpander"] summary{position:relative;padding:9px 8px 4px 18px !important;list-style:none;cursor:pointer;}
+        .st-key-navmenu [data-testid="stExpander"] summary{position:relative;display:flex !important;align-items:center !important;padding:9px 8px 4px 18px !important;list-style:none;cursor:pointer;}
+        .st-key-navmenu [data-testid="stExpander"] summary [data-testid="stExpanderIcon"]{order:9 !important;margin-left:auto !important;}
         .st-key-navmenu [data-testid="stExpander"] summary::-webkit-details-marker{display:none;}
         .st-key-navmenu [data-testid="stExpander"] summary::before{content:'';position:absolute;left:6px;top:11px;width:3px;height:13px;background:#FFCC00;border-radius:2px;}
         .st-key-navmenu [data-testid="stExpander"] summary p,
