@@ -423,6 +423,12 @@ def _new_session_dialog():
 
 _hl, _hr = st.columns([0.56, 0.44])
 with _hl:
+    with st.container(key="topauth"):
+        st.markdown('<style>.st-key-topauth{margin-bottom:8px !important;}'
+                    '.st-key-topauth iframe[title="streamlit_oauth.authorize_button"]'
+                    '{width:300px !important;border-radius:9px !important;overflow:hidden !important;}</style>',
+                    unsafe_allow_html=True)
+        auth.render_sidebar_auth()
     st.markdown(
         '<h1 style="margin:0;font-size:2.0rem;">'
         + brand_html('font-size:2.0rem;') +
@@ -446,8 +452,6 @@ with _hr:
             st.session_state["_pending_nav"] = "Data Input"
             st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
             st.rerun()
-    with st.container(horizontal=True, horizontal_alignment="right", key="hdrauth"):
-        auth.render_sidebar_auth()
 st.markdown('<hr style="border:1px solid #FFCC00;margin:8px 0 4px 0;">', unsafe_allow_html=True)
 
 # GDPR cookie/usage consent — dismissible, shown until accepted (session-level).
