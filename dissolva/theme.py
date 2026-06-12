@@ -45,7 +45,12 @@ html, body, [class*="css"] {
 section[data-testid="stSidebar"] {
   background: #0B132B !important;
   border-right: 1px solid rgba(255,204,0,0.18) !important;
+  width: 300px !important; min-width: 300px !important; max-width: 300px !important;
+  flex: 0 0 300px !important;
 }
+/* sabit genişlik: kullanıcı sürükleyerek değiştiremesin */
+section[data-testid="stSidebar"] [data-testid="stSidebarResizeHandle"],
+div[data-testid="stSidebarResizeHandle"] { display: none !important; }
 section[data-testid="stSidebar"] * { color: #CBD5E1 !important; }
 
 section[data-testid="stSidebar"] label {
