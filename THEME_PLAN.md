@@ -100,3 +100,35 @@ Streamlit's `config.toml [theme] base` is read at **process startup** — it **c
 > class from `st.session_state["theme"]`), including how light/hybrid handle native widgets given the static
 > config base. Keep `streamlit==1.50.0`, English UI, no engine/state changes, dev→main workflow. Verify each
 > theme visually on every page before promoting.
+
+---
+
+## 9. Progress — 2026-06-12 (Cowork, on `dev` only)
+
+**Implemented & visually verified (headless render, Method Settings page):**
+- **Theme switcher** — `st.segmented_control` (Dark / Hybrid / Light) in the sidebar,
+  bound to `st.session_state["theme"]` (default `dark`).
+- **Marker mechanism** — instead of the config-base swap (impossible at runtime in 1.50),
+  a marker `<div class="dvtheme-{theme}">` is emitted via `st.markdown`, and theme rules
+  are scoped with **`body:has(.dvtheme-hybrid|light)`**. (An empty `st.container` does NOT
+  render a DOM node — must use a real markdown div. `:has()` works in the cloud chromium.)
+- **Additive overrides** — the existing Dark `_CSS` is **untouched**; `_THEME_OVERRIDES`
+  is appended and is INERT for Dark (no marker match) → **zero regression to Dark** (confirmed:
+  Dark render is byte-for-byte the same).
+- **Hybrid** = dark sidebar + light workspace (the "original look"): `stMain` bg `#F4EFE6`,
+  dark headings/text, white input surfaces. ✓
+- **Light** = Hybrid + light sidebar (`#FBF7EF`, dark sidebar text). ✓
+
+**Still TODO before promoting to `main` (per §5 "verify every page"):**
+1. **Per-page inline-color sweep** — pages with hardcoded `#16203F`/dark inline cards
+   (esp. `dissolva/pages/api_information.py`, also stat/report pages) stay dark under
+   Light/Hybrid because inline styles can't be overridden by class CSS. These must become
+   theme-aware (read `st.session_state["theme"]` or use CSS-variable-driven classes).
+2. **Light polish** — a few sidebar nav labels are low-contrast on cream; the header
+   `New Session`/`Load demo` outline buttons stay dark; recolor for Light/Hybrid.
+3. **Native widgets** — dataframes, multiselect chips, date/time pickers: spot-check each
+   page in Light/Hybrid (config base is `dark`, so some baseweb internals may need overrides).
+4. **Verify on every page** in all 3 themes, then promote `dev → main`.
+
+**Files touched:** `dissolva/theme.py` (`_THEME_OVERRIDES` + inject), `app.py` (marker +
+switcher). Kept on `dev`; **not** promoted to `main`.

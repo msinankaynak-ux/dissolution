@@ -55,6 +55,8 @@ st.set_page_config(
 
 
 inject_theme()
+st.session_state.setdefault("theme", "dark")
+st.markdown(f"<div class='dvtheme-{st.session_state['theme']}'></div>", unsafe_allow_html=True)
 extras.init_sentry()  # crash reporting (no-op without a DSN; never sends PII)
 
 # Feedback button at the bottom of the sidebar
@@ -284,6 +286,14 @@ with st.sidebar:
         )
 
     st.markdown('<hr style="border:1px solid rgba(255,191,0,0.15);margin:10px 0 6px 0;">', unsafe_allow_html=True)
+    _TH = {"Dark": "dark", "Hybrid": "hybrid", "Light": "light"}
+    _cur = next((k for k, v in _TH.items() if v == st.session_state.get("theme", "dark")), "Dark")
+    with st.container(key="themesel"):
+        st.markdown("<div style='font-size:0.66rem;color:#7e8db0;letter-spacing:1px;margin:2px 0 3px 2px;'>THEME</div>", unsafe_allow_html=True)
+        _sel = st.segmented_control("Theme", list(_TH.keys()), default=_cur, key="theme_seg", label_visibility="collapsed")
+    if _sel and _TH.get(_sel) and _TH[_sel] != st.session_state.get("theme"):
+        st.session_state["theme"] = _TH[_sel]
+        st.rerun()
 
     st.markdown("""<style>
     div[data-testid="stSidebarContent"] div.stButton > button {

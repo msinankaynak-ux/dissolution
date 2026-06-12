@@ -250,9 +250,55 @@ button[data-baseweb="tab"][aria-selected="true"] { border-bottom: 3px solid #FFC
 </style>
 """
 
+_THEME_OVERRIDES = """
+<style>
+/* ===== DissolvA theme overrides — activated by a marker container via :has().
+        Dark = no marker -> these rules are INERT (zero change to Dark). ===== */
+
+/* ---------- Workspace light (HYBRID and LIGHT share this) ---------- */
+body:has(.dvtheme-hybrid) [data-testid="stMain"],
+body:has(.dvtheme-light)  [data-testid="stMain"]{ background:#F4EFE6 !important; }
+
+/* headings + body text -> dark */
+body:has(.dvtheme-hybrid) [data-testid="stMain"] :is(h1,h2,h3,h4,h5),
+body:has(.dvtheme-light)  [data-testid="stMain"] :is(h1,h2,h3,h4,h5){ color:#15233B !important; }
+body:has(.dvtheme-hybrid) [data-testid="stMain"] [data-testid="stMarkdownContainer"] :is(p,span,li,strong),
+body:has(.dvtheme-light)  [data-testid="stMain"] [data-testid="stMarkdownContainer"] :is(p,span,li,strong){ color:#2a3550 !important; }
+
+/* form-field labels */
+body:has(.dvtheme-hybrid) [data-testid="stMain"] label p,
+body:has(.dvtheme-light)  [data-testid="stMain"] label p{ color:#5a6480 !important; }
+
+/* inputs / selects / number / textarea -> white surface + dark text */
+body:has(.dvtheme-hybrid) [data-testid="stMain"] :is(.stTextInput input,.stNumberInput input,.stTextArea textarea,.stDateInput input,.stSelectbox div[data-baseweb="select"]>div),
+body:has(.dvtheme-light)  [data-testid="stMain"] :is(.stTextInput input,.stNumberInput input,.stTextArea textarea,.stDateInput input,.stSelectbox div[data-baseweb="select"]>div){
+  background:#FFFFFF !important; color:#15233B !important; border:1px solid rgba(0,33,71,0.18) !important; }
+
+/* tabs + expander header text -> dark */
+body:has(.dvtheme-hybrid) [data-testid="stMain"] :is([data-testid="stTabs"] button p,[data-testid="stExpander"] summary p,[data-testid="stExpander"] summary span),
+body:has(.dvtheme-light)  [data-testid="stMain"] :is([data-testid="stTabs"] button p,[data-testid="stExpander"] summary p,[data-testid="stExpander"] summary span){ color:#2a3550 !important; }
+
+/* dataframe / tables -> light */
+body:has(.dvtheme-hybrid) [data-testid="stMain"] [data-testid="stDataFrame"],
+body:has(.dvtheme-light)  [data-testid="stMain"] [data-testid="stDataFrame"]{ background:#FFFFFF !important; }
+
+/* ---------- LIGHT only: lighten the sidebar too ---------- */
+body:has(.dvtheme-light) section[data-testid="stSidebar"]{ background:#FBF7EF !important; border-right:1px solid rgba(0,33,71,0.12) !important; }
+body:has(.dvtheme-light) section[data-testid="stSidebar"] *{ color:#2a3550 !important; }
+body:has(.dvtheme-light) section[data-testid="stSidebar"] .dvlogo-gold{ color:#FFCC00 !important; }
+body:has(.dvtheme-light) .st-key-navmenu [data-testid="stExpander"] summary span{ color:#43506b !important; }
+
+/* theme switcher chip stays subtle in all themes */
+.st-key-themesel [data-testid="stMarkdownContainer"] p{ font-size:0.7rem !important; }
+
+</style>
+"""
+
+
 def inject_theme():
     """Injects global CSS. Must be called AFTER st.set_page_config."""
     st.markdown(_CSS, unsafe_allow_html=True)
+    st.markdown(_THEME_OVERRIDES, unsafe_allow_html=True)
 
 
 def style_ax(fig, ax):
