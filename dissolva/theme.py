@@ -160,9 +160,11 @@ section[data-testid="stSidebar"] .stNumberInput button { background: #16203F !im
 /* OAuth button in the TOP HEADER (right actions) — rounded, keep one line */
 .st-key-hdrauth iframe[title="streamlit_oauth.authorize_button"] {
   border-radius: 9px !important; overflow: hidden !important;
+  transform: scale(0.82) !important; transform-origin: right center !important;
 }
 .st-key-hdractions { align-items: center !important; gap: 9px !important; }
-.st-key-hdrauth { gap: 0 !important; margin-top: 2px !important; }
+.st-key-hdrauth { gap: 0 !important; margin-top: 0 !important;
+  justify-content: flex-end !important; align-items: center !important; }
 .stDownloadButton > button {
   background: #FFCC00 !important; color: #0B132B !important;
   border: 1px solid #FFCC00 !important;
