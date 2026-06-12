@@ -133,9 +133,9 @@ def consent_banner(open_privacy):
     if st.session_state.get("cookie_consent"):
         return
     st.markdown("""<style>
-    .st-key-consent_bar { background:transparent !important; border:none !important;
-        border-bottom:1px solid rgba(0,33,71,0.08) !important;
-        padding:0 2px 10px !important; margin-bottom:16px !important; }
+    .st-key-consent_bar { background:rgba(255,255,255,0.02) !important; border:none !important;
+        border-left:3px solid #FFCC00 !important; border-radius:0 8px 8px 0 !important;
+        padding:10px 14px !important; margin-bottom:16px !important; }
     .st-key-consent_accept button {
         background:transparent !important; color:#9a6a12 !important;
         border:1px solid rgba(255,191,0,0.65) !important;

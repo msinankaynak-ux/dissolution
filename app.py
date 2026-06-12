@@ -87,7 +87,8 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # (Sign-in moved to the top header, right side.)
+    # Sign-in — logonun altında (sidebar)
+    auth.render_sidebar_auth()
 
     if "method_cfg" not in st.session_state:
         st.session_state.method_cfg = {
@@ -423,12 +424,6 @@ def _new_session_dialog():
 
 _hl, _hr = st.columns([0.56, 0.44])
 with _hl:
-    with st.container(key="topauth"):
-        st.markdown('<style>.st-key-topauth{margin-bottom:8px !important;}'
-                    '.st-key-topauth iframe[title="streamlit_oauth.authorize_button"]'
-                    '{width:300px !important;border-radius:9px !important;overflow:hidden !important;}</style>',
-                    unsafe_allow_html=True)
-        auth.render_sidebar_auth()
     st.markdown(
         '<h1 style="margin:0;font-size:2.0rem;">'
         + brand_html('font-size:2.0rem;') +
