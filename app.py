@@ -423,6 +423,7 @@ with _hr:
             st.session_state["_pending_nav"] = "Data Input"
             st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
             st.rerun()
+    with st.container(horizontal=True, horizontal_alignment="right", key="hdrauth"):
         auth.render_sidebar_auth()
 st.markdown('<hr style="border:1px solid #FFCC00;margin:8px 0 4px 0;">', unsafe_allow_html=True)
 
