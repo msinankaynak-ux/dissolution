@@ -153,20 +153,13 @@ def _detect_country() -> str:
     return ""
 
 
-def render_sidebar_auth():
-    """Sidebar sign-in / user card. Open-mode note when not configured."""
+def render_google_button():
+    """Sign in with Google (OAuth) button + callback. Called from EITHER the sidebar
+    (demo mode) OR the access gate — never both in one run, so the keyed button
+    renders exactly once."""
     cid, csec, redirect = _google_cfg()
     if not (cid and _OAUTH_OK):
-        st.markdown(
-            '<div style="padding:8px 12px;font-size:0.7rem;color:#7a8aa0;">'
-            '🔓 Open mode — sign-in not configured</div>',
-            unsafe_allow_html=True,
-        )
         return
-
-    if is_authenticated():
-        return  # signed-in: account row rendered at sidebar bottom (render_account)
-
     oauth2 = OAuth2Component(cid, csec, _AUTHORIZE, _TOKEN, _TOKEN, _REVOKE)
     result = oauth2.authorize_button(
         name="Sign in with Google",
@@ -202,6 +195,24 @@ def render_sidebar_auth():
         except Exception:
             pass
         st.rerun()
+
+
+def render_sidebar_auth():
+    """Sidebar sign-in / user card. Open-mode note when not configured."""
+    cid, csec, redirect = _google_cfg()
+    if not (cid and _OAUTH_OK):
+        st.markdown(
+            '<div style="padding:8px 12px;font-size:0.7rem;color:#7a8aa0;">'
+            '🔓 Open mode — sign-in not configured</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    if is_authenticated():
+        return  # signed-in: account row rendered at sidebar bottom (render_account)
+
+    if st.session_state.get("demo_mode"):
+        render_google_button()
 
 
 def require_login(feature: str = "This feature"):

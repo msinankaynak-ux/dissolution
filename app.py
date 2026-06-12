@@ -198,15 +198,21 @@ def _render_gate():
         "<div style='font-size:1.7rem;font-weight:700;color:#ffffff;line-height:1.25;'>"
         "Sign in to start your analysis</div>"
         "<div style='color:#9fb0d0;font-size:0.95rem;margin:13px 0 2px;line-height:1.65;'>"
-        "Use <b style='color:#fff;'>Sign in with Google</b> in the sidebar to work with your "
-        "own dissolution data, save projects and export reports.<br>"
+        "Work with your own dissolution data, save projects and export reports.<br>"
         "<span style='color:#7e8db0;font-size:0.86rem;'>Free during beta &middot; your dissolution data is never stored.</span>"
         "</div></div>",
         unsafe_allow_html=True)
     _g1, _g2, _g3 = st.columns([1, 1.05, 1])
     with _g2:
         st.markdown(
-            "<div style='text-align:center;color:#7e8db0;font-size:0.8rem;margin:16px 0 6px;'>— or —</div>",
+            "<style>.st-key-gateauth{display:flex;justify-content:center;margin:4px 0 2px;}"
+            ".st-key-gateauth iframe[title=\"streamlit_oauth.authorize_button\"]{width:300px !important;"
+            "border-radius:9px !important;overflow:hidden !important;}</style>",
+            unsafe_allow_html=True)
+        with st.container(key="gateauth"):
+            auth.render_google_button()
+        st.markdown(
+            "<div style='text-align:center;color:#7e8db0;font-size:0.8rem;margin:14px 0 6px;'>— or —</div>",
             unsafe_allow_html=True)
         if st.button("Explore the demo", icon=":material/science:",
                      use_container_width=True, key="gate_demo"):
