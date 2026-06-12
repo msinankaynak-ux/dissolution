@@ -7,6 +7,7 @@ from dissolva.theme import OXFORD, AMBER
 from dissolva.models import MODEL_DEFS, CATEGORIES
 from dissolva.academy_content import ACADEMY
 from dissolva.methods_content import METHODS, METHOD_ORDER
+from dissolva import explorer
 import os
 
 
@@ -35,6 +36,17 @@ def _model_page(name):
     with col2:
         st.markdown("**Parameters**")
         st.code(", ".join(pnames), language="text")
+
+    if explorer.is_explorable(name):
+        st.markdown("#### 🎛️ Interactive explorer")
+        st.caption("Drag the sliders — the release curve, t₅₀, t₈₀ and final % update live. "
+                   "Use **Pin curve** to freeze a shape and compare. Standard published equation; "
+                   "no data leaves your browser.")
+        explorer.render(preselect=name)
+    else:
+        st.markdown("#### 🎛️ Interactive explorer")
+        st.caption("An interactive slider demo is not yet available for this model — the equation "
+                   "above is the reference form.")
 
     st.markdown("#### 🔬 Mechanism")
     st.write(c.get("mechanism", "—"))
