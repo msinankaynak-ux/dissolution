@@ -428,12 +428,7 @@ with _hl:
         '<h1 style="margin:0;font-size:2.0rem;">'
         + brand_html('font-size:2.0rem;') +
         ' <span style="font-size:0.92rem;color:#9fb0d0;font-style:italic;font-weight:400;">'
-        '- Predictive Dissolution Suite</span></h1>'
-        '<div style="color:#7E8DAB;font-size:0.84rem;margin-top:4px;">'
-        'FDA/EMA guidance-aligned · 62 Kinetic Models · f1/f2 · Bootstrap f2 · Statistical Profiling'
-        '<span style="background:rgba(255,204,0,0.10);color:#FFCC00;border:1px solid rgba(255,204,0,0.35);'
-        'font-size:0.7rem;font-weight:600;padding:1px 8px;border-radius:10px;margin-left:8px;display:inline-block;white-space:nowrap;">'
-        'BETA · research use only</span></div>',
+        '- Predictive Dissolution Suite</span></h1>',
         unsafe_allow_html=True
     )
 with _hr:
@@ -448,9 +443,13 @@ with _hr:
             st.toast("Demo profiles loaded — open Data Input or Kinetic Model Fitting.", icon="⚗")
             st.rerun()
 st.markdown('<hr style="border:1px solid #FFCC00;margin:8px 0 4px 0;">', unsafe_allow_html=True)
-
-# GDPR cookie/usage consent — dismissible, shown until accepted (session-level).
-extras.consent_banner(_privacy_dialog)
+st.markdown(
+    '<div style="color:#7E8DAB;font-size:0.84rem;margin:2px 0 6px;">'
+    'FDA/EMA guidance-aligned · 62 Kinetic Models · f1/f2 · Bootstrap f2 · Statistical Profiling'
+    '<span style="background:rgba(255,204,0,0.10);color:#FFCC00;border:1px solid rgba(255,204,0,0.35);'
+    'font-size:0.7rem;font-weight:600;padding:1px 8px;border-radius:10px;margin-left:8px;display:inline-block;white-space:nowrap;">'
+    'BETA · research use only</span></div>',
+    unsafe_allow_html=True)
 
 # Thin workflow stepper (Setup -> Analysis -> Report -> Reference) reflecting the
 # current page — makes the linear analysis flow visible. Hidden in overlays.
