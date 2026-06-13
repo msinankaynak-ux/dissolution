@@ -69,31 +69,77 @@ def render():
 
     # ── Save current work ────────────────────────────────────────────────────
     st.subheader("Save current work")
+    st.caption(
+        "💡 Your work is auto-kept in your browser so you never lose it. **Saving here** "
+        "writes a permanent, audit-trailed record on the server — nothing is written to your "
+        "records until you click Save/Update."
+    )
+    _active_id = st.session_state.get("_active_record_id")
+    _active_name = st.session_state.get("_active_record_name") or "this record"
+
     if not st.session_state.get("profiles"):
         st.caption("Load or enter dissolution profiles first, then save them here.")
     else:
-        c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
-        with c1:
-            rec_name = st.text_input(
-                "Record name",
-                value=st.session_state.get("project_metadata", {}).get(
-                    "name", "Untitled Project"
-                ),
-                key="rec_name_in",
+        if _active_id:
+            st.markdown(
+                "<div style='color:#9fb0d0;font-size:0.86rem;margin-bottom:6px;'>"
+                "📂 Editing saved record: <b style='color:#FFCC00;'>"
+                + _active_name
+                + "</b>"
+                "</div>",
+                unsafe_allow_html=True,
             )
-        with c2:
-            if st.button(
-                "💾 Save", type="primary", use_container_width=True, key="rec_save_btn"
+            u1, u2 = st.columns(2)
+            if u1.button(
+                "⬆️ Update “" + _active_name + "”",
+                type="primary",
+                use_container_width=True,
+                key="rec_update_btn",
+                help="Overwrite the loaded record (saves a new version; the previous "
+                "version stays in the audit trail).",
             ):
                 try:
-                    res = engine_client.save_record(
-                        owner, rec_name or "Untitled", _current_payload()
+                    engine_client.save_record(
+                        owner, _active_name, _current_payload(), analysis_id=_active_id
                     )
-                    st.session_state["_active_record_id"] = res.get("id")
-                    st.toast("Saved to your compliance records.", icon="✅")
+                    st.toast("Record updated — new version saved.", icon="✅")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Save failed: {e}")
+                    st.error(f"Update failed: {e}")
+            if u2.button(
+                "➕ Save as a new record",
+                use_container_width=True,
+                key="rec_saveas_btn",
+            ):
+                st.session_state["_show_saveas"] = True
+
+        if (not _active_id) or st.session_state.get("_show_saveas"):
+            c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
+            with c1:
+                _default_name = st.session_state.get("project_metadata", {}).get(
+                    "name", "Untitled Project"
+                )
+                rec_name = st.text_input(
+                    "New record name", value=_default_name, key="rec_name_in"
+                )
+            with c2:
+                if st.button(
+                    "💾 Save new",
+                    type="primary",
+                    use_container_width=True,
+                    key="rec_save_btn",
+                ):
+                    try:
+                        res = engine_client.save_record(
+                            owner, rec_name or "Untitled", _current_payload()
+                        )
+                        st.session_state["_active_record_id"] = res.get("id")
+                        st.session_state["_active_record_name"] = rec_name or "Untitled"
+                        st.session_state["_show_saveas"] = False
+                        st.toast("Saved as a new record.", icon="✅")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Save failed: {e}")
 
     st.divider()
 
@@ -123,6 +169,8 @@ def render():
                     full = engine_client.get_record(owner, r["id"])
                     if _hydrate(full.get("payload")):
                         st.session_state["_active_record_id"] = r["id"]
+                        st.session_state["_active_record_name"] = r.get("name", "")
+                        st.session_state["_show_saveas"] = False
                         st.toast(f"Loaded “{r.get('name','')}”.", icon="📂")
                         st.rerun()
                     else:
@@ -142,6 +190,9 @@ def render():
                 ):
                     try:
                         engine_client.delete_record(owner, r["id"], reason=rsn or "")
+                        if r["id"] == st.session_state.get("_active_record_id"):
+                            st.session_state.pop("_active_record_id", None)
+                            st.session_state.pop("_active_record_name", None)
                         st.session_state.pop(f"_confirm_del_{r['id']}", None)
                         st.toast("Record archived (soft-deleted).", icon="🗑️")
                         st.rerun()
