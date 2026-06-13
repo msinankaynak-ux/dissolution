@@ -72,7 +72,7 @@ def render():
     if not st.session_state.get("profiles"):
         st.caption("Load or enter dissolution profiles first, then save them here.")
     else:
-        c1, c2 = st.columns([3, 1])
+        c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
         with c1:
             rec_name = st.text_input(
                 "Record name",
@@ -82,8 +82,6 @@ def render():
                 key="rec_name_in",
             )
         with c2:
-            st.write("")
-            st.write("")
             if st.button(
                 "💾 Save", type="primary", use_container_width=True, key="rec_save_btn"
             ):
