@@ -311,3 +311,8 @@ def audit_chain_intact():
         return bool(_get("/api/audit/verify").get("intact"))
     except Exception:
         return None
+
+
+def list_audit(owner):
+    """Kullanicinin denetim izi etkinligi (create/update/delete)."""
+    return _get("/api/audit", {"owner": owner}).get("entries", [])

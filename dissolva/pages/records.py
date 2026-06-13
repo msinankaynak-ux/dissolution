@@ -201,3 +201,32 @@ def render():
                 if dc2.button("Cancel", key=f"rec_delcancel_{r['id']}"):
                     st.session_state.pop(f"_confirm_del_{r['id']}", None)
                     st.rerun()
+
+    # ── Audit trail viewer ───────────────────────────────────────────────────
+    st.divider()
+    with st.expander("🔎 Audit trail — your activity (who · what · when)"):
+        try:
+            _entries = engine_client.list_audit(owner)
+        except Exception as _e:
+            st.caption(f"Audit trail unavailable: {_e}")
+            _entries = []
+        if not _entries:
+            st.caption("No audit entries yet.")
+        else:
+            import pandas as _pd
+
+            _adf = _pd.DataFrame(
+                [
+                    {
+                        "When (UTC)": (e.get("ts", "") or "")[:19].replace("T", " "),
+                        "Action": e.get("action", ""),
+                        "Record": (e.get("entity_id", "") or "")[:8],
+                    }
+                    for e in _entries
+                ]
+            )
+            st.dataframe(_adf, use_container_width=True, hide_index=True)
+            st.caption(
+                "Immutable, hash-chained log (21 CFR Part 11 §11.10(e)) — append-only, "
+                "cannot be edited."
+            )
