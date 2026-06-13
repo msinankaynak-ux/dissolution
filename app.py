@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import warnings
+
 warnings.filterwarnings("ignore")
 
 from scipy.optimize import curve_fit, root
@@ -13,21 +14,53 @@ import io
 try:
     import plotly.figure_factory as ff
     import plotly.graph_objects as go
+
     _PLOTLY_OK = True
 except ImportError:
     _PLOTLY_OK = False
 
 from dissolva.theme import OXFORD, inject_theme, style_ax, brand_html, VERSION
 from dissolva import i18n
-from dissolva.models import (MODEL_DEFS, CATEGORIES,
-    compute_mdt, compute_de, r2s, r2adj, aic_fn, msc_fn, _nz)
-from dissolva.state import (init_session_state, TIER_RANK, current_tier, require_tier,
-    _upgrade_cta, _safe_profile_names, _get_index, _rename_profile, _clear_all)
+from dissolva.models import (
+    MODEL_DEFS,
+    CATEGORIES,
+    compute_mdt,
+    compute_de,
+    r2s,
+    r2adj,
+    aic_fn,
+    msc_fn,
+    _nz,
+)
+from dissolva.state import (
+    init_session_state,
+    TIER_RANK,
+    current_tier,
+    require_tier,
+    _upgrade_cta,
+    _safe_profile_names,
+    _get_index,
+    _rename_profile,
+    _clear_all,
+)
 from dissolva.content import show_literature, show_all_references, analyze_profile_shape
-from dissolva.pages import (method_settings, analytical_settings, all_references,
-    data_input, kinetic_model_fitting, statistical_analysis, f1_f2_similarity,
-    bootstrap_f2, ivivc, excel_report, api_information, academy, admin,
-    template_builder)
+from dissolva.pages import (
+    method_settings,
+    analytical_settings,
+    all_references,
+    data_input,
+    kinetic_model_fitting,
+    statistical_analysis,
+    f1_f2_similarity,
+    bootstrap_f2,
+    ivivc,
+    excel_report,
+    api_information,
+    academy,
+    admin,
+    template_builder,
+    records,
+)
 from dissolva import auth, engine_client, extras
 from dissolva import persistence
 from dissolva import tiers as _tiers
@@ -47,27 +80,36 @@ def _is_admin():
     em = (auth.current_user() or {}).get("email") or ""
     return em.strip().lower() in _admin_emails()
 
+
 _FAVICON_URI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzAwMzE3MSIvPgogIDxyZWN0IHg9IjIwIiB5PSIwIiB3aWR0aD0iMTIiIGhlaWdodD0iNCIgcng9IjIiIGZpbGw9IiNGRkJGMDAiLz4KICA8cmVjdCB4PSIyOCIgeT0iMCIgd2lkdGg9IjQiIGhlaWdodD0iMTIiIHJ4PSIyIiBmaWxsPSIjRkZCRjAwIi8+CiAgPHRleHQgeD0iMTYiIHk9IjIzIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiIGZvbnQtd2VpZ2h0PSI1MDAiIGZpbGw9IiNGRkJGMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkE8L3RleHQ+Cjwvc3ZnPg=="
 st.set_page_config(
     page_title="DissolvA - Predictive Dissolution Suite",
     page_icon=_FAVICON_URI,
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 
 inject_theme()
 st.session_state.setdefault("theme", "dark")
 st.session_state.setdefault("lang", "en")
-st.markdown(f"<div class='dvtheme-{st.session_state['theme']}'></div>", unsafe_allow_html=True)
+st.markdown(
+    f"<div class='dvtheme-{st.session_state['theme']}'></div>", unsafe_allow_html=True
+)
 st.session_state.setdefault("role", None)
 
 
 _ROLES = [
-    "Formulation Development", "Analytical Development / R&D",
-    "Quality Control (QC) / QA", "Regulatory Affairs / CMC",
-    "Biopharmaceutics / Bioequivalence", "Process / Manufacturing Sciences",
-    "Academia / Researcher", "Student", "Other", "Prefer not to say",
+    "Formulation Development",
+    "Analytical Development / R&D",
+    "Quality Control (QC) / QA",
+    "Regulatory Affairs / CMC",
+    "Biopharmaceutics / Bioequivalence",
+    "Process / Manufacturing Sciences",
+    "Academia / Researcher",
+    "Student",
+    "Other",
+    "Prefer not to say",
 ]
 _THEME_MAP = {"Dark": "dark", "Hybrid": "hybrid", "Light": "light"}
 
@@ -85,33 +127,80 @@ def _account_dialog():
     st.markdown(
         "<div style='margin:6px 0 2px;'><span style='background:rgba(255,204,0,0.12);"
         "border:1px solid rgba(255,204,0,0.30);color:#caa400;font-size:0.72rem;font-weight:600;"
-        "padding:2px 10px;border-radius:8px;'>✦ " + _plabel + i18n.t(" plan · free during beta") + "</span></div>"
+        "padding:2px 10px;border-radius:8px;'>✦ "
+        + _plabel
+        + i18n.t(" plan · free during beta")
+        + "</span></div>"
         "<div style='font-size:0.7rem;color:#8a98ab;margin:3px 0 0;'>All 62 models, f1/f2 and bootstrap are unlocked.</div>",
-        unsafe_allow_html=True)
+        unsafe_allow_html=True,
+    )
     st.divider()
     st.markdown("**" + i18n.t("Appearance") + "**")
-    _cur = next((k for k, v in _THEME_MAP.items() if v == st.session_state.get("theme", "dark")), "Dark")
-    _sel = st.segmented_control("Theme", list(_THEME_MAP.keys()), default=_cur,
-                                key="acct_theme_seg", label_visibility="collapsed")
+    _cur = next(
+        (
+            k
+            for k, v in _THEME_MAP.items()
+            if v == st.session_state.get("theme", "dark")
+        ),
+        "Dark",
+    )
+    _sel = st.segmented_control(
+        "Theme",
+        list(_THEME_MAP.keys()),
+        default=_cur,
+        key="acct_theme_seg",
+        label_visibility="collapsed",
+    )
     if _sel and _THEME_MAP[_sel] != st.session_state.get("theme"):
         st.session_state["theme"] = _THEME_MAP[_sel]
         st.rerun()
     st.markdown("**" + i18n.t("Language") + "**")
-    _lcur = next((k for k, v in i18n.LANGS.items() if v == st.session_state.get("lang", "en")), "English")
-    _lsel = st.segmented_control("Language", list(i18n.LANGS.keys()), default=_lcur,
-                                 key="acct_lang_seg", label_visibility="collapsed")
+    _lcur = next(
+        (k for k, v in i18n.LANGS.items() if v == st.session_state.get("lang", "en")),
+        "English",
+    )
+    _lsel = st.segmented_control(
+        "Language",
+        list(i18n.LANGS.keys()),
+        default=_lcur,
+        key="acct_lang_seg",
+        label_visibility="collapsed",
+    )
     if _lsel and i18n.LANGS[_lsel] != st.session_state.get("lang"):
         st.session_state["lang"] = i18n.LANGS[_lsel]
         st.rerun()
-    st.markdown("**" + i18n.t("Your role") + "** &nbsp;<span style='color:#8a98ab;font-size:0.72rem;'>" + i18n.t("(helps us improve — optional)") + "</span>",
-                unsafe_allow_html=True)
-    _ridx = _ROLES.index(st.session_state["role"]) if st.session_state.get("role") in _ROLES else None
-    _r = st.selectbox("Role", _ROLES, index=_ridx, placeholder=i18n.t("Select your role…"), format_func=lambda r: i18n.t(r),
-                      key="acct_role_sel", label_visibility="collapsed")
+    st.markdown(
+        "**"
+        + i18n.t("Your role")
+        + "** &nbsp;<span style='color:#8a98ab;font-size:0.72rem;'>"
+        + i18n.t("(helps us improve — optional)")
+        + "</span>",
+        unsafe_allow_html=True,
+    )
+    _ridx = (
+        _ROLES.index(st.session_state["role"])
+        if st.session_state.get("role") in _ROLES
+        else None
+    )
+    _r = st.selectbox(
+        "Role",
+        _ROLES,
+        index=_ridx,
+        placeholder=i18n.t("Select your role…"),
+        format_func=lambda r: i18n.t(r),
+        key="acct_role_sel",
+        label_visibility="collapsed",
+    )
     if _r:
         st.session_state["role"] = _r
     st.divider()
-    if st.button(i18n.t("Save"), icon=":material/check:", use_container_width=True, type="primary", key="acct_save_btn"):
+    if st.button(
+        i18n.t("Save"),
+        icon=":material/check:",
+        use_container_width=True,
+        type="primary",
+        key="acct_save_btn",
+    ):
         _persist_profile()
         st.toast(i18n.t("Preferences saved."), icon="✅")
         st.rerun()
@@ -129,18 +218,32 @@ def _welcome_dialog():
         "padding:2px 10px;border-radius:8px;'>✦ Free plan · free during beta</span></div>"
         "<div style='font-size:0.82rem;color:#8a98ab;margin:7px 0 0;'>All 62 kinetic models, "
         "f1/f2 similarity and bootstrap f2 are unlocked for you.</div>",
-        unsafe_allow_html=True)
+        unsafe_allow_html=True,
+    )
     st.divider()
     st.markdown(
         "**What best describes your role?** &nbsp;"
         "<span style='color:#8a98ab;font-size:0.72rem;'>(optional — helps us improve)</span>",
-        unsafe_allow_html=True)
-    _r = st.selectbox("Role", _ROLES, index=None, placeholder=i18n.t("Select your role…"), format_func=lambda r: i18n.t(r),
-                      key="welcome_role_sel", label_visibility="collapsed")
+        unsafe_allow_html=True,
+    )
+    _r = st.selectbox(
+        "Role",
+        _ROLES,
+        index=None,
+        placeholder=i18n.t("Select your role…"),
+        format_func=lambda r: i18n.t(r),
+        key="welcome_role_sel",
+        label_visibility="collapsed",
+    )
     if _r:
         st.session_state["role"] = _r
-    if st.button(i18n.t("Get started"), icon=":material/arrow_forward:", type="primary",
-                 use_container_width=True, key="welcome_done"):
+    if st.button(
+        i18n.t("Get started"),
+        icon=":material/arrow_forward:",
+        type="primary",
+        use_container_width=True,
+        key="welcome_done",
+    ):
         _persist_profile()
         st.session_state["_welcomed"] = True
         st.rerun()
@@ -152,9 +255,12 @@ def _persist_profile():
         return
     _u = auth.current_user()
     try:
-        engine_client.upsert_member(_u.get("email"), _u.get("name"),
-                                    role=st.session_state.get("role") or "",
-                                    theme=st.session_state.get("theme") or "")
+        engine_client.upsert_member(
+            _u.get("email"),
+            _u.get("name"),
+            role=st.session_state.get("role") or "",
+            theme=st.session_state.get("theme") or "",
+        )
     except Exception:
         pass
 
@@ -168,11 +274,19 @@ def _render_account():
     email = u.get("email") or ""
     initials = auth._initials(name if name != "User" else email)
     if pic:
-        avstyle = "background-image:url(" + pic + ");background-size:cover;background-position:center;"
+        avstyle = (
+            "background-image:url("
+            + pic
+            + ");background-size:cover;background-position:center;"
+        )
         avtxt = ""
     else:
         avstyle = "background:#003171;"
-        avtxt = "<span style='color:#FFCC00;font-size:0.78rem;font-weight:700;'>" + initials + "</span>"
+        avtxt = (
+            "<span style='color:#FFCC00;font-size:0.78rem;font-weight:700;'>"
+            + initials
+            + "</span>"
+        )
     css = (
         "<style>"
         ".st-key-acctrow{position:relative;border-top:1px solid rgba(255,255,255,0.08);margin-top:14px;padding-top:12px;}"
@@ -186,19 +300,35 @@ def _render_account():
         ".st-key-acct_gear button p,.st-key-acct_logout2 button p{display:none !important;}"
         ".st-key-acct_gear button *,.st-key-acct_logout2 button *{color:#9fb0d0 !important;}"
         ".st-key-acct_gear button:hover *,.st-key-acct_logout2 button:hover *{color:#FFCC00 !important;}"
-        "[data-testid=\"stSidebar\"] .st-key-acct_gear button:hover,[data-testid=\"stSidebar\"] .st-key-acct_logout2 button:hover{background:transparent !important;border:none !important;}"
+        '[data-testid="stSidebar"] .st-key-acct_gear button:hover,[data-testid="stSidebar"] .st-key-acct_logout2 button:hover{background:transparent !important;border:none !important;}'
         ".st-key-acct_gear button:focus,.st-key-acct_logout2 button:focus,.st-key-acct_gear button:active,.st-key-acct_logout2 button:active{background:transparent !important;box-shadow:none !important;outline:none !important;}"
         "</style>"
     )
-    html = (css +
-        "<div class='acctrow-in'><div class='acctrow-av' style=\"" + avstyle + "\">" + avtxt + "</div>"
+    html = (
+        css
+        + "<div class='acctrow-in'><div class='acctrow-av' style=\""
+        + avstyle
+        + '">'
+        + avtxt
+        + "</div>"
         "<div style='min-width:0;'><div class='acctrow-name'>" + name + "</div>"
-        "<div class='acctrow-mail'>" + email + "</div></div></div>")
+        "<div class='acctrow-mail'>" + email + "</div></div></div>"
+    )
     with st.container(key="acctrow"):
         st.markdown(html, unsafe_allow_html=True)
-        if st.button(i18n.t("Log out"), icon=":material/logout:", key="acct_logout2", help=i18n.t("Log out")):
+        if st.button(
+            i18n.t("Log out"),
+            icon=":material/logout:",
+            key="acct_logout2",
+            help=i18n.t("Log out"),
+        ):
             auth._logout()
-        if st.button(i18n.t("Account"), icon=":material/settings:", key="acct_gear", help=i18n.t("Account & settings")):
+        if st.button(
+            i18n.t("Account"),
+            icon=":material/settings:",
+            key="acct_gear",
+            help=i18n.t("Account & settings"),
+        ):
             _account_dialog()
 
 
@@ -213,26 +343,33 @@ def _render_gate():
         "Work with your own dissolution data, save projects and export reports.<br>"
         "<span style='color:#7e8db0;font-size:0.86rem;'>Free during beta &middot; your dissolution data stays in your browser, never uploaded.</span>"
         "</div></div>",
-        unsafe_allow_html=True)
+        unsafe_allow_html=True,
+    )
     _g1, _g2, _g3 = st.columns([1.6, 1, 1.6])
     with _g2:
         st.markdown(
             "<style>.st-key-gateauth{margin:4px 0 2px;text-align:center;}"
-            ".st-key-gateauth iframe[title=\"streamlit_oauth.authorize_button\"]{width:300px !important;"
+            '.st-key-gateauth iframe[title="streamlit_oauth.authorize_button"]{width:300px !important;'
             "display:block !important;margin-left:auto !important;margin-right:auto !important;"
             "border-radius:7px !important;overflow:hidden !important;}"
             # Explore-the-demo button: match the Google button 1:1 (300x43, 7px radius, centered)
             ".st-key-gate_demo button{width:300px !important;height:43px !important;"
             "margin-left:auto !important;margin-right:auto !important;display:flex !important;"
             "align-items:center !important;justify-content:center !important;}</style>",
-            unsafe_allow_html=True)
+            unsafe_allow_html=True,
+        )
         with st.container(key="gateauth"):
             auth.render_google_button()
         st.markdown(
             "<div style='text-align:center;color:#7e8db0;font-size:0.8rem;margin:14px 0 6px;'>— or —</div>",
-            unsafe_allow_html=True)
-        if st.button(i18n.t("Explore the demo"), icon=":material/science:",
-                     use_container_width=True, key="gate_demo"):
+            unsafe_allow_html=True,
+        )
+        if st.button(
+            i18n.t("Explore the demo"),
+            icon=":material/science:",
+            use_container_width=True,
+            key="gate_demo",
+        ):
             st.session_state["demo_mode"] = True
             extras.load_demo_data()
             st.session_state["_pending_nav"] = "Data Input"
@@ -240,9 +377,9 @@ def _render_gate():
         st.markdown(
             "<div style='text-align:center;color:#7e8db0;font-size:0.74rem;margin-top:8px;'>"
             "Browse the full app with example profiles &mdash; no sign-in needed.</div>",
-            unsafe_allow_html=True)
+            unsafe_allow_html=True,
+        )
     st.stop()
-
 
 
 extras.init_sentry()  # crash reporting (no-op without a DSN; never sends PII)
@@ -252,12 +389,13 @@ with st.sidebar:
     pass  # top sidebar placeholder
 
 init_session_state()
-persistence.restore_on_load()   # Faz 1: yenileme sonrasi calismayi geri yukle
+persistence.restore_on_load()  # Faz 1: yenileme sonrasi calismayi geri yukle
 
 
 # --- Sidebar ---
 with st.sidebar:
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     /* Brand colors via CLASS (Streamlit strips inline !important; class rules beat the sidebar '*' override). */
     section[data-testid="stSidebar"] .dvlogo-gold  { color:#FFCC00 !important; }
@@ -276,27 +414,42 @@ with st.sidebar:
                      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">A</span>
       </div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     # Sign-in — logonun altında (sidebar)
     auth.render_sidebar_auth()
 
     if "method_cfg" not in st.session_state:
         st.session_state.method_cfg = {
-            "time_unit": "minutes", "conc_unit": "mg/mL", "dose_mg": 100.0,
-            "q_time": 45.0, "q_limit": 80.0,
+            "time_unit": "minutes",
+            "conc_unit": "mg/mL",
+            "dose_mg": 100.0,
+            "q_time": 45.0,
+            "q_limit": 80.0,
             "internal_spec_enabled": False,
             "internal_spec_time": 45.0,
             "internal_spec_limit": 85.0,
             "internal_spec_name": "Internal Spec",
-            "apparatus": "USP II (Paddle)", "medium": "0.1N HCl (pH 1.2)",
-            "rpm": 50, "volume_ml": 900, "temp_c": 37.0,
+            "apparatus": "USP II (Paddle)",
+            "medium": "0.1N HCl (pH 1.2)",
+            "rpm": 50,
+            "volume_ml": 900,
+            "temp_c": 37.0,
             "analytical": "UV-Vis",
-            "lambda_max": 272.0, "slit_nm": 2.0, "ref_wavelength": "",
-            "hplc_column": "", "hplc_flow": 1.0, "hplc_mp_a": "",
-            "hplc_mp_b": "", "hplc_detection": 254.0,
-            "hplc_inj_vol": 20.0, "hplc_col_temp": 30.0,
-            "hplc_run_time": 10.0, "notes": "",
+            "lambda_max": 272.0,
+            "slit_nm": 2.0,
+            "ref_wavelength": "",
+            "hplc_column": "",
+            "hplc_flow": 1.0,
+            "hplc_mp_a": "",
+            "hplc_mp_b": "",
+            "hplc_detection": 254.0,
+            "hplc_inj_vol": 20.0,
+            "hplc_col_temp": 30.0,
+            "hplc_run_time": 10.0,
+            "notes": "",
         }
 
     cfg = st.session_state.method_cfg
@@ -304,9 +457,9 @@ with st.sidebar:
     # Expose variables globally for rest of app
     time_unit = cfg["time_unit"]
     conc_unit = cfg["conc_unit"]
-    dose_mg   = cfg["dose_mg"]
-    q_time    = cfg["q_time"]
-    q_limit   = cfg["q_limit"]
+    dose_mg = cfg["dose_mg"]
+    q_time = cfg["q_time"]
+    q_limit = cfg["q_limit"]
 
     # Logical flow: Setup -> Analysis -> Report -> Reference.
     # Returned value is the canonical key; the displayed label is decorated via _nav_label (routing intact).
@@ -314,24 +467,46 @@ with st.sidebar:
     # Each item = (routing_value, display_label, material_icon). Display labels may
     # differ from the canonical routing value; the page dispatch still uses the value.
     _NAV_CATEGORIES = [
-        ("Configuration & Setup", [
-            ("Method Settings",       "Method Settings",       ":material/settings:"),
-            ("Analytical Settings",   "Analytical Settings",   ":material/science:"),
-            ("Data Input",            "Data Input",            ":material/table_chart:"),
-            ("Template Builder",      "Template Builder",      ":material/grid_on:"),
-        ]),
-        ("Predictive Analysis", [
-            ("Kinetic Model Fitting", "Kinetic Model Fitting", ":material/show_chart:"),
-            ("Statistical Analysis",  "Statistical Analysis",  ":material/functions:"),
-            ("f1 and f2 Similarity",  "f1 & f2 Similarity",    ":material/compare_arrows:"),
-            ("Bootstrap f2 Analysis", "Bootstrap f2",          ":material/sync:"),
-            ("IVIVC Analysis",        "IVIVC Correlation",     ":material/link:"),
-        ]),
-        ("Results & Documentation", [
-            ("Excel Report",          "Excel Reporting",       ":material/description:"),
-            ("All References",        "References",            ":material/menu_book:"),
-            ("API Information",       "API Information",        ":material/medication:"),
-        ]),
+        (
+            "Configuration & Setup",
+            [
+                ("Method Settings", "Method Settings", ":material/settings:"),
+                ("Analytical Settings", "Analytical Settings", ":material/science:"),
+                ("Data Input", "Data Input", ":material/table_chart:"),
+                ("Template Builder", "Template Builder", ":material/grid_on:"),
+            ],
+        ),
+        (
+            "Predictive Analysis",
+            [
+                (
+                    "Kinetic Model Fitting",
+                    "Kinetic Model Fitting",
+                    ":material/show_chart:",
+                ),
+                (
+                    "Statistical Analysis",
+                    "Statistical Analysis",
+                    ":material/functions:",
+                ),
+                (
+                    "f1 and f2 Similarity",
+                    "f1 & f2 Similarity",
+                    ":material/compare_arrows:",
+                ),
+                ("Bootstrap f2 Analysis", "Bootstrap f2", ":material/sync:"),
+                ("IVIVC Analysis", "IVIVC Correlation", ":material/link:"),
+            ],
+        ),
+        (
+            "Results & Documentation",
+            [
+                ("Excel Report", "Excel Reporting", ":material/description:"),
+                ("My Records", "My Records", ":material/save:"),
+                ("All References", "References", ":material/menu_book:"),
+                ("API Information", "API Information", ":material/medication:"),
+            ],
+        ),
     ]
     _nav_options = [v for _, _items in _NAV_CATEGORIES for v, _, _ in _items]
 
@@ -346,7 +521,8 @@ with st.sidebar:
 
     # Nav-row styling scoped to the navmenu container (extra .st-key-navmenu class →
     # higher specificity, so it overrides the generic sidebar-button styles).
-    st.markdown("""<style>
+    st.markdown(
+        """<style>
     [data-testid="stSidebar"] .st-key-navmenu .stButton > button {
         background: transparent !important; border: none !important; box-shadow: none !important;
         justify-content: flex-start !important; text-align: left !important;
@@ -404,10 +580,13 @@ with st.sidebar:
     [data-testid="stSidebar"] .st-key-navmenu .stCaption, [data-testid="stSidebar"] .st-key-navmenu .stCaption * {
         color: rgba(255,204,0,0.65) !important; font-size: 0.66rem !important; padding-left: 12px !important;
     }
-    </style>""", unsafe_allow_html=True)
+    </style>""",
+        unsafe_allow_html=True,
+    )
 
     with st.container(key="navmenu"):
-        st.markdown("""<style>
+        st.markdown(
+            """<style>
         .st-key-navmenu [data-testid="stExpander"]{border:none !important;background:transparent !important;box-shadow:none !important;margin-bottom:0 !important;}
         .st-key-navmenu [data-testid="stExpander"] details{border:none !important;background:transparent !important;}
         .st-key-navmenu [data-testid="stExpander"] summary{position:relative;padding:9px 28px 4px 18px !important;list-style:none;cursor:pointer;background:transparent !important;box-shadow:none !important;}
@@ -419,12 +598,19 @@ with st.sidebar:
         .st-key-navmenu [data-testid="stExpander"] summary:hover p,
         .st-key-navmenu [data-testid="stExpander"] summary:hover span{color:#FFCC00 !important;}
         .st-key-navmenu [data-testid="stExpanderDetails"]{padding:14px 4px 2px !important;}
-        </style>""", unsafe_allow_html=True)
+        </style>""",
+            unsafe_allow_html=True,
+        )
         for _cat, _items in _NAV_CATEGORIES:
             with st.expander(i18n.t(_cat), expanded=True):
                 for _val, _label, _icon in _items:
-                    if st.button(i18n.t(_label), icon=_icon, key=f"nav_{_val}", use_container_width=True,
-                                 type=("primary" if nav == _val else "secondary")):
+                    if st.button(
+                        i18n.t(_label),
+                        icon=_icon,
+                        key=f"nav_{_val}",
+                        use_container_width=True,
+                        type=("primary" if nav == _val else "secondary"),
+                    ):
                         st.session_state["main_nav_radio"] = _val
                         st.rerun()
                 if _cat == "Predictive Analysis":
@@ -432,10 +618,16 @@ with st.sidebar:
                         "<div style='margin:-2px 0 4px 4px;'><span style='background:rgba(255,255,255,0.06);"
                         "color:#7e8db0;font-size:0.66rem;font-weight:600;letter-spacing:0.3px;"
                         "padding:2px 9px;border-radius:8px;'>IVIVC v3.5 · coming soon</span></div>",
-                        unsafe_allow_html=True)
+                        unsafe_allow_html=True,
+                    )
         with st.expander(i18n.t("Learn"), expanded=True):
-            if st.button(i18n.t("DissolvA Academy"), icon=":material/school:", key="nav_academy",
-                         use_container_width=True, type="secondary"):
+            if st.button(
+                i18n.t("DissolvA Academy"),
+                icon=":material/school:",
+                key="nav_academy",
+                use_container_width=True,
+                type="secondary",
+            ):
                 st.session_state.academy_open = True
                 st.rerun()
 
@@ -457,26 +649,33 @@ with st.sidebar:
         _bcs_sb = _as_sb.get("bcs_class")
         st.markdown(
             f'<div style="background:rgba(0,33,71,0.6);border:1px solid rgba(255,191,0,0.25);'
-            f'border-radius:8px;padding:8px 12px;margin-top:8px;">' 
+            f'border-radius:8px;padding:8px 12px;margin-top:8px;">'
             f'<div style="font-size:9px;font-weight:700;color:#FFBF00;text-transform:uppercase;'
             f'letter-spacing:0.5px;margin-bottom:4px;">💊 API Loaded</div>'
             f'<div style="font-size:12px;font-weight:600;color:white;">{_as_sb["name"]}</div>'
             f'<div style="font-size:10px;color:rgba(255,255,255,0.55);margin-top:2px;">'
-            f'{_pc_sb.get("formula","")}' 
+            f'{_pc_sb.get("formula","")}'
             f' · MW {_pc_sb.get("mw","")} g/mol</div>'
             f'<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap;">'
             f'<span style="background:rgba(255,191,0,0.15);color:#FFBF00;font-size:9px;'
             f'padding:1px 6px;border-radius:10px;">FDA: {len(_as_sb.get("fda_methods",[]))} methods</span>'
-            + (f'<span style="background:rgba(39,174,96,0.2);color:#27ae60;font-size:9px;'
-               f'padding:1px 6px;border-radius:10px;">Lit. validated</span>' 
-               if _as_sb.get("fda_methods") else '') +
-            f'</div></div>',
-            unsafe_allow_html=True
+            + (
+                f'<span style="background:rgba(39,174,96,0.2);color:#27ae60;font-size:9px;'
+                f'padding:1px 6px;border-radius:10px;">Lit. validated</span>'
+                if _as_sb.get("fda_methods")
+                else ""
+            )
+            + f"</div></div>",
+            unsafe_allow_html=True,
         )
 
-    st.markdown('<hr style="border:1px solid rgba(255,191,0,0.15);margin:10px 0 6px 0;">', unsafe_allow_html=True)
+    st.markdown(
+        '<hr style="border:1px solid rgba(255,191,0,0.15);margin:10px 0 6px 0;">',
+        unsafe_allow_html=True,
+    )
 
-    st.markdown("""<style>
+    st.markdown(
+        """<style>
     div[data-testid="stSidebarContent"] div.stButton > button {
         background: transparent !important;
         border: 1px solid rgba(255,191,0,0.35) !important;
@@ -491,7 +690,9 @@ with st.sidebar:
         color: #FFBF00 !important;
         background: rgba(255,191,0,0.06) !important;
     }
-    </style>""", unsafe_allow_html=True)
+    </style>""",
+        unsafe_allow_html=True,
+    )
     # (New Session + Load demo moved to the top header, right side.)
 
     # Data privacy — same button style as above; opens a dialog with the statement
@@ -512,33 +713,42 @@ with st.sidebar:
             "(a commercial citation service by Digital Science). Your dissolution data is never sent."
         )
 
-    if st.button(i18n.t("🔒 Data privacy"), use_container_width=True,
-                 help="How DissolvA handles your data."):
+    if st.button(
+        i18n.t("🔒 Data privacy"),
+        use_container_width=True,
+        help="How DissolvA handles your data.",
+    ):
         _privacy_dialog()
 
     # Cite this tool — APA + BibTeX (Zenodo-ready) for academic users
-    if st.button("❝ Cite this tool", use_container_width=True,
-                 help="Get an APA citation and BibTeX entry for DissolvA."):
+    if st.button(
+        "❝ Cite this tool",
+        use_container_width=True,
+        help="Get an APA citation and BibTeX entry for DissolvA.",
+    ):
         extras.citation_dialog()
 
     # Admin Console — shown ONLY to admin emails (st.secrets[admin][emails], default owner)
     if _is_admin():
-        if st.button("🛡️ Admin Console", use_container_width=True,
-                     help="Members & usage analytics (admins only)."):
+        if st.button(
+            "🛡️ Admin Console",
+            use_container_width=True,
+            help="Members & usage analytics (admins only).",
+        ):
             st.session_state.admin_open = True
             st.rerun()
 
     # Feedback — styled like the New Session / Academy / Data privacy buttons above
     st.markdown(
-        '''<a href="https://tally.so/r/44oM55" target="_blank"
+        """<a href="https://tally.so/r/44oM55" target="_blank"
            style="display:block;text-align:center;background:rgba(255,204,0,0.10);
                   border:1px solid rgba(255,204,0,0.5);color:#FFCC00;
                   font-size:0.85rem;font-weight:600;border-radius:7px;
                   padding:0.5rem 0.75rem;margin-top:4px;text-decoration:none;"
            onmouseover="this.style.background='#FFCC00';this.style.color='#0B132B'"
            onmouseout="this.style.background='rgba(255,204,0,0.10)';this.style.color='#FFCC00'">
-          ✉ Share Feedback</a>''',
-        unsafe_allow_html=True
+          ✉ Share Feedback</a>""",
+        unsafe_allow_html=True,
     )
 
     # ── Plans (config-driven; free during beta) ──────────────────────────────
@@ -549,25 +759,37 @@ with st.sidebar:
             "border-radius:8px;padding:10px 14px;margin-bottom:14px;color:#FFCC00;font-size:0.86rem;'>"
             "🎁 <b>Free during beta</b> — every feature below is unlocked for everyone right now. "
             "Pricing activates at launch; founding members lock in early pricing.</div>",
-            unsafe_allow_html=True)
+            unsafe_allow_html=True,
+        )
         _cols = st.columns(3)
         for _col, _p in zip(_cols, _tiers.plans()):
             _feats = ""
             for _f in _p["features"]:
                 _ic = "✅" if _f["status"] == "live" else "○"
-                _sb = "" if _f["status"] == "live" else (
-                    " <span style='font-size:0.58rem;background:rgba(255,255,255,0.1);"
-                    "color:#9fb0d0;padding:1px 5px;border-radius:6px;'>soon</span>")
-                _feats += (f"<div style='font-size:0.73rem;color:#cfd8ea;margin:4px 0;'>"
-                           f"{_ic} {_f['label']}{_sb}</div>")
+                _sb = (
+                    ""
+                    if _f["status"] == "live"
+                    else (
+                        " <span style='font-size:0.58rem;background:rgba(255,255,255,0.1);"
+                        "color:#9fb0d0;padding:1px 5px;border-radius:6px;'>soon</span>"
+                    )
+                )
+                _feats += (
+                    f"<div style='font-size:0.73rem;color:#cfd8ea;margin:4px 0;'>"
+                    f"{_ic} {_f['label']}{_sb}</div>"
+                )
             if _p["cta_type"] == "contact":
-                _cta = (f"<a href='mailto:dissolva.app@gmail.com?subject=DissolvA%20Enterprise' "
-                        f"style='display:block;text-align:center;font-size:0.74rem;font-weight:700;"
-                        f"color:#0B132B;background:{_p['color']};border-radius:7px;padding:6px 0;"
-                        f"text-decoration:none;'>{_p['cta']}</a>")
+                _cta = (
+                    f"<a href='mailto:dissolva.app@gmail.com?subject=DissolvA%20Enterprise' "
+                    f"style='display:block;text-align:center;font-size:0.74rem;font-weight:700;"
+                    f"color:#0B132B;background:{_p['color']};border-radius:7px;padding:6px 0;"
+                    f"text-decoration:none;'>{_p['cta']}</a>"
+                )
             else:
-                _cta = (f"<div style='text-align:center;font-size:0.68rem;color:#9fb0d0;'>"
-                        f"{_p['cta']} · free in beta</div>")
+                _cta = (
+                    f"<div style='text-align:center;font-size:0.68rem;color:#9fb0d0;'>"
+                    f"{_p['cta']} · free in beta</div>"
+                )
             _col.markdown(
                 f"<div style='border:1px solid {_p['color']}55;border-radius:10px;padding:14px;'>"
                 f"<div style='font-weight:700;color:{_p['color']};font-size:1.05rem;'>{_p['label']}</div>"
@@ -575,24 +797,25 @@ with st.sidebar:
                 f"<div style='font-size:0.65rem;color:#9fb0d0;margin-bottom:6px;'>{_p['price_note']}</div>"
                 f"<div style='font-size:0.7rem;color:#7e8db0;margin-bottom:10px;min-height:30px;'>{_p['audience']}</div>"
                 f"{_feats}<div style='margin-top:10px;'>{_cta}</div></div>",
-                unsafe_allow_html=True)
+                unsafe_allow_html=True,
+            )
 
     with st.container(key="planscard"):
         st.markdown(
-            '<style>'
-            '.st-key-planscard{border:1px solid rgba(255,204,0,0.28) !important;'
-            'background:transparent !important;border-radius:12px !important;'
-            'padding:11px 12px 12px !important;margin-top:16px !important;}'
-            '.st-key-planscard .pc-title{color:#FFCC00;font-size:0.74rem;font-weight:600;text-align:center;}'
-            '.st-key-planscard .pc-sub{color:#9fb0d0;font-size:0.64rem;text-align:center;margin:3px 0 9px;}'
+            "<style>"
+            ".st-key-planscard{border:1px solid rgba(255,204,0,0.28) !important;"
+            "background:transparent !important;border-radius:12px !important;"
+            "padding:11px 12px 12px !important;margin-top:16px !important;}"
+            ".st-key-planscard .pc-title{color:#FFCC00;font-size:0.74rem;font-weight:600;text-align:center;}"
+            ".st-key-planscard .pc-sub{color:#9fb0d0;font-size:0.64rem;text-align:center;margin:3px 0 9px;}"
             '.st-key-planscard [data-testid="stBaseButton-secondary"]{background:rgba(255,204,0,0.10) !important;border:1px solid rgba(255,204,0,0.5) !important;}'
             '.st-key-planscard [data-testid="stBaseButton-secondary"] p{color:#FFCC00 !important;}'
             '.st-key-planscard [data-testid="stBaseButton-secondary"]:hover{background:#FFCC00 !important;border-color:#FFCC00 !important;}'
             '.st-key-planscard [data-testid="stBaseButton-secondary"]:hover p{color:#0B132B !important;}'
-            '</style>'
+            "</style>"
             '<div class="pc-title">✦ Free during beta</div>'
             '<div class="pc-sub">All features unlocked</div>',
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
         if st.button("View plans", key="view_plans", use_container_width=True):
             _plans_dialog()
@@ -613,48 +836,73 @@ def _new_session_dialog():
     _dc1, _dc2 = st.columns(2)
     if _dc1.button("Yes, clear everything", type="primary", use_container_width=True):
         _clear_all()
-        persistence.clear_local()   # Faz 1: tarayicidaki kaydi da sil
+        persistence.clear_local()  # Faz 1: tarayicidaki kaydi da sil
         st.rerun()
     if _dc2.button("Cancel", use_container_width=True):
         st.rerun()
+
 
 _hl, _hr = st.columns([0.56, 0.44], vertical_alignment="bottom")
 with _hl:
     st.markdown(
         '<h1 style="margin:0;font-size:2.0rem;line-height:1.1;">'
-        + brand_html('font-size:2.0rem;') +
-        ' <span style="font-size:0.92rem;color:#9fb0d0;font-style:italic;font-weight:400;">'
-        '- Predictive Dissolution Suite</span></h1>',
-        unsafe_allow_html=True
+        + brand_html("font-size:2.0rem;")
+        + ' <span style="font-size:0.92rem;color:#9fb0d0;font-style:italic;font-weight:400;">'
+        "- Predictive Dissolution Suite</span></h1>",
+        unsafe_allow_html=True,
     )
 with _hr:
     with st.container(horizontal=True, horizontal_alignment="right", key="hdractions"):
-        if st.button(i18n.t("New Session"), icon=":material/add:", key="hdr_new",
-                     help="Clear all profiles and results and start fresh."):
+        if st.button(
+            i18n.t("New Session"),
+            icon=":material/add:",
+            key="hdr_new",
+            help="Clear all profiles and results and start fresh.",
+        ):
             _new_session_dialog()
-        if st.button(i18n.t("Load demo"), icon=":material/science:", key="hdr_demo",
-                     help="Load example Reference + Test profiles."):
+        if st.button(
+            i18n.t("Load demo"),
+            icon=":material/science:",
+            key="hdr_demo",
+            help="Load example Reference + Test profiles.",
+        ):
             st.session_state["demo_mode"] = True
             extras.load_demo_data()
             st.session_state["_pending_nav"] = "Data Input"
-            st.toast(i18n.t("Demo profiles loaded — open Data Input or Kinetic Model Fitting."), icon="⚗")
+            st.toast(
+                i18n.t(
+                    "Demo profiles loaded — open Data Input or Kinetic Model Fitting."
+                ),
+                icon="⚗",
+            )
             st.rerun()
-st.markdown('<hr style="border:1px solid #FFCC00;margin:1px 0 4px 0;">', unsafe_allow_html=True)
+st.markdown(
+    '<hr style="border:1px solid #FFCC00;margin:1px 0 4px 0;">', unsafe_allow_html=True
+)
 st.markdown(
     '<div style="color:#7E8DAB;font-size:0.84rem;margin:2px 0 6px;">'
-    'FDA/EMA guidance-aligned · 62 Kinetic Models · f1/f2 · Bootstrap f2 · Statistical Profiling'
+    "FDA/EMA guidance-aligned · 62 Kinetic Models · f1/f2 · Bootstrap f2 · Statistical Profiling"
     '<span style="background:rgba(255,204,0,0.10);color:#FFCC00;border:1px solid rgba(255,204,0,0.35);'
     'font-size:0.7rem;font-weight:600;padding:1px 8px;border-radius:10px;margin-left:8px;display:inline-block;white-space:nowrap;">'
-    'BETA · research use only</span></div>',
-    unsafe_allow_html=True)
+    "BETA · research use only</span></div>",
+    unsafe_allow_html=True,
+)
 
 # Thin workflow stepper (Setup -> Analysis -> Report -> Reference) reflecting the
 # current page — makes the linear analysis flow visible. Hidden in overlays.
 _PHASES = [
-    ("Setup",     {"Method Settings", "Analytical Settings", "Data Input"}),
-    ("Analysis",  {"Kinetic Model Fitting", "Statistical Analysis",
-                   "f1 and f2 Similarity", "Bootstrap f2 Analysis", "IVIVC Analysis"}),
-    ("Report",    {"Excel Report"}),
+    ("Setup", {"Method Settings", "Analytical Settings", "Data Input"}),
+    (
+        "Analysis",
+        {
+            "Kinetic Model Fitting",
+            "Statistical Analysis",
+            "f1 and f2 Similarity",
+            "Bootstrap f2 Analysis",
+            "IVIVC Analysis",
+        },
+    ),
+    ("Report", {"Excel Report"}),
     ("Reference", {"API Information", "All References"}),
 ]
 if not (st.session_state.get("academy_open") or st.session_state.get("admin_open")):
@@ -662,40 +910,56 @@ if not (st.session_state.get("academy_open") or st.session_state.get("admin_open
     _chips = []
     for i, (label, _) in enumerate(_PHASES):
         if i == _active:
-            bg, col, bd, sh = ("rgba(255,204,0,0.12)", "#FFCC00", "rgba(255,204,0,0.40)",
-                               "box-shadow:0 0 0 1px rgba(255,204,0,0.28),0 0 12px rgba(255,204,0,0.10);")
+            bg, col, bd, sh = (
+                "rgba(255,204,0,0.12)",
+                "#FFCC00",
+                "rgba(255,204,0,0.40)",
+                "box-shadow:0 0 0 1px rgba(255,204,0,0.28),0 0 12px rgba(255,204,0,0.10);",
+            )
         elif i < _active:
-            bg, col, bd, sh = "rgba(255,204,0,0.06)", "#C9A94A", "rgba(255,204,0,0.22)", ""
+            bg, col, bd, sh = (
+                "rgba(255,204,0,0.06)",
+                "#C9A94A",
+                "rgba(255,204,0,0.22)",
+                "",
+            )
         else:
             bg, col, bd, sh = "transparent", "#7E8DAB", "rgba(126,141,171,0.35)", ""
         _chips.append(
             f'<span style="background:{bg};color:{col};border:1px solid {bd};{sh}'
-            f'border-radius:14px;padding:3px 12px;font-size:0.72rem;font-weight:600;'
-            f'white-space:nowrap;">{i+1}. {label}</span>')
+            f"border-radius:14px;padding:3px 12px;font-size:0.72rem;font-weight:600;"
+            f'white-space:nowrap;">{i+1}. {label}</span>'
+        )
     _sep = '<span style="color:#4a5a7e;">→</span>'
     st.markdown(
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;'
-        'padding:2px 0 12px 0;">' + _sep.join(_chips) + '</div>',
-        unsafe_allow_html=True)
+        'padding:2px 0 12px 0;">' + _sep.join(_chips) + "</div>",
+        unsafe_allow_html=True,
+    )
 
 # ── Access gate: real work needs sign-in; the demo is open to everyone ──────
 if auth.is_authenticated() and st.session_state.get("demo_mode"):
-    st.session_state["demo_mode"] = False          # signing in leaves demo mode
+    st.session_state["demo_mode"] = False  # signing in leaves demo mode
 if not (auth.is_authenticated() or st.session_state.get("demo_mode")):
-    _render_gate()                                   # renders gate, then st.stop()
+    _render_gate()  # renders gate, then st.stop()
 if st.session_state.get("demo_mode") and not auth.is_authenticated():
     st.markdown(
         "<div style='background:rgba(255,204,0,0.08);border:1px solid rgba(255,204,0,0.25);"
         "border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:0.82rem;color:#FFCC00;'>"
-        "\U0001F9EA <b>Demo mode</b> \u2014 exploring with example data. "
+        "\U0001f9ea <b>Demo mode</b> \u2014 exploring with example data. "
         "<span style='color:#9fb0d0;'>Sign in (sidebar) to use your own data, save projects and export.</span></div>",
-        unsafe_allow_html=True)
+        unsafe_allow_html=True,
+    )
 
 # ===========================================================================
 # MAIN DISPATCH
 # ===========================================================================
 # First-login welcome — plan disclosure + optional role (once per session)
-if auth.is_authenticated() and not st.session_state.get("_welcomed") and not st.session_state.get("role"):
+if (
+    auth.is_authenticated()
+    and not st.session_state.get("_welcomed")
+    and not st.session_state.get("role")
+):
     _welcome_dialog()
 
 # DissolvA Academy — free, open to everyone (no tier gate); opened via the sidebar button.
@@ -734,6 +998,8 @@ elif nav == "IVIVC Analysis":
     ivivc.render()
 elif nav == "Excel Report":
     excel_report.render()
+elif nav == "My Records":
+    records.render()
 elif nav == "API Information":
     api_information.render()
 elif nav == "All References":
@@ -745,18 +1011,19 @@ st.markdown(
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;'
     'flex-wrap:wrap;padding-bottom:12px;">'
     '<div style="font-size:0.74rem;color:#7E8DAB;">'
-    + brand_html('font-size:0.78rem;') + f' v{VERSION} &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Powered by AI'
+    + brand_html("font-size:0.78rem;")
+    + f" v{VERSION} &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; Powered by AI"
     ' &nbsp;·&nbsp; <a href="https://tally.so/r/44oM55" target="_blank" '
     'style="color:#9fb0d0;text-decoration:none;">Share Feedback</a>'
     ' &nbsp;·&nbsp; <a href="https://github.com/msinankaynak-ux/dissolution" target="_blank" '
     'style="color:#9fb0d0;text-decoration:none;">Source</a>'
-    '</div>'
+    "</div>"
     '<a href="https://doi.org/10.5281/zenodo.20650463" target="_blank" '
     'style="font-size:0.72rem;color:#9fb0d0;text-decoration:none;white-space:nowrap;'
     'border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 12px;">'
-    '📄 DOI: 10.5281/zenodo.20650463</a>'
-    '</div>',
-    unsafe_allow_html=True
+    "📄 DOI: 10.5281/zenodo.20650463</a>"
+    "</div>",
+    unsafe_allow_html=True,
 )
 
 # -- Faz 1: aktif projeyi tarayiciya otomatik kaydet (run sonu) --
