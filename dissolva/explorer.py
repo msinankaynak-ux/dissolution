@@ -113,8 +113,8 @@ _HTML = r"""
   </div>
   <div id="kmx-eq" style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:__AMBER__;background:__BG__;padding:7px 11px;border-radius:8px;margin-bottom:10px;"></div>
   <div id="kmx-sliders" style="margin-bottom:6px;"></div>
-  <div style="flex:1;min-height:170px;position:relative;">
-    <svg id="kmx-plot" viewBox="0 0 640 300" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;"></svg>
+  <div style="flex:1;min-height:240px;position:relative;">
+    <svg id="kmx-plot" viewBox="0 0 640 300" preserveAspectRatio="xMidYMid meet" style="position:absolute;top:0;left:0;width:100%;height:100%;display:block;"></svg>
   </div>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;">
     <div style="background:__BG__;border-radius:8px;padding:7px 10px;"><div style="font-size:11px;color:__TXT2__;">t₅₀</div><div id="kmx-t50" style="font-size:18px;font-weight:600;">—</div></div>
