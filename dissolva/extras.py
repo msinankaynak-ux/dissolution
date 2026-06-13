@@ -159,7 +159,7 @@ def consent_banner(open_privacy):
             st.markdown(
                 "<div style='font-size:0.8rem;color:#8a98ab;line-height:1.4;'>"
                 "🍪 Cookies and anonymous usage stats keep the beta running. "
-                "<span style='color:#5a6480;'>Your dissolution data is never stored.</span>"
+                "<span style='color:#5a6480;'>Your dissolution data stays in your browser, never uploaded.</span>"
                 "</div>", unsafe_allow_html=True)
         with c2:
             if st.button("Details", use_container_width=True, key="consent_details"):

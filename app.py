@@ -29,6 +29,7 @@ from dissolva.pages import (method_settings, analytical_settings, all_references
     bootstrap_f2, ivivc, excel_report, api_information, academy, admin,
     template_builder)
 from dissolva import auth, engine_client, extras
+from dissolva import persistence
 from dissolva import tiers as _tiers
 
 
@@ -210,7 +211,7 @@ def _render_gate():
         "Sign in to start your analysis</div>"
         "<div style='color:#9fb0d0;font-size:0.95rem;margin:13px 0 2px;line-height:1.65;'>"
         "Work with your own dissolution data, save projects and export reports.<br>"
-        "<span style='color:#7e8db0;font-size:0.86rem;'>Free during beta &middot; your dissolution data is never stored.</span>"
+        "<span style='color:#7e8db0;font-size:0.86rem;'>Free during beta &middot; your dissolution data stays in your browser, never uploaded.</span>"
         "</div></div>",
         unsafe_allow_html=True)
     _g1, _g2, _g3 = st.columns([1.6, 1, 1.6])
@@ -247,6 +248,7 @@ with st.sidebar:
     pass  # top sidebar placeholder
 
 init_session_state()
+persistence.restore_on_load()   # Faz 1: yenileme sonrasi calismayi geri yukle
 
 
 # --- Sidebar ---
@@ -492,10 +494,11 @@ with st.sidebar:
     @st.dialog("🔒 Data privacy")
     def _privacy_dialog():
         st.markdown(
-            "**Your dissolution data is never stored.**\n\n"
-            "- The dissolution data, profiles, and results you enter live only in your session "
-            "memory and are **erased** when you close or refresh the page. We have no database of "
-            "your scientific data and never sell or share it.\n\n"
+            "**Your dissolution data stays in your browser — never on our servers.**\n\n"
+            "- The dissolution data, profiles, and results you enter are saved **locally in your own "
+            "browser** so you don't lose work — they are **never uploaded to our servers**, and "
+            "you can erase them anytime with **New Session** or **Clear saved data**. We have no "
+            "database of your scientific data and never sell or share it.\n\n"
             "**During the free beta we do record a minimal amount to run the service and improve it:**\n"
             "- Your **account email and name** from Google sign-in (to create your free account).\n"
             "- Your **country**, derived once at sign-in (we store only the country, not your IP).\n"
@@ -606,6 +609,7 @@ def _new_session_dialog():
     _dc1, _dc2 = st.columns(2)
     if _dc1.button("Yes, clear everything", type="primary", use_container_width=True):
         _clear_all()
+        persistence.clear_local()   # Faz 1: tarayicidaki kaydi da sil
         st.rerun()
     if _dc2.button("Cancel", use_container_width=True):
         st.rerun()
@@ -750,3 +754,6 @@ st.markdown(
     '</div>',
     unsafe_allow_html=True
 )
+
+# -- Faz 1: aktif projeyi tarayiciya otomatik kaydet (run sonu) --
+persistence.autosave()

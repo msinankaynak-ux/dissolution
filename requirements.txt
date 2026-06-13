@@ -12,3 +12,4 @@ plotly
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 sentry-sdk>=2.0                 # crash reporting (no-op without a DSN; never sends PII)
+streamlit-local-storage>=0.0.25   # Faz 1: client-side localStorage for active project
