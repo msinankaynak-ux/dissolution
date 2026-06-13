@@ -91,11 +91,20 @@ def render():
                 key="dl_demo_xlsx", use_container_width=True,
             )
 
+    st.markdown("#### Step 1 — Choose how to enter your data")
     input_mode = st.radio(
-        "Input Mode",
+        "How do you want to enter your dissolution data?",
         ["Excel / CSV Upload (Raw Vessel Data)", "Inline Spreadsheet Editor", "Manual Mean Entry"],
-        horizontal=True
+        captions=[
+            "Most common · recommended — upload your raw per-vessel file (.xlsx/.csv). "
+            "The app computes Mean, SD, RSD and builds the profile for you.",
+            "No file handy? Type or paste your numbers into a table inside the app.",
+            "Already have averaged % released values? Enter them directly.",
+        ],
+        horizontal=False,
+        label_visibility="collapsed",
     )
+    st.caption("New here? Pick the first option and use the example file above to see the exact format.")
 
     # =========================================================================
     if input_mode == "Excel / CSV Upload (Raw Vessel Data)":
