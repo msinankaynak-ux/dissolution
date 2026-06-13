@@ -220,7 +220,11 @@ def _render_gate():
             "<style>.st-key-gateauth{margin:4px 0 2px;text-align:center;}"
             ".st-key-gateauth iframe[title=\"streamlit_oauth.authorize_button\"]{width:300px !important;"
             "display:block !important;margin-left:auto !important;margin-right:auto !important;"
-            "border-radius:9px !important;overflow:hidden !important;}</style>",
+            "border-radius:7px !important;overflow:hidden !important;}"
+            # Explore-the-demo button: match the Google button 1:1 (300x43, 7px radius, centered)
+            ".st-key-gate_demo button{width:300px !important;height:43px !important;"
+            "margin-left:auto !important;margin-right:auto !important;display:flex !important;"
+            "align-items:center !important;justify-content:center !important;}</style>",
             unsafe_allow_html=True)
         with st.container(key="gateauth"):
             auth.render_google_button()
