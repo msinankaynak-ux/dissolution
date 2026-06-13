@@ -15,22 +15,37 @@ BETA = True
 # ── Tier ladder ────────────────────────────────────────────────────────────
 TIERS = {
     "free": {
-        "key": "free", "label": "Free", "rank": 0, "color": "#9fb0d0",
+        "key": "free",
+        "label": "Free",
+        "rank": 0,
+        "color": "#9fb0d0",
         "audience": "Students & academic researchers",
-        "price": "$0", "price_note": "Free forever",
-        "cta": "Get started", "cta_type": "free",
+        "price": "$0",
+        "price_note": "Free forever",
+        "cta": "Get started",
+        "cta_type": "free",
     },
     "pro": {
-        "key": "pro", "label": "Pro", "rank": 1, "color": "#FFCC00",
+        "key": "pro",
+        "label": "Pro",
+        "rank": 1,
+        "color": "#FFCC00",
         "audience": "Industry R&D scientists, consultants, small labs",
-        "price": "$19/mo", "price_note": "Free during beta · paid at launch",
-        "cta": "Join Pro beta", "cta_type": "free",
+        "price": "$19/mo",
+        "price_note": "Free during beta · paid at launch",
+        "cta": "Join Pro beta",
+        "cta_type": "free",
     },
     "enterprise": {
-        "key": "enterprise", "label": "Enterprise", "rank": 2, "color": "#5dd0ff",
+        "key": "enterprise",
+        "label": "Enterprise",
+        "rank": 2,
+        "color": "#5dd0ff",
         "audience": "Pharma / generic manufacturers, CROs",
-        "price": "Custom", "price_note": "Annual / per-seat · contact us",
-        "cta": "Contact us", "cta_type": "contact",
+        "price": "Custom",
+        "price_note": "Annual / per-seat · contact us",
+        "cta": "Contact us",
+        "cta_type": "contact",
     },
 }
 TIER_ORDER = ["free", "pro", "enterprise"]
@@ -51,28 +66,109 @@ def normalize_tier(t):
 # are free for everyone; SOON features are shown as "coming soon" regardless of tier.
 FEATURES = {
     # Free
-    "kinetic_models":   {"tier": "free", "status": "live", "label": "62 kinetic models + fitting"},
-    "f1_f2":            {"tier": "free", "status": "live", "label": "f1/f2 similarity + USP/FDA/EMA compliance"},
-    "statistics":       {"tier": "free", "status": "live", "label": "Statistics — MDT, DE, RSD"},
-    "bootstrap_param":  {"tier": "free", "status": "live", "label": "Bootstrap f2 (parametric)"},
-    "template_builder": {"tier": "free", "status": "live", "label": "Template Builder + example data"},
-    "academy":          {"tier": "free", "status": "live", "label": "Academy — models & methods"},
-    "excel_basic":      {"tier": "free", "status": "live", "label": "Excel report (research-use watermark)"},
-    "history_free":     {"tier": "free", "status": "live", "label": "Recent projects (current session)"},
+    "kinetic_models": {
+        "tier": "free",
+        "status": "live",
+        "label": "62 kinetic models + fitting",
+    },
+    "f1_f2": {
+        "tier": "free",
+        "status": "live",
+        "label": "f1/f2 similarity + USP/FDA/EMA compliance",
+    },
+    "statistics": {
+        "tier": "free",
+        "status": "live",
+        "label": "Statistics — MDT, DE, RSD",
+    },
+    "bootstrap_param": {
+        "tier": "free",
+        "status": "live",
+        "label": "Bootstrap f2 (parametric)",
+    },
+    "template_builder": {
+        "tier": "free",
+        "status": "live",
+        "label": "Template Builder + example data",
+    },
+    "academy": {
+        "tier": "free",
+        "status": "live",
+        "label": "Academy — models & methods",
+    },
+    "excel_basic": {
+        "tier": "free",
+        "status": "live",
+        "label": "Excel report (research-use watermark)",
+    },
+    "history_free": {
+        "tier": "free",
+        "status": "live",
+        "label": "Recent projects (current session)",
+    },
     # Pro
-    "excel_full":       {"tier": "pro", "status": "live", "label": "Full 8-sheet Excel report, no watermark"},
-    "bootstrap_bca":    {"tier": "pro", "status": "live", "label": "Bootstrap f2 — nonparametric / BCa"},
-    "history_pro":      {"tier": "pro", "status": "soon", "label": "Saved project history + cloud sync"},
-    "batch":            {"tier": "pro", "status": "soon", "label": "Batch (multi-profile) + comparative PDF"},
-    "ai_reco":          {"tier": "pro", "status": "soon", "label": "AI model recommendation + regulatory guidance"},
-    "ivivc":            {"tier": "pro", "status": "soon", "label": "IVIVC module"},
-    "branding":         {"tier": "pro", "status": "soon", "label": "Custom branding on reports"},
+    "excel_full": {
+        "tier": "pro",
+        "status": "live",
+        "label": "Full 8-sheet Excel report, no watermark",
+    },
+    "bootstrap_bca": {
+        "tier": "pro",
+        "status": "live",
+        "label": "Bootstrap f2 — nonparametric / BCa",
+    },
+    "history_pro": {
+        "tier": "pro",
+        "status": "live",
+        "label": "Saved project history + cloud sync",
+    },
+    "batch": {
+        "tier": "pro",
+        "status": "soon",
+        "label": "Batch (multi-profile) + comparative PDF",
+    },
+    "ai_reco": {
+        "tier": "pro",
+        "status": "soon",
+        "label": "AI model recommendation + regulatory guidance",
+    },
+    "ivivc": {"tier": "pro", "status": "soon", "label": "IVIVC module"},
+    "branding": {
+        "tier": "pro",
+        "status": "soon",
+        "label": "Custom branding on reports",
+    },
     # Enterprise
-    "data_control":     {"tier": "enterprise", "status": "soon", "label": "Your data stays in your environment (no vendor storage)"},
-    "part11":           {"tier": "enterprise", "status": "soon", "label": "21 CFR Part 11 — audit trail + e-signatures"},
-    "validation":       {"tier": "enterprise", "status": "soon", "label": "Software validation package (IQ/OQ/PQ)"},
-    "team_sso":         {"tier": "enterprise", "status": "soon", "label": "Team seats + admin console + SSO"},
-    "deploy":           {"tier": "enterprise", "status": "soon", "label": "On-prem / private deployment + SLA support"},
+    "data_control": {
+        "tier": "enterprise",
+        "status": "soon",
+        "label": "Your data stays in your environment (no vendor storage)",
+    },
+    "part11": {
+        "tier": "enterprise",
+        "status": "live",
+        "label": "21 CFR Part 11 — immutable audit trail + record versioning",
+    },
+    "esign": {
+        "tier": "enterprise",
+        "status": "soon",
+        "label": "Electronic signatures (21 CFR Part 11 §11.50–300)",
+    },
+    "validation": {
+        "tier": "enterprise",
+        "status": "soon",
+        "label": "Software validation package (IQ/OQ/PQ)",
+    },
+    "team_sso": {
+        "tier": "enterprise",
+        "status": "soon",
+        "label": "Team seats + admin console + SSO",
+    },
+    "deploy": {
+        "tier": "enterprise",
+        "status": "soon",
+        "label": "On-prem / private deployment + SLA support",
+    },
 }
 
 
@@ -93,7 +189,8 @@ def plans():
         t = dict(TIERS[tk])
         t["features"] = [
             {"label": f["label"], "status": f["status"]}
-            for f in FEATURES.values() if f["tier"] == tk
+            for f in FEATURES.values()
+            if f["tier"] == tk
         ]
         out.append(t)
     return out
