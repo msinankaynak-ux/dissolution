@@ -1,4 +1,5 @@
 """DissolvA page module: Data Input. Extracted from app.py (Phase 3b modularization)."""
+
 import streamlit as st
 from dissolva.theme import release_label as _rlabel
 import numpy as np
@@ -6,9 +7,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import io
 import warnings
+
 try:
     import plotly.graph_objects as go
     import plotly.figure_factory as ff
+
     _PLOTLY_OK = True
 except ImportError:
     _PLOTLY_OK = False
@@ -17,11 +20,54 @@ from scipy.stats import norm as sp_norm
 from scipy.integrate import trapezoid
 from scipy.interpolate import interp1d
 from dissolva.theme import OXFORD, AMBER, PALETTE, style_ax
-from dissolva.models import (MODEL_DEFS, CATEGORIES, compute_mdt,
-    compute_de, r2s, r2adj, aic_fn, msc_fn, _nz)
-from dissolva.state import (current_tier, require_tier, _safe_profile_names,
-    _get_index, _rename_profile, _clear_all)
+from dissolva.models import (
+    MODEL_DEFS,
+    CATEGORIES,
+    compute_mdt,
+    compute_de,
+    r2s,
+    r2adj,
+    aic_fn,
+    msc_fn,
+    _nz,
+)
+from dissolva.state import (
+    current_tier,
+    require_tier,
+    _safe_profile_names,
+    _get_index,
+    _rename_profile,
+    _clear_all,
+)
 from dissolva.content import show_literature, show_all_references, analyze_profile_shape
+from dissolva import auth as _auth
+
+
+def _approved_data_emails():
+    """Kendi verisini yukleyip analiz edebilecek e-postalar (admin + access listesi)."""
+    emails = set()
+    try:
+        for x in st.secrets.get("admin", {}).get("emails") or []:
+            emails.add(str(x).strip().lower())
+    except Exception:
+        pass
+    try:
+        for x in st.secrets.get("access", {}).get("allowed_emails") or []:
+            emails.add(str(x).strip().lower())
+    except Exception:
+        pass
+    if not emails:
+        emails.add("msinankaynak@gmail.com")  # fail-safe sahip
+    return emails
+
+
+def _can_use_own_data():
+    """Yayin-oncesi beta: yalniz giris yapmis + onayli hesaplar kendi verisini
+    yukleyip analiz edebilir. Digerleri demo-only (kendi veri girisi kapali)."""
+    if not _auth.is_authenticated():
+        return False
+    em = ((_auth.current_user() or {}).get("email") or "").strip().lower()
+    return em in _approved_data_emails()
 
 
 def render():
@@ -36,26 +82,38 @@ def render():
         pm = st.session_state.project_metadata
         pc1, pc2 = st.columns([1, 1])
         with pc1:
-            new_proj_name = st.text_input("Project Name", value=pm.get("name","Untitled Project"),
-                                          key="proj_name_input")
-            new_analyst   = st.text_input("Analyst / Author", value=pm.get("analyst",""),
-                                          key="proj_analyst_input",
-                                          placeholder="e.g. Dr. Jane Smith")
+            new_proj_name = st.text_input(
+                "Project Name",
+                value=pm.get("name", "Untitled Project"),
+                key="proj_name_input",
+            )
+            new_analyst = st.text_input(
+                "Analyst / Author",
+                value=pm.get("analyst", ""),
+                key="proj_analyst_input",
+                placeholder="e.g. Dr. Jane Smith",
+            )
         with pc2:
-            new_desc = st.text_area("Project Description", value=pm.get("description",""),
-                                    key="proj_desc_input", height=88,
-                                    placeholder="e.g. Bioequivalence study of ibuprofen 400mg tablets...")
+            new_desc = st.text_area(
+                "Project Description",
+                value=pm.get("description", ""),
+                key="proj_desc_input",
+                height=88,
+                placeholder="e.g. Bioequivalence study of ibuprofen 400mg tablets...",
+            )
         if st.button("💾 Save Project Info", key="save_proj_meta"):
             import datetime as _dt
-            st.session_state.project_metadata.update({
-                "name":        new_proj_name,
-                "analyst":     new_analyst,
-                "description": new_desc,
-                "created":     st.session_state.project_metadata.get("created") or
-                               _dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
-            })
-            st.success(f"Project '{new_proj_name}' saved.")
 
+            st.session_state.project_metadata.update(
+                {
+                    "name": new_proj_name,
+                    "analyst": new_analyst,
+                    "description": new_desc,
+                    "created": st.session_state.project_metadata.get("created")
+                    or _dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                }
+            )
+            st.success(f"Project '{new_proj_name}' saved.")
 
     st.markdown(
         "<div class='info-banner'>"
@@ -64,11 +122,13 @@ def render():
         "Columns: first column = <strong>Time</strong>, remaining columns = one per vessel/tablet (6 or 12 per USP/FDA). "
         "The system computes Mean, SD, RSD, CV automatically and builds the dissolution profile with error bars."
         "</div>",
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     # ── Example dataset (1 Reference + 2 generics · 12 vessels · 90 min) ──────
-    with st.expander("\U0001F9EA Example dataset — try it instantly or download the format"):
+    with st.expander(
+        "\U0001f9ea Example dataset — try it instantly or download the format"
+    ):
         st.caption(
             "1 Reference + 2 generic test products \u00b7 12 vessels each \u00b7 up to 90 min. "
             "Load it into the app to explore, or download a correctly-formatted Excel file "
@@ -76,46 +136,68 @@ def render():
         )
         _ex1, _ex2 = st.columns(2)
         with _ex1:
-            if st.button("\U0001F4E5 Load example into app", key="load_demo_data_page",
-                         use_container_width=True):
+            if st.button(
+                "\U0001f4e5 Load example into app",
+                key="load_demo_data_page",
+                use_container_width=True,
+            ):
                 from dissolva import extras as _ex
+
                 _ex.load_demo_data()
                 st.success("Example profiles loaded: Reference + Test A + Test B.")
                 st.rerun()
         with _ex2:
             from dissolva.templates import build_demo_xlsx as _bdx
+
             st.download_button(
-                "\u2B07\uFE0F Download example .xlsx", data=_bdx(),
+                "\u2b07\ufe0f Download example .xlsx",
+                data=_bdx(),
                 file_name="DissolvA_example_dataset.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="dl_demo_xlsx", use_container_width=True,
+                key="dl_demo_xlsx",
+                use_container_width=True,
             )
 
-    st.markdown("#### Step 1 — Choose how to enter your data")
-    input_mode = st.radio(
-        "How do you want to enter your dissolution data?",
-        ["Excel / CSV Upload (Raw Vessel Data)", "Inline Spreadsheet Editor", "Manual Mean Entry"],
-        captions=[
-            "Most common · recommended — upload your raw per-vessel file (.xlsx/.csv). "
-            "The app computes Mean, SD, RSD and builds the profile for you.",
-            "No file handy? Type or paste your numbers into a table inside the app.",
-            "Already have averaged % released values? Enter them directly.",
-        ],
-        horizontal=False,
-        label_visibility="collapsed",
-    )
-    st.caption("New here? Pick the first option and use the example file above to see the exact format.")
+    if not _can_use_own_data():
+        st.info(
+            "🔒 **Closed early access.** Uploading and analysing your **own** dissolution "
+            "data is approval-only while DissolvA is in pre-publication beta. You can still "
+            "explore the full app with the **example dataset** — use “Load example into app” "
+            "above. To request access, email **dissolva.app@gmail.com**."
+        )
+        input_mode = None
+    else:
+        st.markdown("#### Step 1 — Choose how to enter your data")
+        input_mode = st.radio(
+            "How do you want to enter your dissolution data?",
+            [
+                "Excel / CSV Upload (Raw Vessel Data)",
+                "Inline Spreadsheet Editor",
+                "Manual Mean Entry",
+            ],
+            captions=[
+                "Most common · recommended — upload your raw per-vessel file (.xlsx/.csv). "
+                "The app computes Mean, SD, RSD and builds the profile for you.",
+                "No file handy? Type or paste your numbers into a table inside the app.",
+                "Already have averaged % released values? Enter them directly.",
+            ],
+            horizontal=False,
+            label_visibility="collapsed",
+        )
+        st.caption(
+            "New here? Pick the first option and use the example file above to see the exact format."
+        )
 
     # =========================================================================
     if input_mode == "Excel / CSV Upload (Raw Vessel Data)":
-    # =========================================================================
+        # =========================================================================
 
         col_up, col_fmt = st.columns([2, 1])
         with col_up:
             up = st.file_uploader(
                 "Upload Excel (.xlsx) or CSV file",
                 type=["xlsx", "xls", "csv"],
-                key="raw_upload"
+                key="raw_upload",
             )
         with col_fmt:
             st.markdown(
@@ -126,7 +208,7 @@ def render():
                 "Vessel columns: 6 or 12 tablets per USP/FDA<br>"
                 "Sheet name = formulation name (e.g. Reference, Test1)"
                 "</div>",
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
 
         if up:
@@ -152,8 +234,19 @@ def render():
 
             # Single shared, SAFE time-column keyword list (no bare "t"/"min"
             # that would mis-match a vessel column named e.g. "T").
-            TIME_KEYWORDS = ["time", "zaman", "minute", "minutes", "saat",
-                             "hour", "hours", "dakika", "sure", "sures", "süre"]
+            TIME_KEYWORDS = [
+                "time",
+                "zaman",
+                "minute",
+                "minutes",
+                "saat",
+                "hour",
+                "hours",
+                "dakika",
+                "sure",
+                "sures",
+                "süre",
+            ]
 
             # -- Load all sheets -----------------------------------------------
             try:
@@ -163,24 +256,34 @@ def render():
                     raw_sheets = pd.read_excel(up, sheet_name=None, engine="openpyxl")
 
                 sheet_names = list(raw_sheets.keys())
-                st.success(f"File loaded: **{up.name}** - {len(sheet_names)} sheet(s): {', '.join(sheet_names)}")
+                st.success(
+                    f"File loaded: **{up.name}** - {len(sheet_names)} sheet(s): {', '.join(sheet_names)}"
+                )
 
                 selected_sheets = st.multiselect(
                     "Select which sheets to import as dissolution profiles:",
                     sheet_names,
                     default=sheet_names,
-                    help="Each sheet will become a separate dissolution profile."
+                    help="Each sheet will become a separate dissolution profile.",
                 )
 
                 # -- Preview ---------------------------------------------------
                 if selected_sheets:
-                    prev_sh = st.selectbox("Preview sheet:", selected_sheets, key="prev_sel")
+                    prev_sh = st.selectbox(
+                        "Preview sheet:", selected_sheets, key="prev_sel"
+                    )
                     df_prev = raw_sheets[prev_sh].copy()
                     df_prev.columns = [str(c).strip() for c in df_prev.columns]
 
                     # Detect time col for preview (shared TIME_KEYWORDS)
-                    tc_prev = next((c for c in df_prev.columns
-                                    if c.lower().strip() in TIME_KEYWORDS), df_prev.columns[0])
+                    tc_prev = next(
+                        (
+                            c
+                            for c in df_prev.columns
+                            if c.lower().strip() in TIME_KEYWORDS
+                        ),
+                        df_prev.columns[0],
+                    )
                     vc_prev = [c for c in df_prev.columns if c != tc_prev]
 
                     # Parse vessel cells safely (non-numeric -> NaN, never fabricated)
@@ -189,78 +292,115 @@ def render():
                     df_prev[tc_prev] = pd.to_numeric(df_prev[tc_prev], errors="coerce")
 
                     st.markdown(f"**Raw data - {prev_sh}** ({len(vc_prev)} vessels)")
-                    st.dataframe(df_prev.style.format(precision=2), use_container_width=True)
+                    st.dataframe(
+                        df_prev.style.format(precision=2), use_container_width=True
+                    )
 
                     # Quick stats preview
                     df_prev_clean = df_prev.dropna(subset=[tc_prev])
                     t_p = df_prev_clean[tc_prev].values.astype(float)
-                    vd  = df_prev_clean[vc_prev].apply(pd.to_numeric, errors="coerce")
+                    vd = df_prev_clean[vc_prev].apply(pd.to_numeric, errors="coerce")
                     mean_p = vd.mean(axis=1).values
-                    sd_p   = vd.std(axis=1, ddof=1).values if len(vc_prev) > 1 else np.zeros(len(t_p))
-                    rsd_p  = np.where(mean_p > 0, sd_p / mean_p * 100, 0.0)
+                    sd_p = (
+                        vd.std(axis=1, ddof=1).values
+                        if len(vc_prev) > 1
+                        else np.zeros(len(t_p))
+                    )
+                    rsd_p = np.where(mean_p > 0, sd_p / mean_p * 100, 0.0)
 
-                    df_stats_prev = pd.DataFrame({
-                        f"Time ({time_unit})": t_p,
-                        "Mean (%)":  mean_p.round(2),
-                        "SD":        sd_p.round(2),
-                        "RSD (%)":   rsd_p.round(2),
-                        "CV (%)":    rsd_p.round(2),
-                        "n vessels": len(vc_prev),
-                    })
+                    df_stats_prev = pd.DataFrame(
+                        {
+                            f"Time ({time_unit})": t_p,
+                            "Mean (%)": mean_p.round(2),
+                            "SD": sd_p.round(2),
+                            "RSD (%)": rsd_p.round(2),
+                            "CV (%)": rsd_p.round(2),
+                            "n vessels": len(vc_prev),
+                        }
+                    )
                     st.markdown("**Computed statistics:**")
-                    st.dataframe(df_stats_prev.style.background_gradient(
-                        subset=["RSD (%)"], cmap="RdYlGn_r"), use_container_width=True)
+                    st.dataframe(
+                        df_stats_prev.style.background_gradient(
+                            subset=["RSD (%)"], cmap="RdYlGn_r"
+                        ),
+                        use_container_width=True,
+                    )
 
                 # -- Import button ---------------------------------------------
-                if selected_sheets and st.button("Import Selected Sheets as Profiles", type="primary"):
+                if selected_sheets and st.button(
+                    "Import Selected Sheets as Profiles", type="primary"
+                ):
                     imported = []
                     warnings_list = []
                     for sh in selected_sheets:
                         df_raw = raw_sheets[sh].copy()
                         df_raw.columns = [str(c).strip() for c in df_raw.columns]
 
-                        time_col = next((c for c in df_raw.columns
-                                         if c.lower().strip() in TIME_KEYWORDS),
-                                        df_raw.columns[0])
+                        time_col = next(
+                            (
+                                c
+                                for c in df_raw.columns
+                                if c.lower().strip() in TIME_KEYWORDS
+                            ),
+                            df_raw.columns[0],
+                        )
                         vessel_cols = [c for c in df_raw.columns if c != time_col]
 
                         # Guard: a sheet with no vessel columns can't be a profile
                         if not vessel_cols:
-                            warnings_list.append(f"Sheet '{sh}': no vessel columns found — skipped.")
+                            warnings_list.append(
+                                f"Sheet '{sh}': no vessel columns found — skipped."
+                            )
                             continue
 
                         # Parse vessel cells safely; count cells that fail (non-numeric)
                         _orig_nonnull = int(df_raw[vessel_cols].notna().sum().sum())
                         for col in vessel_cols:
                             df_raw[col] = df_raw[col].apply(_to_num)
-                        _bad_cells = _orig_nonnull - int(df_raw[vessel_cols].notna().sum().sum())
+                        _bad_cells = _orig_nonnull - int(
+                            df_raw[vessel_cols].notna().sum().sum()
+                        )
                         if _bad_cells > 0:
                             warnings_list.append(
                                 f"Sheet '{sh}': {_bad_cells} cell(s) could not be read as numbers and were "
                                 f"treated as missing. Format dissolution values as Number (not Date/Text) in Excel."
                             )
 
-                        df_raw[time_col] = pd.to_numeric(df_raw[time_col], errors="coerce")
+                        df_raw[time_col] = pd.to_numeric(
+                            df_raw[time_col], errors="coerce"
+                        )
                         df_raw = df_raw.dropna(subset=[time_col])
                         # Sort by time and drop duplicate time points (keep first)
-                        df_raw = df_raw.sort_values(time_col).drop_duplicates(subset=[time_col], keep="first")
+                        df_raw = df_raw.sort_values(time_col).drop_duplicates(
+                            subset=[time_col], keep="first"
+                        )
                         if df_raw.empty:
-                            warnings_list.append(f"Sheet '{sh}': no valid time points — skipped.")
+                            warnings_list.append(
+                                f"Sheet '{sh}': no valid time points — skipped."
+                            )
                             continue
 
                         t_vals = df_raw[time_col].values.astype(float)
-                        vdata  = df_raw[vessel_cols].apply(pd.to_numeric, errors="coerce")
-                        n_v    = vdata.shape[1]
+                        vdata = df_raw[vessel_cols].apply(
+                            pd.to_numeric, errors="coerce"
+                        )
+                        n_v = vdata.shape[1]
 
                         # A dissolution profile needs ≥2 time points (fitting / f2 /
                         # bootstrap all require it); skip otherwise to avoid downstream errors.
                         if len(t_vals) < 2:
-                            warnings_list.append(f"Sheet '{sh}': needs at least 2 time points — skipped.")
+                            warnings_list.append(
+                                f"Sheet '{sh}': needs at least 2 time points — skipped."
+                            )
                             continue
 
                         mean_r = vdata.mean(axis=1).values
-                        sd_r   = vdata.std(axis=1, ddof=1).values if n_v > 1 else np.zeros(len(t_vals))
-                        rsd_r  = np.where(mean_r > 0, sd_r / mean_r * 100, 0.0)
+                        sd_r = (
+                            vdata.std(axis=1, ddof=1).values
+                            if n_v > 1
+                            else np.zeros(len(t_vals))
+                        )
+                        rsd_r = np.where(mean_r > 0, sd_r / mean_r * 100, 0.0)
 
                         # Dissolution should be (roughly) non-decreasing; flag clear reversals.
                         if mean_r.size >= 2 and np.any(np.diff(mean_r) < -2.0):
@@ -275,18 +415,20 @@ def render():
                             )
 
                         st.session_state.profiles[sh] = {
-                            "time":    t_vals.tolist(),
+                            "time": t_vals.tolist(),
                             "release": mean_r.tolist(),
-                            "sd":      sd_r.tolist(),
-                            "rsd":     rsd_r.tolist(),
-                            "cv":      rsd_r.tolist(),
-                            "n":       n_v,
+                            "sd": sd_r.tolist(),
+                            "rsd": rsd_r.tolist(),
+                            "cv": rsd_r.tolist(),
+                            "n": n_v,
                             "vessels": vessel_cols,
-                            "raw":     vdata.values.tolist(),
+                            "raw": vdata.values.tolist(),
                         }
                         imported.append(sh)
 
-                    st.success(f"Imported {len(imported)} profile(s): {', '.join(imported)}")
+                    st.success(
+                        f"Imported {len(imported)} profile(s): {', '.join(imported)}"
+                    )
                     for w in warnings_list:
                         st.warning(w)
 
@@ -295,7 +437,7 @@ def render():
 
     # =========================================================================
     elif input_mode == "Inline Spreadsheet Editor":
-    # =========================================================================
+        # =========================================================================
         st.markdown(
             "<div class='info-banner'>"
             "<strong>Paste-friendly Spreadsheet Editor</strong><br>"
@@ -303,7 +445,7 @@ def render():
             "Format: first column = Time, remaining columns = Tablet 1, Tablet 2, ... "
             "You can also type values manually. Columns are separated by tabs (as in Excel)."
             "</div>",
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
         ed_col1, ed_col2 = st.columns([2, 1])
@@ -311,9 +453,13 @@ def render():
             ed_pname = st.text_input("Profile Name", "Formulation A", key="ed_pname")
         with ed_col2:
             n_tablets_hint = st.number_input(
-                "Expected Vessels (hint)", min_value=1, max_value=24,
-                value=6, step=1, key="ed_ntab",
-                help="Helps generate the template below. Actual count is detected from pasted data."
+                "Expected Vessels (hint)",
+                min_value=1,
+                max_value=24,
+                value=6,
+                step=1,
+                key="ed_ntab",
+                help="Helps generate the template below. Actual count is detected from pasted data.",
             )
 
         # -- Generate template text --------------------------------------------
@@ -329,7 +475,7 @@ def render():
         st.markdown(
             "<p style='font-weight:600;margin-top:12px;'>"
             "Paste your Excel data here (or edit the template):</p>",
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
         pasted = st.text_area(
@@ -337,7 +483,7 @@ def render():
             value=template_text,
             height=280,
             key="paste_area",
-            help="Select all cells in Excel, press Ctrl+C, then click here and press Ctrl+V."
+            help="Select all cells in Excel, press Ctrl+C, then click here and press Ctrl+V.",
         )
 
         st.caption(
@@ -349,27 +495,19 @@ def render():
         if pasted.strip():
             try:
                 import io as _io
+
                 df_pasted = pd.read_csv(
-                    _io.StringIO(pasted.strip()),
-                    sep="\t",
-                    decimal=".",
-                    dtype=str
+                    _io.StringIO(pasted.strip()), sep="\t", decimal=".", dtype=str
                 )
                 # Try comma-separated if tab didn't work well
                 if df_pasted.shape[1] == 1:
                     df_pasted = pd.read_csv(
-                        _io.StringIO(pasted.strip()),
-                        sep=",",
-                        decimal=".",
-                        dtype=str
+                        _io.StringIO(pasted.strip()), sep=",", decimal=".", dtype=str
                     )
                 # Try semicolon
                 if df_pasted.shape[1] == 1:
                     df_pasted = pd.read_csv(
-                        _io.StringIO(pasted.strip()),
-                        sep=";",
-                        decimal=",",
-                        dtype=str
+                        _io.StringIO(pasted.strip()), sep=";", decimal=",", dtype=str
                     )
 
                 df_pasted.columns = [str(c).strip() for c in df_pasted.columns]
@@ -392,42 +530,45 @@ def render():
                 )
                 st.dataframe(
                     df_pasted.style.format(precision=2, na_rep="-"),
-                    use_container_width=True
+                    use_container_width=True,
                 )
 
                 if st.button("Compute & Add Profile", type="primary", key="ed_compute"):
                     t_vals = df_pasted[time_col].values.astype(float)
-                    vdata  = df_pasted[vessel_cols].apply(
-                        pd.to_numeric, errors="coerce"
-                    )
-                    n_v    = vdata.shape[1]
+                    vdata = df_pasted[vessel_cols].apply(pd.to_numeric, errors="coerce")
+                    n_v = vdata.shape[1]
                     mean_r = vdata.mean(axis=1).values
-                    sd_r   = (vdata.std(axis=1, ddof=1).values
-                              if n_v > 1 else np.zeros(len(t_vals)))
-                    rsd_r  = np.where(mean_r > 0, sd_r / mean_r * 100, 0.0)
+                    sd_r = (
+                        vdata.std(axis=1, ddof=1).values
+                        if n_v > 1
+                        else np.zeros(len(t_vals))
+                    )
+                    rsd_r = np.where(mean_r > 0, sd_r / mean_r * 100, 0.0)
 
                     st.session_state.profiles[ed_pname] = {
-                        "time":    t_vals.tolist(),
+                        "time": t_vals.tolist(),
                         "release": mean_r.tolist(),
-                        "sd":      sd_r.tolist(),
-                        "rsd":     rsd_r.tolist(),
-                        "cv":      rsd_r.tolist(),
-                        "n":       n_v,
+                        "sd": sd_r.tolist(),
+                        "rsd": rsd_r.tolist(),
+                        "cv": rsd_r.tolist(),
+                        "n": n_v,
                         "vessels": vessel_cols,
-                        "raw":     vdata.values.tolist(),
+                        "raw": vdata.values.tolist(),
                     }
                     st.success(
                         f"Profile '{ed_pname}' added - "
                         f"{n_v} vessels, {len(t_vals)} time points, "
                         f"max release = {mean_r.max():.1f}%"
                     )
-                    df_stat = pd.DataFrame({
-                        f"Time ({time_unit})": t_vals,
-                        "Mean (%)":  mean_r.round(2),
-                        "SD":        sd_r.round(3),
-                        "RSD (%)":   rsd_r.round(2),
-                        "CV (%)":    rsd_r.round(2),
-                    })
+                    df_stat = pd.DataFrame(
+                        {
+                            f"Time ({time_unit})": t_vals,
+                            "Mean (%)": mean_r.round(2),
+                            "SD": sd_r.round(3),
+                            "RSD (%)": rsd_r.round(2),
+                            "CV (%)": rsd_r.round(2),
+                        }
+                    )
                     st.dataframe(df_stat, use_container_width=True)
 
             except Exception as e:
@@ -439,20 +580,26 @@ def render():
 
     # =========================================================================
     else:  # Manual Mean Entry
-    # =========================================================================
+        # =========================================================================
         st.markdown(
             "<div class='info-banner'>"
             "Enter the already-computed mean cumulative release (%) at each time point."
             "</div>",
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
         c1, c2 = st.columns(2)
         with c1:
-            t_str = st.text_area("Time points (comma-separated)",
-                                 "0,15,30,45,60,90,120,180,240", height=100)
+            t_str = st.text_area(
+                "Time points (comma-separated)",
+                "0,15,30,45,60,90,120,180,240",
+                height=100,
+            )
         with c2:
-            r_str = st.text_area("Mean Cumulative Release % (comma-separated)",
-                                 "0,18,35,49,62,74,82,89,94", height=100)
+            r_str = st.text_area(
+                "Mean Cumulative Release % (comma-separated)",
+                "0,18,35,49,62,74,82,89,94",
+                height=100,
+            )
         pname = st.text_input("Profile Name", "Formulation A")
         if st.button("Add Profile"):
             try:
@@ -462,8 +609,13 @@ def render():
                     st.error("Arrays must have equal length.")
                 else:
                     st.session_state.profiles[pname] = {
-                        "time": ta.tolist(), "release": ra.tolist(),
-                        "sd": None, "rsd": None, "cv": None, "n": 1, "vessels": []
+                        "time": ta.tolist(),
+                        "release": ra.tolist(),
+                        "sd": None,
+                        "rsd": None,
+                        "cv": None,
+                        "n": 1,
+                        "vessels": [],
                     }
                     st.success(f"Profile '{pname}' added.")
             except Exception as e:
@@ -478,16 +630,19 @@ def render():
 
         # -- Profile Renaming ─────────────────────────────────────────
         with st.expander("✏️ Edit / Rename Profiles", expanded=False):
-            st.markdown("Rename a profile — all analysis results will be synchronized automatically.")
+            st.markdown(
+                "Rename a profile — all analysis results will be synchronized automatically."
+            )
             for nm in list(st.session_state.profiles.keys()):
                 r_col1, r_col2, r_col3 = st.columns([2, 2, 1])
                 with r_col1:
                     st.markdown(f"**Current:** `{nm}`")
                 with r_col2:
                     new_nm = st.text_input(
-                        "New name", value=nm,
+                        "New name",
+                        value=nm,
                         key=f"rename_{nm}",
-                        label_visibility="collapsed"
+                        label_visibility="collapsed",
                     )
                 with r_col3:
                     if st.button("Rename", key=f"btn_rename_{nm}"):
@@ -513,7 +668,7 @@ def render():
                     f"<span style='font-size:0.82rem;color:#9fb0d0;'>"
                     f"n = {n_v} vessels &nbsp;|&nbsp; {len(d['time'])} time points<br>"
                     f"Max release: {max_r:.1f}%</span></div>",
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
 
         # -- Mean profiles plot with error bars -------------------------------
@@ -521,29 +676,49 @@ def render():
 
         opt_col1, opt_col2, opt_col3, opt_col4 = st.columns(4)
         with opt_col1:
-            show_80 = st.radio(
-                f"Q Value ({q_limit:.0f}%)",
-                ["Show", "Hide"], horizontal=True, key="opt_80line",
-                help=f"FDA/USP Q criterion: NLT {q_limit:.0f}% dissolved at {q_time:.0f} {time_unit}."
-            ) == "Show"
+            show_80 = (
+                st.radio(
+                    f"Q Value ({q_limit:.0f}%)",
+                    ["Show", "Hide"],
+                    horizontal=True,
+                    key="opt_80line",
+                    help=f"FDA/USP Q criterion: NLT {q_limit:.0f}% dissolved at {q_time:.0f} {time_unit}.",
+                )
+                == "Show"
+            )
         with opt_col2:
-            show_qt = st.radio(
-                f"Q Time ({q_time:.0f} {time_unit})",
-                ["Show", "Hide"], horizontal=True, key="opt_qtline",
-                help=f"Vertical marker at Q time point ({q_time:.0f} {time_unit})."
-            ) == "Show"
+            show_qt = (
+                st.radio(
+                    f"Q Time ({q_time:.0f} {time_unit})",
+                    ["Show", "Hide"],
+                    horizontal=True,
+                    key="opt_qtline",
+                    help=f"Vertical marker at Q time point ({q_time:.0f} {time_unit}).",
+                )
+                == "Show"
+            )
         with opt_col3:
-            show_band = st.radio(
-                "SD Band",
-                ["Show", "Hide"], horizontal=True, key="opt_sdband",
-                help="Shaded area around mean = Mean ± SD."
-            ) == "Show"
+            show_band = (
+                st.radio(
+                    "SD Band",
+                    ["Show", "Hide"],
+                    horizontal=True,
+                    key="opt_sdband",
+                    help="Shaded area around mean = Mean ± SD.",
+                )
+                == "Show"
+            )
         with opt_col4:
-            show_errbar = st.radio(
-                "Error Bars (SD)",
-                ["Show", "Hide"], horizontal=True, key="opt_errbar",
-                help="Vertical error bars at each time point showing SD."
-            ) == "Show"
+            show_errbar = (
+                st.radio(
+                    "Error Bars (SD)",
+                    ["Show", "Hide"],
+                    horizontal=True,
+                    key="opt_errbar",
+                    help="Vertical error bars at each time point showing SD.",
+                )
+                == "Show"
+            )
 
         # ── Compliance Engine: compute OOS ────────────────────────────────────
         def compute_compliance(t_arr, r_arr, q_t, q_lim):
@@ -559,7 +734,8 @@ def render():
 
         compliance_results = {}
         for nm, d in st.session_state.profiles.items():
-            ta = np.array(d["time"]); ra = np.array(d["release"])
+            ta = np.array(d["time"])
+            ra = np.array(d["release"])
             rel_actual, passed = compute_compliance(ta, ra, q_time, q_limit)
             compliance_results[nm] = {"rel": rel_actual, "passed": passed}
 
@@ -575,7 +751,8 @@ def render():
                         f'<div style="font-size:0.8rem;">{nm}</div>'
                         f'<div style="font-size:0.75rem;opacity:0.85;">@ {q_time:.0f} {time_unit}: '
                         f'<strong>{res["rel"]:.1f}%</strong> ≥ Q={q_limit:.0f}%</div>'
-                        f'</div>', unsafe_allow_html=True
+                        f"</div>",
+                        unsafe_allow_html=True,
                     )
                 else:
                     st.markdown(
@@ -584,7 +761,8 @@ def render():
                         f'<div style="font-size:0.8rem;">{nm}</div>'
                         f'<div style="font-size:0.75rem;opacity:0.85;">@ {q_time:.0f} {time_unit}: '
                         f'<strong>{res["rel"]:.1f}%</strong> < Q={q_limit:.0f}%</div>'
-                        f'</div>', unsafe_allow_html=True
+                        f"</div>",
+                        unsafe_allow_html=True,
                     )
         st.markdown("")  # spacer
 
@@ -592,19 +770,37 @@ def render():
         style_ax(fig, ax)
 
         for i, (nm, d) in enumerate(st.session_state.profiles.items()):
-            t   = np.array(d["time"])
-            r   = np.array(d["release"])
-            sd  = np.array(d["sd"]) if d.get("sd") is not None else np.zeros(len(t))
+            t = np.array(d["time"])
+            r = np.array(d["release"])
+            sd = np.array(d["sd"]) if d.get("sd") is not None else np.zeros(len(t))
             col = PALETTE[i % len(PALETTE)]
             has_sd = not np.all(sd == 0)
 
             if has_sd and show_errbar:
-                ax.errorbar(t, r, yerr=sd, fmt="o-", color=col, lw=2,
-                            ms=5, capsize=4, capthick=1.5, elinewidth=1.2,
-                            alpha=0.9, label=f"{nm} (n={d.get('n',1)})")
+                ax.errorbar(
+                    t,
+                    r,
+                    yerr=sd,
+                    fmt="o-",
+                    color=col,
+                    lw=2,
+                    ms=5,
+                    capsize=4,
+                    capthick=1.5,
+                    elinewidth=1.2,
+                    alpha=0.9,
+                    label=f"{nm} (n={d.get('n',1)})",
+                )
             else:
-                ax.plot(t, r, "o-", color=col, lw=2, ms=5,
-                        label=f"{nm} (n={d.get('n',1)})" if d.get("n",1)>1 else nm)
+                ax.plot(
+                    t,
+                    r,
+                    "o-",
+                    color=col,
+                    lw=2,
+                    ms=5,
+                    label=f"{nm} (n={d.get('n',1)})" if d.get("n", 1) > 1 else nm,
+                )
 
             if has_sd and show_band:
                 ax.fill_between(t, r - sd, r + sd, color=col, alpha=0.10)
@@ -613,22 +809,54 @@ def render():
         any_fail = any(not v["passed"] for v in compliance_results.values())
         if any_fail and show_80 and show_qt:
             # Region left of Q-time line and below Q-limit = critical target region
-            ax.axvspan(0, q_time, ymin=0, ymax=q_limit/112,
-                       alpha=0.07, color="#e74c3c", zorder=0)
-            ax.text(q_time * 0.5, q_limit * 0.5,
-                    "⚠️ CRITICAL\nTARGET ZONE",
-                    ha='center', va='center', fontsize=8.5,
-                    color='#7b1a1a', alpha=0.95,
-                    fontweight='bold', style='italic', zorder=4,
-                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
-                              edgecolor='#e74c3c', alpha=0.55, lw=0.8))
+            ax.axvspan(
+                0,
+                q_time,
+                ymin=0,
+                ymax=q_limit / 112,
+                alpha=0.07,
+                color="#e74c3c",
+                zorder=0,
+            )
+            ax.text(
+                q_time * 0.5,
+                q_limit * 0.5,
+                "⚠️ CRITICAL\nTARGET ZONE",
+                ha="center",
+                va="center",
+                fontsize=8.5,
+                color="#7b1a1a",
+                alpha=0.95,
+                fontweight="bold",
+                style="italic",
+                zorder=4,
+                bbox=dict(
+                    boxstyle="round,pad=0.3",
+                    facecolor="white",
+                    edgecolor="#e74c3c",
+                    alpha=0.55,
+                    lw=0.8,
+                ),
+            )
 
         if show_80:
-            ax.axhline(q_limit, color=AMBER, lw=1.5, ls="--", alpha=0.9,
-                       label=f"Q = {q_limit:.0f}% (FDA/USP)")
+            ax.axhline(
+                q_limit,
+                color=AMBER,
+                lw=1.5,
+                ls="--",
+                alpha=0.9,
+                label=f"Q = {q_limit:.0f}% (FDA/USP)",
+            )
         if show_qt:
-            ax.axvline(q_time, color="#27ae60", lw=1.4, ls=":", alpha=0.85,
-                       label=f"Q-time = {q_time:.0f} {time_unit}")
+            ax.axvline(
+                q_time,
+                color="#27ae60",
+                lw=1.4,
+                ls=":",
+                alpha=0.85,
+                label=f"Q-time = {q_time:.0f} {time_unit}",
+            )
 
         # ── Internal Spec line ─────────────────────────────────────────────
         _is_cfg = st.session_state.method_cfg
@@ -636,10 +864,22 @@ def render():
             _isn = _is_cfg.get("internal_spec_name", "Internal Spec")
             _isl = float(_is_cfg.get("internal_spec_limit", 85.0))
             _ist = float(_is_cfg.get("internal_spec_time", 45.0))
-            ax.axhline(_isl, color="#9467bd", lw=1.4, ls=(0,(5,3)), alpha=0.85,
-                       label=f"{_isn} = {_isl:.0f}%")
-            ax.axvline(_ist, color="#9467bd", lw=1.2, ls=(0,(3,3)), alpha=0.75,
-                       label=f"{_isn} t = {_ist:.0f} {time_unit}")
+            ax.axhline(
+                _isl,
+                color="#9467bd",
+                lw=1.4,
+                ls=(0, (5, 3)),
+                alpha=0.85,
+                label=f"{_isn} = {_isl:.0f}%",
+            )
+            ax.axvline(
+                _ist,
+                color="#9467bd",
+                lw=1.2,
+                ls=(0, (3, 3)),
+                alpha=0.75,
+                label=f"{_isn} t = {_ist:.0f} {time_unit}",
+            )
 
             # Internal Spec warning — per profile
             _is_warn_profs = []
@@ -660,22 +900,48 @@ def render():
 
         # OOS/COMPLIANT annotation in the chart corner
         if any_fail:
-            ax.text(0.98, 0.97, "⚠️ OOS / NON-COMPLIANT",
-                    transform=ax.transAxes, ha='right', va='top',
-                    fontsize=10, fontweight='bold', color='#c0392b',
-                    bbox=dict(boxstyle='round,pad=0.4', facecolor='#ffc7ce',
-                              edgecolor='#e74c3c', alpha=0.92))
+            ax.text(
+                0.98,
+                0.97,
+                "⚠️ OOS / NON-COMPLIANT",
+                transform=ax.transAxes,
+                ha="right",
+                va="top",
+                fontsize=10,
+                fontweight="bold",
+                color="#c0392b",
+                bbox=dict(
+                    boxstyle="round,pad=0.4",
+                    facecolor="#ffc7ce",
+                    edgecolor="#e74c3c",
+                    alpha=0.92,
+                ),
+            )
         else:
-            ax.text(0.98, 0.97, "✅ MONOGRAPH COMPLIANT",
-                    transform=ax.transAxes, ha='right', va='top',
-                    fontsize=10, fontweight='bold', color='#1a5c2e',
-                    bbox=dict(boxstyle='round,pad=0.4', facecolor='#c6efce',
-                              edgecolor='#27ae60', alpha=0.92))
+            ax.text(
+                0.98,
+                0.97,
+                "✅ MONOGRAPH COMPLIANT",
+                transform=ax.transAxes,
+                ha="right",
+                va="top",
+                fontsize=10,
+                fontweight="bold",
+                color="#1a5c2e",
+                bbox=dict(
+                    boxstyle="round,pad=0.4",
+                    facecolor="#c6efce",
+                    edgecolor="#27ae60",
+                    alpha=0.92,
+                ),
+            )
 
         ax.set_xlabel(f"Time ({time_unit})")
         ax.set_ylabel(_rlabel(st.session_state.method_cfg))
         ax.set_title("Mean Dissolution Profiles  (Mean ± SD)")
-        t_all = np.concatenate([np.array(d["time"]) for d in st.session_state.profiles.values()])
+        t_all = np.concatenate(
+            [np.array(d["time"]) for d in st.session_state.profiles.values()]
+        )
         ax.set_xlim(left=0, right=t_all.max() * 1.05)
         ax.set_ylim(bottom=0, top=112)
         ax.legend(fontsize=8.5)
@@ -720,8 +986,11 @@ def render():
 
         # Per-Profile Statistics -> moved to Statistical Analysis page
 
-        if st.button("🗑️ Remove All Profiles", key="clear_profiles_btn",
-                     help="Remove profiles but keep project metadata and settings."):
+        if st.button(
+            "🗑️ Remove All Profiles",
+            key="clear_profiles_btn",
+            help="Remove profiles but keep project metadata and settings.",
+        ):
             st.session_state.profiles = {}
             st.session_state.fit_results = {}
             st.session_state.selected_ref_id = None
@@ -730,6 +999,7 @@ def render():
             st.rerun()
 
     show_literature("Data Input")
+
 
 # ===========================================================================
 # PAGE: KINETIC MODEL FITTING
