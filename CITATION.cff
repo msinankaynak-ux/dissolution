@@ -2,9 +2,10 @@ cff-version: 1.2.0
 message: "If you use DissolvA in your work, please cite it as below."
 title: "DissolvA: Predictive Dissolution Suite"
 abstract: >-
-  A free, web-based pharmaceutical dissolution analysis platform: FDA/EMA
+  A web-based pharmaceutical dissolution analysis platform: FDA/EMA
   guidance-aligned f1/f2 similarity, 62 kinetic models, bootstrap f2, USP
-  monograph compliance checks, and professional reporting.
+  monograph compliance checks, and professional reporting. Proprietary software,
+  available as a hosted service at https://www.dissolva.app.
 type: software
 authors:
   - family-names: "Kaynak"
@@ -13,9 +14,7 @@ authors:
 version: "3.0"
 date-released: "2026-06-12"
 url: "https://www.dissolva.app"
-repository-code: "https://github.com/msinankaynak-ux/dissolution"
-license: AGPL-3.0-or-later
-doi: "10.5281/zenodo.20650463"
+license: LicenseRef-Proprietary
 keywords:
   - dissolution
   - drug release kinetics
