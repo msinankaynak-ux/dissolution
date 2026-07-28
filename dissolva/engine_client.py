@@ -13,6 +13,7 @@ can be removed from the public frontend repo.
 """
 
 import os
+import time
 import numpy as np
 import streamlit as st
 
@@ -50,15 +51,32 @@ def _api_key():
         return os.getenv("BACKEND_API_KEY") or ""
 
 
-def _post(path, payload, timeout=120):
+def _post(path, payload, timeout=120, retries=2):
     url = backend_url()
     headers = {}
     key = _api_key()
     if key:
         headers["X-API-Key"] = key
-    resp = requests.post(url + path, json=payload, timeout=timeout, headers=headers)
-    resp.raise_for_status()
-    return resp.json()
+    last_exc = None
+    for attempt in range(retries + 1):
+        try:
+            resp = requests.post(
+                url + path, json=payload, timeout=timeout, headers=headers
+            )
+            if resp.status_code in (502, 503, 504) and attempt < retries:
+                time.sleep(2 + 2 * attempt)
+                continue
+            resp.raise_for_status()
+            return resp.json()
+        except (requests.ConnectionError, requests.Timeout) as e:
+            last_exc = e
+            if attempt < retries:
+                time.sleep(2 + 2 * attempt)
+                continue
+            raise
+    if last_exc:
+        raise last_exc
+    raise RuntimeError("request failed")
 
 
 def _floats(a):
@@ -135,8 +153,9 @@ def fit_models(
             d = _post("/api/fit", payload)
             return {r["name"]: r for r in d["results"]}, d.get("best_by_aicc")
         except Exception as e:
-            st.error(
-                f"Model fitting service is unavailable ({type(e).__name__}). Please try again shortly."
+            st.warning(
+                "⏳ The model-fitting engine is waking up. Please click "
+                "**Run Model Fitting** again in a few seconds."
             )
             return {}, None
 
@@ -178,8 +197,9 @@ def bootstrap(
                 timeout=300,
             )
         except Exception as e:
-            st.error(
-                f"Bootstrap f2 service is unavailable ({type(e).__name__}). Please try again shortly."
+            st.warning(
+                "⏳ The bootstrap f2 engine is waking up. Please click Run again "
+                "in a few seconds."
             )
             return {"distribution": []}
 
@@ -255,17 +275,32 @@ def admin_stats():
 
 
 # ── 21 CFR Part 11 uyum modu — server-side kayit (records) API istemcisi ──────
-def _get(path, params=None, timeout=60):
+def _get(path, params=None, timeout=60, retries=2):
     url = backend_url()
     headers = {}
     key = _api_key()
     if key:
         headers["X-API-Key"] = key
-    resp = requests.get(
-        url + path, params=params or {}, timeout=timeout, headers=headers
-    )
-    resp.raise_for_status()
-    return resp.json()
+    last_exc = None
+    for attempt in range(retries + 1):
+        try:
+            resp = requests.get(
+                url + path, params=params or {}, timeout=timeout, headers=headers
+            )
+            if resp.status_code in (502, 503, 504) and attempt < retries:
+                time.sleep(2 + 2 * attempt)
+                continue
+            resp.raise_for_status()
+            return resp.json()
+        except (requests.ConnectionError, requests.Timeout) as e:
+            last_exc = e
+            if attempt < retries:
+                time.sleep(2 + 2 * attempt)
+                continue
+            raise
+    if last_exc:
+        raise last_exc
+    raise RuntimeError("request failed")
 
 
 def records_enabled():

@@ -180,7 +180,8 @@ def render():
             )
         st.session_state.fit_results = _results
         st.session_state["fit_best"] = _best
-        st.success(f"Fitting complete - {len(selected_models)} models processed.")
+        if _results:
+            st.success(f"Fitting complete - {len(_results)} models processed.")
 
     if st.session_state.fit_results:
         res_ok = {k: v for k, v in st.session_state.fit_results.items() if v["success"]}

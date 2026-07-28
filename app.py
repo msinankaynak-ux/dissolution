@@ -613,13 +613,6 @@ with st.sidebar:
                     ):
                         st.session_state["main_nav_radio"] = _val
                         st.rerun()
-                if _cat == "Predictive Analysis":
-                    st.markdown(
-                        "<div style='margin:-2px 0 4px 4px;'><span style='background:rgba(255,255,255,0.06);"
-                        "color:#7e8db0;font-size:0.66rem;font-weight:600;letter-spacing:0.3px;"
-                        "padding:2px 9px;border-radius:8px;'>IVIVC v3.5 · coming soon</span></div>",
-                        unsafe_allow_html=True,
-                    )
         with st.expander(i18n.t("Learn"), expanded=True):
             if st.button(
                 i18n.t("DissolvA Academy"),
