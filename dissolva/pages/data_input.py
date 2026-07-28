@@ -579,7 +579,7 @@ def render():
                 )
 
     # =========================================================================
-    else:  # Manual Mean Entry
+    elif input_mode == "Manual Mean Entry":
         # =========================================================================
         st.markdown(
             "<div class='info-banner'>"
