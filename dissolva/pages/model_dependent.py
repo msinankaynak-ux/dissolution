@@ -171,7 +171,7 @@ def render():
         test = st.selectbox("Test profile", tests, key="md_test")
     with c3:
         ref2_opts = ["— none (use ±δ shift limit) —"] + [n for n in names if n not in (ref, test)]
-        ref2 = st.selectbox("2nd reference batch (similarity region)", ref2_opts, key="md_ref2",
+        ref2 = st.selectbox("2nd reference batch (similarity region)", ref2_opts, index=0, key="md_ref2",
                             help="FDA: the similarity region should reflect the batch-to-batch variation of approved "
                                  "reference batches. Select a second reference batch to derive it; otherwise the "
                                  "±δ % shift convention (DDSolver 'Max_MSD') is used.")
@@ -192,7 +192,8 @@ def render():
     with c7:
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
         run = st.button("▶ Run analysis", type="primary", key="md_run", use_container_width=True)
-    use_times = st.multiselect("Time points used", common, default=common, key="md_times",
+    _default_t = [x for x in common if x > 0] or common   # ICH M13B: zero excluded
+    use_times = st.multiselect("Time points used", common, default=_default_t, key="md_times",
                                help="ICH M13B: ≤6 points, up to the plateau; the same subset is used for every unit.")
     if len(use_times) < 3:
         st.error("Select at least 3 time points."); return
