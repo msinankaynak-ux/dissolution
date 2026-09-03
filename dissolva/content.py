@@ -84,6 +84,14 @@ def bootstrap_recommendation(profiles, ref_nm, test_nm):
 
 # ── Literature references ────────────────────────────────────────────────────
 LITERATURE = {
+    "model_dependent": [
+        "U.S. Food and Drug Administration. (1997). *Guidance for Industry: Dissolution Testing of Immediate Release Solid Oral Dosage Forms* (Section V: Dissolution Profile Comparisons). Center for Drug Evaluation and Research.",
+        "Sathe, P. M., Tsong, Y., & Shah, V. P. (1996). In-vitro dissolution profile comparison: Statistics and analysis, model dependent approach. *Pharmaceutical Research, 13*(12), 1799–1803. https://doi.org/10.1023/A:1016020822093",
+        "Tsong, Y., Hammerstrom, T., Sathe, P., & Shah, V. P. (1996). Statistical assessment of mean differences between two dissolution data sets. *Drug Information Journal, 30*(4), 1105–1112. https://doi.org/10.1177/009286159603000427",
+        "International Council for Harmonisation. (2025). *ICH M13B: Bioequivalence for Immediate-Release Solid Oral Dosage Forms — Additional Strengths Biowaiver* (Draft, Step 2), Section 2.4 Assessment of Similarity.",
+        "Paixão, P., Gouveia, L. F., Silva, N., & Morais, J. A. G. (2017). Evaluation of dissolution profile similarity — Comparison between the f2, the multivariate statistical distance and the f2 bootstrapping methods. *European Journal of Pharmaceutics and Biopharmaceutics, 112*, 67–74. https://doi.org/10.1016/j.ejpb.2016.10.026",
+        "Shah, V. P., Tsong, Y., Sathe, P., & Liu, J.-P. (1998). In vitro dissolution profile comparison — Statistics and analysis of the similarity factor, f2. *Pharmaceutical Research, 15*(6), 889–896. https://doi.org/10.1023/A:1011976615750",
+    ],
     "Data Input": [
         "United States Pharmacopeia. (2023). <711> Dissolution. *USP 46–NF 41*.",
         "U.S. Food and Drug Administration. (1997). Guidance for industry: Dissolution testing of immediate release solid oral dosage forms. FDA.",

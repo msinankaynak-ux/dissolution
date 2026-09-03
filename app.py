@@ -54,6 +54,7 @@ from dissolva.pages import (
     f1_f2_similarity,
     bootstrap_f2,
     ivivc,
+    model_dependent,
     excel_report,
     api_information,
     academy,
@@ -496,6 +497,7 @@ with st.sidebar:
                 ),
                 ("Bootstrap f2 Analysis", "Bootstrap f2", ":material/sync:"),
                 ("IVIVC Analysis", "IVIVC Correlation", ":material/link:"),
+                ("Model-Dependent Similarity", "Model-Dependent Similarity", ":material/scatter_plot:"),
             ],
         ),
         (
@@ -893,6 +895,7 @@ _PHASES = [
             "f1 and f2 Similarity",
             "Bootstrap f2 Analysis",
             "IVIVC Analysis",
+            "Model-Dependent Similarity",
         },
     ),
     ("Report", {"Excel Report"}),
@@ -989,6 +992,8 @@ elif nav == "Bootstrap f2 Analysis":
     bootstrap_f2.render()
 elif nav == "IVIVC Analysis":
     ivivc.render()
+elif nav == "Model-Dependent Similarity":
+    model_dependent.render()
 elif nav == "Excel Report":
     excel_report.render()
 elif nav == "My Records":

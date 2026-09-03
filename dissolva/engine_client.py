@@ -209,6 +209,38 @@ def bootstrap(
     return {"distribution": []}
 
 
+# ── Model-dependent / model-independent MSD similarity (backend only) ────────
+def msd(time, ref_raw, test_raw, model="weibull", alpha=0.10, delta=10.0,
+        limit_mode="shift", ref2_raw=None, use_times=None):
+    """FDA 1997 §V.B/V.C multivariate similarity (Hotelling T² / Mahalanobis
+    distance / 90 % confidence region) + ICH M13B applicability gate.
+    Returns the backend dict {time, alpha, gate, independent, dependent} or
+    {"error": str}. Proprietary math stays server-side."""
+    if not using_backend():
+        return {"error": "The DissolvA engine service is not configured."}
+    payload = {
+        "time": _floats(time),
+        "ref_raw": [_floats(r) for r in ref_raw],
+        "test_raw": [_floats(r) for r in test_raw],
+        "model": model, "alpha": float(alpha), "delta": float(delta),
+        "limit_mode": limit_mode,
+    }
+    if ref2_raw is not None:
+        payload["ref2_raw"] = [_floats(r) for r in ref2_raw]
+    if use_times:
+        payload["use_times"] = _floats(use_times)
+    try:
+        return _post("/api/msd", payload, timeout=180)
+    except requests.HTTPError as e:
+        try:
+            detail = e.response.json().get("detail")
+        except Exception:
+            detail = str(e)
+        return {"error": str(detail)}
+    except Exception as e:
+        return {"error": f"Engine unavailable ({type(e).__name__}) — the service may be waking up; please run again."}
+
+
 # ── Membership & usage analytics (best-effort; never block/raise to the UI) ──
 def _admin_key():
     try:
