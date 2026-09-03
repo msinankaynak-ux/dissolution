@@ -161,16 +161,30 @@ def render_google_button():
     if not (cid and _OAUTH_OK):
         return
     oauth2 = OAuth2Component(cid, csec, _AUTHORIZE, _TOKEN, _TOKEN, _REVOKE)
-    result = oauth2.authorize_button(
-        name="Sign in with Google",
-        icon=GOOGLE_G_ICON,
-        redirect_uri=redirect,
-        scope="openid email profile",
-        key="google_login",
-        extras_params={"prompt": "select_account"},
-        use_container_width=False,
-        pkce="S256",
-    )
+    try:
+        result = oauth2.authorize_button(
+            name="Sign in with Google",
+            icon=GOOGLE_G_ICON,
+            redirect_uri=redirect,
+            scope="openid email profile",
+            key="google_login",
+            extras_params={"prompt": "select_account"},
+            use_container_width=False,
+            pkce="S256",
+        )
+    except Exception:
+        # streamlit-oauth raises StreamlitOauthError ("STATE ... DOES NOT MATCH OR
+        # OUT OF DATE") when the OAuth state is stale — e.g. after an app reboot or a
+        # lingering ?code=&state= callback URL. Never let that crash the whole app:
+        # clear the stale callback params and offer a clean retry.
+        try:
+            st.query_params.clear()
+        except Exception:
+            pass
+        st.warning("Sign-in was interrupted (session expired). Please try again.")
+        if st.button("↻ Try sign-in again", key="oauth_retry"):
+            st.rerun()
+        return
     if result and "token" in result:
         info = _decode_id_token(result["token"])
         st.session_state["user_email"]   = info.get("email")
